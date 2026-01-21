@@ -6,7 +6,30 @@
       "Bash(git push:*)",
       "Bash(az login:*)",
       "Bash(winget install:*)",
-      "Bash(\"/c/Program Files/Microsoft SDKs/Azure/CLI2/wbin/az.cmd\" login)"
+      "Bash(\"/c/Program Files/Microsoft SDKs/Azure/CLI2/wbin/az.cmd\" login)",
+      "Bash(\"/c/Program Files/Microsoft SDKs/Azure/CLI2/wbin/az.cmd\" account list --output table)",
+      "Bash(\"/c/Program Files/Microsoft SDKs/Azure/CLI2/wbin/az.cmd\" login --tenant fe64e912-f83c-44e9-9389-f66812c7fa57)",
+      "Bash(\"/c/Program Files/Microsoft SDKs/Azure/CLI2/wbin/az.cmd\" account set --subscription 671b1321-4407-420b-b877-97cd40ba898a)",
+      "Bash(powershell.exe -Command \"az --version\")",
+      "Bash(powershell.exe -Command \"Get-ChildItem ''C:\\\\Program Files\\\\Microsoft SDKs\\\\Azure\\\\CLI2'' -ErrorAction SilentlyContinue; Get-ChildItem ''C:\\\\Program Files \\(x86\\)\\\\Microsoft SDKs\\\\Azure\\\\CLI2'' -ErrorAction SilentlyContinue\")",
+      "Bash(powershell.exe -Command \"& ''C:\\\\Program Files\\\\Microsoft SDKs\\\\Azure\\\\CLI2\\\\wbin\\\\az.cmd'' login\")",
+      "Bash(powershell.exe -Command \"& ''C:\\\\Program Files\\\\Microsoft SDKs\\\\Azure\\\\CLI2\\\\wbin\\\\az.cmd'' login --username anuragdhuria@MngEnvMCAP510531.onmicrosoft.com\")",
+      "Bash(powershell.exe -Command \"& ''C:\\\\Program Files\\\\Microsoft SDKs\\\\Azure\\\\CLI2\\\\wbin\\\\az.cmd'' login --use-device-code\")",
+      "WebFetch(domain:registry.terraform.io)",
+      "Bash(az group list:*)",
+      "Bash(az group create:*)",
+      "Bash(az rest:*)",
+      "Bash(az provider register:*)",
+      "Bash(az provider show:*)",
+      "Bash(az role assignment:*)",
+      "Bash(az ad signed-in-user show:*)",
+      "Bash(az extension list-available:*)",
+      "Bash(az extension add:*)",
+      "Bash(az fabric capacity --help:*)",
+      "Bash(az fabric capacity create --help:*)",
+      "Bash(az fabric capacity create:*)",
+      "Bash(az account show:*)",
+      "Bash(az fabric capacity:*)"
     ]
   }
 }
