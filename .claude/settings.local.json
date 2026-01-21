@@ -5,7 +5,8 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(az login:*)",
-      "Bash(winget install:*)"
+      "Bash(winget install:*)",
+      "Bash(\"/c/Program Files/Microsoft SDKs/Azure/CLI2/wbin/az.cmd\" login)"
     ]
   }
 }
