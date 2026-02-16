@@ -1,0 +1,191 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "factoryName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the Azure Data Factory instance"
+            }
+        }
+    },
+    "resources": [
+        {
+            "name": "[concat(parameters('factoryName'), '/DS_SharePoint_FileList')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "description": "Dataset for querying SharePoint REST API to enumerate files in a document library. Returns JSON array of file metadata.",
+                "linkedServiceName": {
+                    "referenceName": "LS_SharePointOnline_REST",
+                    "type": "LinkedServiceReference"
+                },
+                "annotations": [
+                    "sharepoint",
+                    "source",
+                    "file-enumeration",
+                    "hydro-one-migration"
+                ],
+                "parameters": {
+                    "SiteUrl": {
+                        "type": "string",
+                        "description": "SharePoint site URL (e.g., /sites/HydroOneDocuments)"
+                    },
+                    "LibraryName": {
+                        "type": "string",
+                        "description": "Document library name (e.g., Documents)"
+                    },
+                    "FolderPath": {
+                        "type": "string",
+                        "defaultValue": "",
+                        "description": "Optional folder path within the library"
+                    }
+                },
+                "type": "RestResource",
+                "typeProperties": {
+                    "relativeUrl": {
+                        "value": "@concat(dataset().SiteUrl, '/_api/web/GetFolderByServerRelativeUrl(''', dataset().LibraryName, if(empty(dataset().FolderPath), '', concat('/', dataset().FolderPath)), ''')/Files?$select=Name,ServerRelativeUrl,Length,TimeLastModified,UniqueId&$top=5000')",
+                        "type": "Expression"
+                    }
+                },
+                "schema": []
+            }
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/DS_SharePoint_FolderList')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "description": "Dataset for querying SharePoint REST API to enumerate folders in a document library. Used for recursive folder traversal.",
+                "linkedServiceName": {
+                    "referenceName": "LS_SharePointOnline_REST",
+                    "type": "LinkedServiceReference"
+                },
+                "annotations": [
+                    "sharepoint",
+                    "source",
+                    "folder-enumeration",
+                    "hydro-one-migration"
+                ],
+                "parameters": {
+                    "SiteUrl": {
+                        "type": "string",
+                        "description": "SharePoint site URL (e.g., /sites/HydroOneDocuments)"
+                    },
+                    "LibraryName": {
+                        "type": "string",
+                        "description": "Document library name"
+                    },
+                    "FolderPath": {
+                        "type": "string",
+                        "defaultValue": "",
+                        "description": "Current folder path for recursive enumeration"
+                    }
+                },
+                "type": "RestResource",
+                "typeProperties": {
+                    "relativeUrl": {
+                        "value": "@concat(dataset().SiteUrl, '/_api/web/GetFolderByServerRelativeUrl(''', dataset().LibraryName, if(empty(dataset().FolderPath), '', concat('/', dataset().FolderPath)), ''')/Folders?$select=Name,ServerRelativeUrl,ItemCount')",
+                        "type": "Expression"
+                    }
+                },
+                "schema": []
+            }
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/DS_SharePoint_FileContent')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "description": "Dataset for downloading binary file content from SharePoint via REST API.",
+                "linkedServiceName": {
+                    "referenceName": "LS_SharePointOnline_REST",
+                    "type": "LinkedServiceReference"
+                },
+                "annotations": [
+                    "sharepoint",
+                    "source",
+                    "binary-download",
+                    "hydro-one-migration"
+                ],
+                "parameters": {
+                    "FileServerRelativeUrl": {
+                        "type": "string",
+                        "description": "Server-relative URL of the file (e.g., /sites/HydroOne/Documents/file.pdf)"
+                    },
+                    "SiteUrl": {
+                        "type": "string",
+                        "description": "SharePoint site URL"
+                    }
+                },
+                "type": "RestResource",
+                "typeProperties": {
+                    "relativeUrl": {
+                        "value": "@concat(dataset().SiteUrl, '/_api/web/GetFileByServerRelativeUrl(''', dataset().FileServerRelativeUrl, ''')/$value')",
+                        "type": "Expression"
+                    }
+                },
+                "schema": []
+            }
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/DS_SharePoint_DeltaQuery')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "description": "Dataset for SharePoint delta/change query to get modified files since last sync. Used for incremental migration.",
+                "linkedServiceName": {
+                    "referenceName": "LS_SharePointOnline_REST",
+                    "type": "LinkedServiceReference"
+                },
+                "annotations": [
+                    "sharepoint",
+                    "source",
+                    "delta-sync",
+                    "incremental",
+                    "hydro-one-migration"
+                ],
+                "parameters": {
+                    "SiteUrl": {
+                        "type": "string",
+                        "description": "SharePoint site URL"
+                    },
+                    "LibraryName": {
+                        "type": "string",
+                        "description": "Document library name"
+                    },
+                    "LastModifiedDate": {
+                        "type": "string",
+                        "description": "ISO 8601 date to filter files modified after this date"
+                    }
+                },
+                "type": "RestResource",
+                "typeProperties": {
+                    "relativeUrl": {
+                        "value": "@concat(dataset().SiteUrl, '/_api/web/lists/getbytitle(''', dataset().LibraryName, ''')/items?$filter=Modified ge datetime''', dataset().LastModifiedDate, '''&$select=FileRef,FileLeafRef,File_x0020_Size,Modified,UniqueId&$expand=File')",
+                        "type": "Expression"
+                    }
+                },
+                "schema": []
+            }
+        }
+    ],
+    "outputs": {
+        "fileListDataset": {
+            "type": "string",
+            "value": "DS_SharePoint_FileList"
+        },
+        "folderListDataset": {
+            "type": "string",
+            "value": "DS_SharePoint_FolderList"
+        },
+        "fileContentDataset": {
+            "type": "string",
+            "value": "DS_SharePoint_FileContent"
+        },
+        "deltaQueryDataset": {
+            "type": "string",
+            "value": "DS_SharePoint_DeltaQuery"
+        }
+    }
+}

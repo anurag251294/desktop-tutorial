@@ -1,0 +1,75 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "factoryName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the Azure Data Factory instance"
+            }
+        },
+        "storageAccountName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the Azure Storage Account (ADLS Gen2)"
+            }
+        }
+    },
+    "resources": [
+        {
+            "name": "[concat(parameters('factoryName'), '/LS_ADLS_Gen2')]",
+            "type": "Microsoft.DataFactory/factories/linkedServices",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "description": "Azure Data Lake Storage Gen2 linked service using Managed Identity authentication. Target storage for SharePoint migration with hierarchical namespace enabled.",
+                "annotations": [
+                    "adls",
+                    "sink",
+                    "hydro-one-migration",
+                    "managed-identity"
+                ],
+                "type": "AzureBlobFS",
+                "typeProperties": {
+                    "url": "[concat('https://', parameters('storageAccountName'), '.dfs.core.windows.net/')]"
+                },
+                "connectVia": {
+                    "referenceName": "AutoResolveIntegrationRuntime",
+                    "type": "IntegrationRuntimeReference"
+                }
+            }
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/LS_AzureBlobStorage')]",
+            "type": "Microsoft.DataFactory/factories/linkedServices",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "description": "Azure Blob Storage linked service using Managed Identity authentication. Alternative sink for migrations not requiring hierarchical namespace.",
+                "annotations": [
+                    "blob",
+                    "sink",
+                    "hydro-one-migration",
+                    "managed-identity"
+                ],
+                "type": "AzureBlobStorage",
+                "typeProperties": {
+                    "serviceEndpoint": "[concat('https://', parameters('storageAccountName'), '.blob.core.windows.net/')]",
+                    "accountKind": "StorageV2"
+                },
+                "connectVia": {
+                    "referenceName": "AutoResolveIntegrationRuntime",
+                    "type": "IntegrationRuntimeReference"
+                }
+            }
+        }
+    ],
+    "outputs": {
+        "adlsLinkedServiceName": {
+            "type": "string",
+            "value": "LS_ADLS_Gen2"
+        },
+        "blobLinkedServiceName": {
+            "type": "string",
+            "value": "LS_AzureBlobStorage"
+        }
+    }
+}

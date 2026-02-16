@@ -1,0 +1,206 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "factoryName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the Azure Data Factory instance"
+            }
+        },
+        "incrementalSyncStartTime": {
+            "type": "string",
+            "defaultValue": "2024-01-01T02:00:00Z",
+            "metadata": {
+                "description": "Start time for incremental sync tumbling window trigger (UTC)"
+            }
+        }
+    },
+    "resources": [
+        {
+            "name": "[concat(parameters('factoryName'), '/TR_Manual_BulkMigration')]",
+            "type": "Microsoft.DataFactory/factories/triggers",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "description": "Manual trigger for initiating bulk migration. Use this trigger to start the initial full migration of SharePoint libraries to ADLS Gen2.",
+                "annotations": [
+                    "manual",
+                    "bulk-migration",
+                    "hydro-one-migration"
+                ],
+                "runtimeState": "Stopped",
+                "pipelines": [
+                    {
+                        "pipelineReference": {
+                            "referenceName": "PL_Master_Migration_Orchestrator",
+                            "type": "PipelineReference"
+                        },
+                        "parameters": {
+                            "BatchSize": 10,
+                            "ParallelLibraries": 4,
+                            "MaxRetries": 3,
+                            "TargetContainerName": "sharepoint-migration"
+                        }
+                    }
+                ],
+                "type": "ScheduleTrigger",
+                "typeProperties": {
+                    "recurrence": {
+                        "frequency": "Day",
+                        "interval": 365,
+                        "startTime": "2099-01-01T00:00:00Z",
+                        "timeZone": "Eastern Standard Time"
+                    }
+                }
+            }
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/TR_TumblingWindow_IncrementalSync')]",
+            "type": "Microsoft.DataFactory/factories/triggers",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "description": "Tumbling window trigger for daily incremental synchronization. Runs every 24 hours to sync files modified since the last successful sync. Scheduled during off-peak hours (2 AM EST) to minimize SharePoint throttling.",
+                "annotations": [
+                    "incremental-sync",
+                    "daily",
+                    "tumbling-window",
+                    "hydro-one-migration"
+                ],
+                "runtimeState": "Stopped",
+                "pipeline": {
+                    "pipelineReference": {
+                        "referenceName": "PL_Incremental_Sync",
+                        "type": "PipelineReference"
+                    },
+                    "parameters": {
+                        "SharePointTenantUrl": "https://hydroone.sharepoint.com",
+                        "ContainerName": "sharepoint-migration"
+                    }
+                },
+                "type": "TumblingWindowTrigger",
+                "typeProperties": {
+                    "frequency": "Hour",
+                    "interval": 24,
+                    "startTime": "[parameters('incrementalSyncStartTime')]",
+                    "delay": "00:00:00",
+                    "maxConcurrency": 1,
+                    "retryPolicy": {
+                        "count": 3,
+                        "intervalInSeconds": 300
+                    }
+                }
+            }
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/TR_Schedule_Validation')]",
+            "type": "Microsoft.DataFactory/factories/triggers",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "description": "Scheduled trigger for weekly validation runs. Executes validation pipeline every Sunday at 6 AM EST to verify migration integrity.",
+                "annotations": [
+                    "validation",
+                    "weekly",
+                    "scheduled",
+                    "hydro-one-migration"
+                ],
+                "runtimeState": "Stopped",
+                "pipelines": [
+                    {
+                        "pipelineReference": {
+                            "referenceName": "PL_Validation",
+                            "type": "PipelineReference"
+                        },
+                        "parameters": {
+                            "SharePointTenantUrl": "https://hydroone.sharepoint.com",
+                            "ValidateAll": false
+                        }
+                    }
+                ],
+                "type": "ScheduleTrigger",
+                "typeProperties": {
+                    "recurrence": {
+                        "frequency": "Week",
+                        "interval": 1,
+                        "startTime": "2024-01-07T11:00:00Z",
+                        "timeZone": "Eastern Standard Time",
+                        "schedule": {
+                            "weekDays": [
+                                "Sunday"
+                            ],
+                            "hours": [
+                                6
+                            ],
+                            "minutes": [
+                                0
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/TR_Evening_BulkMigration')]",
+            "type": "Microsoft.DataFactory/factories/triggers",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "description": "Scheduled trigger for evening bulk migration runs. Executes during off-peak hours (8 PM - 6 AM EST) to maximize throughput and minimize SharePoint throttling during business hours.",
+                "annotations": [
+                    "bulk-migration",
+                    "evening",
+                    "off-peak",
+                    "hydro-one-migration"
+                ],
+                "runtimeState": "Stopped",
+                "pipelines": [
+                    {
+                        "pipelineReference": {
+                            "referenceName": "PL_Master_Migration_Orchestrator",
+                            "type": "PipelineReference"
+                        },
+                        "parameters": {
+                            "BatchSize": 20,
+                            "ParallelLibraries": 8,
+                            "MaxRetries": 3,
+                            "TargetContainerName": "sharepoint-migration"
+                        }
+                    }
+                ],
+                "type": "ScheduleTrigger",
+                "typeProperties": {
+                    "recurrence": {
+                        "frequency": "Day",
+                        "interval": 1,
+                        "startTime": "2024-01-01T01:00:00Z",
+                        "timeZone": "Eastern Standard Time",
+                        "schedule": {
+                            "hours": [
+                                20
+                            ],
+                            "minutes": [
+                                0
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+    ],
+    "outputs": {
+        "manualTriggerName": {
+            "type": "string",
+            "value": "TR_Manual_BulkMigration"
+        },
+        "incrementalSyncTriggerName": {
+            "type": "string",
+            "value": "TR_TumblingWindow_IncrementalSync"
+        },
+        "validationTriggerName": {
+            "type": "string",
+            "value": "TR_Schedule_Validation"
+        },
+        "eveningMigrationTriggerName": {
+            "type": "string",
+            "value": "TR_Evening_BulkMigration"
+        }
+    }
+}

@@ -1,0 +1,118 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "factoryName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the Azure Data Factory instance"
+            }
+        },
+        "sharePointTenantUrl": {
+            "type": "string",
+            "metadata": {
+                "description": "SharePoint Online tenant URL (e.g., https://hydroone.sharepoint.com)"
+            }
+        },
+        "servicePrincipalId": {
+            "type": "string",
+            "metadata": {
+                "description": "Azure AD Application (Client) ID for SharePoint access"
+            }
+        },
+        "tenantId": {
+            "type": "string",
+            "metadata": {
+                "description": "Azure AD Tenant ID"
+            }
+        },
+        "keyVaultLinkedServiceName": {
+            "type": "string",
+            "defaultValue": "LS_AzureKeyVault",
+            "metadata": {
+                "description": "Name of the Key Vault linked service"
+            }
+        },
+        "clientSecretSecretName": {
+            "type": "string",
+            "defaultValue": "sharepoint-client-secret",
+            "metadata": {
+                "description": "Name of the secret in Key Vault containing the client secret"
+            }
+        }
+    },
+    "resources": [
+        {
+            "name": "[concat(parameters('factoryName'), '/LS_SharePointOnline_REST')]",
+            "type": "Microsoft.DataFactory/factories/linkedServices",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "description": "HTTP/REST linked service for SharePoint Online using OAuth2 Service Principal authentication. Used for file enumeration and metadata retrieval via SharePoint REST API.",
+                "annotations": [
+                    "sharepoint",
+                    "source",
+                    "hydro-one-migration",
+                    "rest-api"
+                ],
+                "type": "RestService",
+                "typeProperties": {
+                    "url": "[concat(parameters('sharePointTenantUrl'), '/_api')]",
+                    "enableServerCertificateValidation": true,
+                    "authenticationType": "AadServicePrincipal",
+                    "servicePrincipalId": "[parameters('servicePrincipalId')]",
+                    "servicePrincipalKey": {
+                        "type": "AzureKeyVaultSecret",
+                        "store": {
+                            "referenceName": "[parameters('keyVaultLinkedServiceName')]",
+                            "type": "LinkedServiceReference"
+                        },
+                        "secretName": "[parameters('clientSecretSecretName')]"
+                    },
+                    "tenant": "[parameters('tenantId')]",
+                    "aadResourceId": "[concat(parameters('sharePointTenantUrl'), '/')]",
+                    "azureCloudType": "AzurePublic"
+                },
+                "connectVia": {
+                    "referenceName": "AutoResolveIntegrationRuntime",
+                    "type": "IntegrationRuntimeReference"
+                }
+            },
+            "dependsOn": []
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/LS_SharePointOnline_HTTP')]",
+            "type": "Microsoft.DataFactory/factories/linkedServices",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "description": "HTTP linked service for SharePoint Online file downloads. Uses Service Principal authentication for binary file retrieval.",
+                "annotations": [
+                    "sharepoint",
+                    "source",
+                    "hydro-one-migration",
+                    "file-download"
+                ],
+                "type": "HttpServer",
+                "typeProperties": {
+                    "url": "[parameters('sharePointTenantUrl')]",
+                    "enableServerCertificateValidation": true,
+                    "authenticationType": "Anonymous"
+                },
+                "connectVia": {
+                    "referenceName": "AutoResolveIntegrationRuntime",
+                    "type": "IntegrationRuntimeReference"
+                }
+            },
+            "dependsOn": []
+        }
+    ],
+    "outputs": {
+        "restLinkedServiceName": {
+            "type": "string",
+            "value": "LS_SharePointOnline_REST"
+        },
+        "httpLinkedServiceName": {
+            "type": "string",
+            "value": "LS_SharePointOnline_HTTP"
+        }
+    }
+}

@@ -1,0 +1,335 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "factoryName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the Azure Data Factory instance"
+            }
+        }
+    },
+    "resources": [
+        {
+            "name": "[concat(parameters('factoryName'), '/PL_Master_Migration_Orchestrator')]",
+            "type": "Microsoft.DataFactory/factories/pipelines",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "description": "Master orchestration pipeline for Hydro One SharePoint to ADLS migration. Reads from control table and iterates through SharePoint sites/libraries, invoking the child migration pipeline for each. Implements batch processing with configurable parallelism to manage SharePoint throttling.",
+                "activities": [
+                    {
+                        "name": "Lookup_PendingLibraries",
+                        "type": "Lookup",
+                        "dependsOn": [
+                            {
+                                "activity": "Set_BatchId",
+                                "dependencyConditions": [
+                                    "Succeeded"
+                                ]
+                            }
+                        ],
+                        "policy": {
+                            "timeout": "0.00:10:00",
+                            "retry": 3,
+                            "retryIntervalInSeconds": 30,
+                            "secureOutput": false,
+                            "secureInput": false
+                        },
+                        "userProperties": [],
+                        "typeProperties": {
+                            "source": {
+                                "type": "AzureSqlSource",
+                                "sqlReaderQuery": {
+                                    "value": "SELECT Id, SiteUrl, LibraryName, FileCount, TotalSizeBytes, RetryCount \nFROM dbo.MigrationControl \nWHERE Status IN ('Pending', 'Failed') \nAND (RetryCount < @{pipeline().parameters.MaxRetries} OR RetryCount IS NULL)\nORDER BY TotalSizeBytes ASC",
+                                    "type": "Expression"
+                                },
+                                "queryTimeout": "00:05:00",
+                                "partitionOption": "None"
+                            },
+                            "dataset": {
+                                "referenceName": "DS_SQL_MigrationControl",
+                                "type": "DatasetReference",
+                                "parameters": {
+                                    "SchemaName": "dbo",
+                                    "TableName": "MigrationControl"
+                                }
+                            },
+                            "firstRowOnly": false
+                        }
+                    },
+                    {
+                        "name": "ForEach_Library",
+                        "type": "ForEach",
+                        "dependsOn": [
+                            {
+                                "activity": "Filter_BatchSize",
+                                "dependencyConditions": [
+                                    "Succeeded"
+                                ]
+                            }
+                        ],
+                        "userProperties": [],
+                        "typeProperties": {
+                            "items": {
+                                "value": "@activity('Filter_BatchSize').output.value",
+                                "type": "Expression"
+                            },
+                            "isSequential": false,
+                            "batchCount": {
+                                "value": "@pipeline().parameters.ParallelLibraries",
+                                "type": "Expression"
+                            },
+                            "activities": [
+                                {
+                                    "name": "Execute_MigrateSingleLibrary",
+                                    "type": "ExecutePipeline",
+                                    "dependsOn": [],
+                                    "policy": {
+                                        "secureInput": false
+                                    },
+                                    "userProperties": [],
+                                    "typeProperties": {
+                                        "pipeline": {
+                                            "referenceName": "PL_Migrate_Single_Library",
+                                            "type": "PipelineReference"
+                                        },
+                                        "waitOnCompletion": true,
+                                        "parameters": {
+                                            "SiteUrl": {
+                                                "value": "@item().SiteUrl",
+                                                "type": "Expression"
+                                            },
+                                            "LibraryName": {
+                                                "value": "@item().LibraryName",
+                                                "type": "Expression"
+                                            },
+                                            "ControlTableId": {
+                                                "value": "@item().Id",
+                                                "type": "Expression"
+                                            },
+                                            "BatchId": {
+                                                "value": "@variables('BatchId')",
+                                                "type": "Expression"
+                                            },
+                                            "ContainerName": {
+                                                "value": "@pipeline().parameters.TargetContainerName",
+                                                "type": "Expression"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "Set_BatchId",
+                        "type": "SetVariable",
+                        "dependsOn": [],
+                        "policy": {
+                            "secureOutput": false,
+                            "secureInput": false
+                        },
+                        "userProperties": [],
+                        "typeProperties": {
+                            "variableName": "BatchId",
+                            "value": {
+                                "value": "@concat('BATCH-', formatDateTime(utcNow(), 'yyyyMMdd-HHmmss'))",
+                                "type": "Expression"
+                            }
+                        }
+                    },
+                    {
+                        "name": "Filter_BatchSize",
+                        "type": "Filter",
+                        "dependsOn": [
+                            {
+                                "activity": "Lookup_PendingLibraries",
+                                "dependencyConditions": [
+                                    "Succeeded"
+                                ]
+                            }
+                        ],
+                        "userProperties": [],
+                        "typeProperties": {
+                            "items": {
+                                "value": "@activity('Lookup_PendingLibraries').output.value",
+                                "type": "Expression"
+                            },
+                            "condition": {
+                                "value": "@lessOrEquals(indexOf(activity('Lookup_PendingLibraries').output.value, item()), sub(pipeline().parameters.BatchSize, 1))",
+                                "type": "Expression"
+                            }
+                        }
+                    },
+                    {
+                        "name": "Log_BatchStart",
+                        "type": "SqlServerStoredProcedure",
+                        "dependsOn": [
+                            {
+                                "activity": "Set_BatchId",
+                                "dependencyConditions": [
+                                    "Succeeded"
+                                ]
+                            }
+                        ],
+                        "policy": {
+                            "timeout": "0.00:05:00",
+                            "retry": 2,
+                            "retryIntervalInSeconds": 30,
+                            "secureOutput": false,
+                            "secureInput": false
+                        },
+                        "userProperties": [],
+                        "typeProperties": {
+                            "storedProcedureName": "[dbo].[usp_LogBatchStart]",
+                            "storedProcedureParameters": {
+                                "BatchId": {
+                                    "value": {
+                                        "value": "@variables('BatchId')",
+                                        "type": "Expression"
+                                    },
+                                    "type": "String"
+                                },
+                                "PipelineRunId": {
+                                    "value": {
+                                        "value": "@pipeline().RunId",
+                                        "type": "Expression"
+                                    },
+                                    "type": "String"
+                                },
+                                "StartTime": {
+                                    "value": {
+                                        "value": "@utcNow()",
+                                        "type": "Expression"
+                                    },
+                                    "type": "DateTime"
+                                }
+                            }
+                        },
+                        "linkedServiceName": {
+                            "referenceName": "LS_AzureSqlDatabase",
+                            "type": "LinkedServiceReference"
+                        }
+                    },
+                    {
+                        "name": "Log_BatchComplete",
+                        "type": "SqlServerStoredProcedure",
+                        "dependsOn": [
+                            {
+                                "activity": "ForEach_Library",
+                                "dependencyConditions": [
+                                    "Succeeded"
+                                ]
+                            }
+                        ],
+                        "policy": {
+                            "timeout": "0.00:05:00",
+                            "retry": 2,
+                            "retryIntervalInSeconds": 30,
+                            "secureOutput": false,
+                            "secureInput": false
+                        },
+                        "userProperties": [],
+                        "typeProperties": {
+                            "storedProcedureName": "[dbo].[usp_LogBatchComplete]",
+                            "storedProcedureParameters": {
+                                "BatchId": {
+                                    "value": {
+                                        "value": "@variables('BatchId')",
+                                        "type": "Expression"
+                                    },
+                                    "type": "String"
+                                },
+                                "Status": {
+                                    "value": "Completed",
+                                    "type": "String"
+                                },
+                                "EndTime": {
+                                    "value": {
+                                        "value": "@utcNow()",
+                                        "type": "Expression"
+                                    },
+                                    "type": "DateTime"
+                                }
+                            }
+                        },
+                        "linkedServiceName": {
+                            "referenceName": "LS_AzureSqlDatabase",
+                            "type": "LinkedServiceReference"
+                        }
+                    },
+                    {
+                        "name": "If_NoLibrariesToProcess",
+                        "type": "IfCondition",
+                        "dependsOn": [
+                            {
+                                "activity": "Lookup_PendingLibraries",
+                                "dependencyConditions": [
+                                    "Succeeded"
+                                ]
+                            }
+                        ],
+                        "userProperties": [],
+                        "typeProperties": {
+                            "expression": {
+                                "value": "@equals(activity('Lookup_PendingLibraries').output.count, 0)",
+                                "type": "Expression"
+                            },
+                            "ifTrueActivities": [
+                                {
+                                    "name": "Log_NoWork",
+                                    "type": "SetVariable",
+                                    "dependsOn": [],
+                                    "policy": {
+                                        "secureOutput": false,
+                                        "secureInput": false
+                                    },
+                                    "userProperties": [],
+                                    "typeProperties": {
+                                        "variableName": "NoWorkMessage",
+                                        "value": "No pending libraries found in control table. All migrations complete or maximum retries exceeded."
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "parameters": {
+                    "BatchSize": {
+                        "type": "int",
+                        "defaultValue": 10
+                    },
+                    "ParallelLibraries": {
+                        "type": "int",
+                        "defaultValue": 4
+                    },
+                    "MaxRetries": {
+                        "type": "int",
+                        "defaultValue": 3
+                    },
+                    "TargetContainerName": {
+                        "type": "string",
+                        "defaultValue": "sharepoint-migration"
+                    }
+                },
+                "variables": {
+                    "BatchId": {
+                        "type": "String"
+                    },
+                    "NoWorkMessage": {
+                        "type": "String"
+                    }
+                },
+                "annotations": [
+                    "master-pipeline",
+                    "orchestrator",
+                    "hydro-one-migration",
+                    "sharepoint-to-adls"
+                ],
+                "folder": {
+                    "name": "SharePoint Migration"
+                }
+            }
+        }
+    ]
+}

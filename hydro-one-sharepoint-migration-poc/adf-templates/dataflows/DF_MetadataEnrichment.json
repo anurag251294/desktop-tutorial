@@ -1,0 +1,77 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "factoryName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the Azure Data Factory instance"
+            }
+        }
+    },
+    "resources": [
+        {
+            "name": "[concat(parameters('factoryName'), '/DF_MetadataEnrichment')]",
+            "type": "Microsoft.DataFactory/factories/dataflows",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "description": "Mapping data flow for metadata transformation and enrichment. Processes SharePoint file metadata, adds migration tracking fields, categorizes files by type and size, and prepares data for audit reporting.",
+                "type": "MappingDataFlow",
+                "typeProperties": {
+                    "sources": [
+                        {
+                            "dataset": {
+                                "referenceName": "DS_SQL_AuditLog",
+                                "type": "DatasetReference"
+                            },
+                            "name": "AuditLogSource",
+                            "description": "Read from migration audit log table"
+                        }
+                    ],
+                    "sinks": [
+                        {
+                            "dataset": {
+                                "referenceName": "DS_ADLS_Parquet_Metadata",
+                                "type": "DatasetReference"
+                            },
+                            "name": "EnrichedMetadataSink",
+                            "description": "Write enriched metadata to ADLS as Parquet"
+                        }
+                    ],
+                    "transformations": [
+                        {
+                            "name": "DeriveFileCategory",
+                            "description": "Categorize files by extension"
+                        },
+                        {
+                            "name": "DeriveSizeCategory",
+                            "description": "Categorize files by size (Small, Medium, Large, XLarge)"
+                        },
+                        {
+                            "name": "ExtractPathComponents",
+                            "description": "Extract site, library, and folder path from source path"
+                        },
+                        {
+                            "name": "AddMigrationMetrics",
+                            "description": "Add migration tracking metrics and timestamps"
+                        },
+                        {
+                            "name": "FilterSuccessful",
+                            "description": "Filter to only successfully migrated files"
+                        }
+                    ],
+                    "script": "source(output(\n        Id as long,\n        FileName as string,\n        SourcePath as string,\n        DestinationPath as string,\n        FileSizeBytes as long,\n        Checksum as string,\n        MigrationStatus as string,\n        Timestamp as timestamp,\n        ErrorDetails as string,\n        PipelineRunId as string\n    ),\n    allowSchemaDrift: true,\n    validateSchema: false,\n    isolationLevel: 'READ_UNCOMMITTED',\n    format: 'table') ~> AuditLogSource\nAuditLogSource filter(MigrationStatus == 'Success' || MigrationStatus == 'IncrementalSync') ~> FilterSuccessful\nFilterSuccessful derive(FileExtension = lower(right(FileName, length(FileName) - instr(FileName, '.', length(FileName) - 5))),\n        FileCategory = case(\n            endsWith(lower(FileName), '.pdf') || endsWith(lower(FileName), '.doc') || endsWith(lower(FileName), '.docx') || endsWith(lower(FileName), '.txt'), 'Document',\n            endsWith(lower(FileName), '.xls') || endsWith(lower(FileName), '.xlsx') || endsWith(lower(FileName), '.csv'), 'Spreadsheet',\n            endsWith(lower(FileName), '.ppt') || endsWith(lower(FileName), '.pptx'), 'Presentation',\n            endsWith(lower(FileName), '.jpg') || endsWith(lower(FileName), '.jpeg') || endsWith(lower(FileName), '.png') || endsWith(lower(FileName), '.gif') || endsWith(lower(FileName), '.bmp'), 'Image',\n            endsWith(lower(FileName), '.mp4') || endsWith(lower(FileName), '.avi') || endsWith(lower(FileName), '.mov') || endsWith(lower(FileName), '.wmv'), 'Video',\n            endsWith(lower(FileName), '.mp3') || endsWith(lower(FileName), '.wav'), 'Audio',\n            endsWith(lower(FileName), '.zip') || endsWith(lower(FileName), '.rar') || endsWith(lower(FileName), '.7z'), 'Archive',\n            'Other'\n        )) ~> DeriveFileCategory\nDeriveFileCategory derive(SizeCategory = case(\n            FileSizeBytes < 1048576, 'Small (<1MB)',\n            FileSizeBytes < 10485760, 'Medium (1-10MB)',\n            FileSizeBytes < 104857600, 'Large (10-100MB)',\n            'XLarge (>100MB)'\n        ),\n        FileSizeMB = round(FileSizeBytes / 1048576.0, 2)) ~> DeriveSizeCategory\nDeriveSizeCategory derive(SiteName = substring(SourcePath, 8, iif(instr(SourcePath, '/', 8) > 0, instr(SourcePath, '/', 8) - 8, length(SourcePath) - 8)),\n        LibraryName = substring(SourcePath, iif(instr(SourcePath, '/', 8) > 0, instr(SourcePath, '/', 8) + 1, 0), 50),\n        FolderDepth = length(SourcePath) - length(replace(SourcePath, '/', ''))) ~> ExtractPathComponents\nExtractPathComponents derive(MigrationDate = toDate(Timestamp),\n        MigrationHour = hour(Timestamp),\n        DayOfWeek = dayOfWeek(Timestamp),\n        IsWeekend = dayOfWeek(Timestamp) == 1 || dayOfWeek(Timestamp) == 7,\n        ProcessingTimestamp = currentTimestamp()) ~> AddMigrationMetrics\nAddMigrationMetrics sink(allowSchemaDrift: true,\n    validateSchema: false,\n    format: 'parquet',\n    partitionFileNames:['enriched-metadata.parquet'],\n    umask: 0022,\n    preCommands: [],\n    postCommands: [],\n    skipDuplicateMapInputs: true,\n    skipDuplicateMapOutputs: true,\n    partitionBy('key',\n        0,\n        MigrationDate\n    )) ~> EnrichedMetadataSink"
+                },
+                "annotations": [
+                    "metadata-enrichment",
+                    "data-flow",
+                    "reporting",
+                    "hydro-one-migration"
+                ],
+                "folder": {
+                    "name": "SharePoint Migration"
+                }
+            }
+        }
+    ]
+}

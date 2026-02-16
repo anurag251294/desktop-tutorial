@@ -1,0 +1,56 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "factoryName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the Azure Data Factory instance"
+            }
+        },
+        "sqlServerName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the Azure SQL Server"
+            }
+        },
+        "sqlDatabaseName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the Azure SQL Database"
+            }
+        }
+    },
+    "resources": [
+        {
+            "name": "[concat(parameters('factoryName'), '/LS_AzureSqlDatabase')]",
+            "type": "Microsoft.DataFactory/factories/linkedServices",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "description": "Azure SQL Database linked service for migration control table and audit logging. Uses Managed Identity authentication.",
+                "annotations": [
+                    "sql",
+                    "control-table",
+                    "audit-log",
+                    "hydro-one-migration",
+                    "managed-identity"
+                ],
+                "type": "AzureSqlDatabase",
+                "typeProperties": {
+                    "connectionString": "[concat('Server=tcp:', parameters('sqlServerName'), '.database.windows.net,1433;Initial Catalog=', parameters('sqlDatabaseName'), ';')]",
+                    "authenticationType": "ManagedIdentity"
+                },
+                "connectVia": {
+                    "referenceName": "AutoResolveIntegrationRuntime",
+                    "type": "IntegrationRuntimeReference"
+                }
+            }
+        }
+    ],
+    "outputs": {
+        "linkedServiceName": {
+            "type": "string",
+            "value": "LS_AzureSqlDatabase"
+        }
+    }
+}

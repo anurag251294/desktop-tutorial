@@ -1,0 +1,51 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "factoryName": {
+            "value": "adf-hydroone-migration-prod"
+        },
+        "location": {
+            "value": "canadacentral"
+        },
+        "sharePointTenantUrl": {
+            "value": "https://hydroone.sharepoint.com"
+        },
+        "servicePrincipalId": {
+            "value": "<INSERT-APP-CLIENT-ID>"
+        },
+        "tenantId": {
+            "value": "<INSERT-TENANT-ID>"
+        },
+        "keyVaultName": {
+            "value": "kv-hydroone-mig-prod"
+        },
+        "storageAccountName": {
+            "value": "sthydroonemigprod"
+        },
+        "sqlServerName": {
+            "value": "sql-hydroone-migration-prod"
+        },
+        "sqlDatabaseName": {
+            "value": "MigrationControl"
+        },
+        "clientSecretSecretName": {
+            "value": "sharepoint-client-secret"
+        },
+        "incrementalSyncStartTime": {
+            "value": "2024-01-01T07:00:00Z"
+        }
+    },
+    "metadata": {
+        "environment": "prod",
+        "description": "Production environment parameters for Hydro One SharePoint Migration",
+        "lastUpdated": "2024-01-01",
+        "updatedBy": "PwC Azure Team",
+        "notes": [
+            "Ensure all placeholder values are replaced before deployment",
+            "servicePrincipalId: Azure AD App Registration Client ID",
+            "tenantId: Azure AD Tenant ID (Hydro One tenant)",
+            "Verify Key Vault access policies before deployment"
+        ]
+    }
+}

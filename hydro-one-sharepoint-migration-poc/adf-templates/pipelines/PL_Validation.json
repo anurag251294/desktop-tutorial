@@ -1,0 +1,412 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "factoryName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the Azure Data Factory instance"
+            }
+        }
+    },
+    "resources": [
+        {
+            "name": "[concat(parameters('factoryName'), '/PL_Validation')]",
+            "type": "Microsoft.DataFactory/factories/pipelines",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "description": "Post-migration validation pipeline. Compares file counts and sizes between SharePoint source and ADLS destination for each migrated library. Generates validation report and flags discrepancies.",
+                "activities": [
+                    {
+                        "name": "Lookup_CompletedLibraries",
+                        "type": "Lookup",
+                        "dependsOn": [],
+                        "policy": {
+                            "timeout": "0.00:10:00",
+                            "retry": 3,
+                            "retryIntervalInSeconds": 30,
+                            "secureOutput": false,
+                            "secureInput": false
+                        },
+                        "userProperties": [],
+                        "typeProperties": {
+                            "source": {
+                                "type": "AzureSqlSource",
+                                "sqlReaderQuery": {
+                                    "value": "SELECT Id, SiteUrl, LibraryName, FileCount AS ExpectedFileCount, TotalSizeBytes AS ExpectedSizeBytes\nFROM dbo.MigrationControl\nWHERE Status = 'Completed'\nAND (@{pipeline().parameters.ValidateAll} = 1 OR ValidationStatus IS NULL OR ValidationStatus = 'Pending')",
+                                    "type": "Expression"
+                                },
+                                "queryTimeout": "00:05:00",
+                                "partitionOption": "None"
+                            },
+                            "dataset": {
+                                "referenceName": "DS_SQL_MigrationControl",
+                                "type": "DatasetReference",
+                                "parameters": {
+                                    "SchemaName": "dbo",
+                                    "TableName": "MigrationControl"
+                                }
+                            },
+                            "firstRowOnly": false
+                        }
+                    },
+                    {
+                        "name": "ForEach_ValidateLibrary",
+                        "type": "ForEach",
+                        "dependsOn": [
+                            {
+                                "activity": "Lookup_CompletedLibraries",
+                                "dependencyConditions": [
+                                    "Succeeded"
+                                ]
+                            }
+                        ],
+                        "userProperties": [],
+                        "typeProperties": {
+                            "items": {
+                                "value": "@activity('Lookup_CompletedLibraries').output.value",
+                                "type": "Expression"
+                            },
+                            "isSequential": false,
+                            "batchCount": 5,
+                            "activities": [
+                                {
+                                    "name": "Get_SourceFileCount",
+                                    "type": "WebActivity",
+                                    "dependsOn": [],
+                                    "policy": {
+                                        "timeout": "0.00:10:00",
+                                        "retry": 3,
+                                        "retryIntervalInSeconds": 60,
+                                        "secureOutput": false,
+                                        "secureInput": false
+                                    },
+                                    "userProperties": [],
+                                    "typeProperties": {
+                                        "method": "GET",
+                                        "headers": {
+                                            "Accept": "application/json;odata=verbose"
+                                        },
+                                        "url": {
+                                            "value": "@concat(pipeline().parameters.SharePointTenantUrl, item().SiteUrl, '/_api/web/lists/getbytitle(''', item().LibraryName, ''')/ItemCount')",
+                                            "type": "Expression"
+                                        },
+                                        "authentication": {
+                                            "type": "MSI",
+                                            "resource": {
+                                                "value": "@concat(pipeline().parameters.SharePointTenantUrl, '/')",
+                                                "type": "Expression"
+                                            }
+                                        }
+                                    }
+                                },
+                                {
+                                    "name": "Lookup_DestinationFileCount",
+                                    "type": "Lookup",
+                                    "dependsOn": [],
+                                    "policy": {
+                                        "timeout": "0.00:10:00",
+                                        "retry": 3,
+                                        "retryIntervalInSeconds": 30,
+                                        "secureOutput": false,
+                                        "secureInput": false
+                                    },
+                                    "userProperties": [],
+                                    "typeProperties": {
+                                        "source": {
+                                            "type": "AzureSqlSource",
+                                            "sqlReaderQuery": {
+                                                "value": "SELECT \n    COUNT(*) AS ActualFileCount,\n    SUM(FileSizeBytes) AS ActualSizeBytes,\n    SUM(CASE WHEN MigrationStatus = 'Success' THEN 1 ELSE 0 END) AS SuccessCount,\n    SUM(CASE WHEN MigrationStatus = 'Failed' THEN 1 ELSE 0 END) AS FailedCount\nFROM dbo.MigrationAuditLog\nWHERE SourcePath LIKE '@{item().SiteUrl}/@{item().LibraryName}%'",
+                                                "type": "Expression"
+                                            },
+                                            "queryTimeout": "00:05:00",
+                                            "partitionOption": "None"
+                                        },
+                                        "dataset": {
+                                            "referenceName": "DS_SQL_AuditLog",
+                                            "type": "DatasetReference",
+                                            "parameters": {
+                                                "SchemaName": "dbo",
+                                                "TableName": "MigrationAuditLog"
+                                            }
+                                        },
+                                        "firstRowOnly": true
+                                    }
+                                },
+                                {
+                                    "name": "Compare_And_Log",
+                                    "type": "SqlServerStoredProcedure",
+                                    "dependsOn": [
+                                        {
+                                            "activity": "Get_SourceFileCount",
+                                            "dependencyConditions": [
+                                                "Succeeded"
+                                            ]
+                                        },
+                                        {
+                                            "activity": "Lookup_DestinationFileCount",
+                                            "dependencyConditions": [
+                                                "Succeeded"
+                                            ]
+                                        }
+                                    ],
+                                    "policy": {
+                                        "timeout": "0.00:05:00",
+                                        "retry": 2,
+                                        "retryIntervalInSeconds": 30,
+                                        "secureOutput": false,
+                                        "secureInput": false
+                                    },
+                                    "userProperties": [],
+                                    "typeProperties": {
+                                        "storedProcedureName": "[dbo].[usp_LogValidationResult]",
+                                        "storedProcedureParameters": {
+                                            "ControlTableId": {
+                                                "value": {
+                                                    "value": "@item().Id",
+                                                    "type": "Expression"
+                                                },
+                                                "type": "Int32"
+                                            },
+                                            "ExpectedFileCount": {
+                                                "value": {
+                                                    "value": "@activity('Get_SourceFileCount').output.d.ItemCount",
+                                                    "type": "Expression"
+                                                },
+                                                "type": "Int32"
+                                            },
+                                            "ActualFileCount": {
+                                                "value": {
+                                                    "value": "@activity('Lookup_DestinationFileCount').output.firstRow.ActualFileCount",
+                                                    "type": "Expression"
+                                                },
+                                                "type": "Int32"
+                                            },
+                                            "SuccessCount": {
+                                                "value": {
+                                                    "value": "@activity('Lookup_DestinationFileCount').output.firstRow.SuccessCount",
+                                                    "type": "Expression"
+                                                },
+                                                "type": "Int32"
+                                            },
+                                            "FailedCount": {
+                                                "value": {
+                                                    "value": "@activity('Lookup_DestinationFileCount').output.firstRow.FailedCount",
+                                                    "type": "Expression"
+                                                },
+                                                "type": "Int32"
+                                            },
+                                            "ValidationTimestamp": {
+                                                "value": {
+                                                    "value": "@utcNow()",
+                                                    "type": "Expression"
+                                                },
+                                                "type": "DateTime"
+                                            },
+                                            "PipelineRunId": {
+                                                "value": {
+                                                    "value": "@pipeline().RunId",
+                                                    "type": "Expression"
+                                                },
+                                                "type": "String"
+                                            }
+                                        }
+                                    },
+                                    "linkedServiceName": {
+                                        "referenceName": "LS_AzureSqlDatabase",
+                                        "type": "LinkedServiceReference"
+                                    }
+                                },
+                                {
+                                    "name": "If_Discrepancy",
+                                    "type": "IfCondition",
+                                    "dependsOn": [
+                                        {
+                                            "activity": "Compare_And_Log",
+                                            "dependencyConditions": [
+                                                "Succeeded"
+                                            ]
+                                        }
+                                    ],
+                                    "userProperties": [],
+                                    "typeProperties": {
+                                        "expression": {
+                                            "value": "@or(greater(activity('Lookup_DestinationFileCount').output.firstRow.FailedCount, 0), not(equals(activity('Get_SourceFileCount').output.d.ItemCount, activity('Lookup_DestinationFileCount').output.firstRow.SuccessCount)))",
+                                            "type": "Expression"
+                                        },
+                                        "ifTrueActivities": [
+                                            {
+                                                "name": "Flag_Discrepancy",
+                                                "type": "SqlServerStoredProcedure",
+                                                "dependsOn": [],
+                                                "policy": {
+                                                    "timeout": "0.00:05:00",
+                                                    "retry": 2,
+                                                    "retryIntervalInSeconds": 30,
+                                                    "secureOutput": false,
+                                                    "secureInput": false
+                                                },
+                                                "userProperties": [],
+                                                "typeProperties": {
+                                                    "storedProcedureName": "[dbo].[usp_UpdateValidationStatus]",
+                                                    "storedProcedureParameters": {
+                                                        "Id": {
+                                                            "value": {
+                                                                "value": "@item().Id",
+                                                                "type": "Expression"
+                                                            },
+                                                            "type": "Int32"
+                                                        },
+                                                        "ValidationStatus": {
+                                                            "value": "Discrepancy",
+                                                            "type": "String"
+                                                        },
+                                                        "DiscrepancyDetails": {
+                                                            "value": {
+                                                                "value": "@concat('Expected: ', string(activity('Get_SourceFileCount').output.d.ItemCount), ', Actual Success: ', string(activity('Lookup_DestinationFileCount').output.firstRow.SuccessCount), ', Failed: ', string(activity('Lookup_DestinationFileCount').output.firstRow.FailedCount))",
+                                                                "type": "Expression"
+                                                            },
+                                                            "type": "String"
+                                                        }
+                                                    }
+                                                },
+                                                "linkedServiceName": {
+                                                    "referenceName": "LS_AzureSqlDatabase",
+                                                    "type": "LinkedServiceReference"
+                                                }
+                                            }
+                                        ],
+                                        "ifFalseActivities": [
+                                            {
+                                                "name": "Mark_Validated",
+                                                "type": "SqlServerStoredProcedure",
+                                                "dependsOn": [],
+                                                "policy": {
+                                                    "timeout": "0.00:05:00",
+                                                    "retry": 2,
+                                                    "retryIntervalInSeconds": 30,
+                                                    "secureOutput": false,
+                                                    "secureInput": false
+                                                },
+                                                "userProperties": [],
+                                                "typeProperties": {
+                                                    "storedProcedureName": "[dbo].[usp_UpdateValidationStatus]",
+                                                    "storedProcedureParameters": {
+                                                        "Id": {
+                                                            "value": {
+                                                                "value": "@item().Id",
+                                                                "type": "Expression"
+                                                            },
+                                                            "type": "Int32"
+                                                        },
+                                                        "ValidationStatus": {
+                                                            "value": "Validated",
+                                                            "type": "String"
+                                                        },
+                                                        "DiscrepancyDetails": {
+                                                            "value": null,
+                                                            "type": "String"
+                                                        }
+                                                    }
+                                                },
+                                                "linkedServiceName": {
+                                                    "referenceName": "LS_AzureSqlDatabase",
+                                                    "type": "LinkedServiceReference"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "Generate_ValidationReport",
+                        "type": "Lookup",
+                        "dependsOn": [
+                            {
+                                "activity": "ForEach_ValidateLibrary",
+                                "dependencyConditions": [
+                                    "Succeeded"
+                                ]
+                            }
+                        ],
+                        "policy": {
+                            "timeout": "0.00:10:00",
+                            "retry": 2,
+                            "retryIntervalInSeconds": 30,
+                            "secureOutput": false,
+                            "secureInput": false
+                        },
+                        "userProperties": [],
+                        "typeProperties": {
+                            "source": {
+                                "type": "AzureSqlSource",
+                                "sqlReaderQuery": "SELECT \n    SUM(CASE WHEN ValidationStatus = 'Validated' THEN 1 ELSE 0 END) AS ValidatedCount,\n    SUM(CASE WHEN ValidationStatus = 'Discrepancy' THEN 1 ELSE 0 END) AS DiscrepancyCount,\n    SUM(CASE WHEN ValidationStatus IS NULL OR ValidationStatus = 'Pending' THEN 1 ELSE 0 END) AS PendingCount,\n    COUNT(*) AS TotalLibraries\nFROM dbo.MigrationControl\nWHERE Status = 'Completed'",
+                                "queryTimeout": "00:05:00",
+                                "partitionOption": "None"
+                            },
+                            "dataset": {
+                                "referenceName": "DS_SQL_MigrationControl",
+                                "type": "DatasetReference",
+                                "parameters": {
+                                    "SchemaName": "dbo",
+                                    "TableName": "MigrationControl"
+                                }
+                            },
+                            "firstRowOnly": true
+                        }
+                    },
+                    {
+                        "name": "Set_ValidationSummary",
+                        "type": "SetVariable",
+                        "dependsOn": [
+                            {
+                                "activity": "Generate_ValidationReport",
+                                "dependencyConditions": [
+                                    "Succeeded"
+                                ]
+                            }
+                        ],
+                        "policy": {
+                            "secureOutput": false,
+                            "secureInput": false
+                        },
+                        "userProperties": [],
+                        "typeProperties": {
+                            "variableName": "ValidationSummary",
+                            "value": {
+                                "value": "@concat('Validation Complete - Validated: ', string(activity('Generate_ValidationReport').output.firstRow.ValidatedCount), ', Discrepancies: ', string(activity('Generate_ValidationReport').output.firstRow.DiscrepancyCount), ', Pending: ', string(activity('Generate_ValidationReport').output.firstRow.PendingCount))",
+                                "type": "Expression"
+                            }
+                        }
+                    }
+                ],
+                "parameters": {
+                    "SharePointTenantUrl": {
+                        "type": "string",
+                        "defaultValue": "https://hydroone.sharepoint.com"
+                    },
+                    "ValidateAll": {
+                        "type": "bool",
+                        "defaultValue": false
+                    }
+                },
+                "variables": {
+                    "ValidationSummary": {
+                        "type": "String"
+                    }
+                },
+                "annotations": [
+                    "validation",
+                    "post-migration",
+                    "hydro-one-migration",
+                    "reconciliation"
+                ],
+                "folder": {
+                    "name": "SharePoint Migration"
+                }
+            }
+        }
+    ]
+}

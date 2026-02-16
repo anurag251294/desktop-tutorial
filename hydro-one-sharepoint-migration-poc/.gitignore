@@ -1,0 +1,73 @@
+# Azure Data Factory
+*.bak
+publish_config.json
+adf_publish/
+
+# Environment-specific secrets (never commit)
+*.local.json
+*secrets*.json
+credentials/
+.env
+.env.*
+
+# PowerShell
+*.log
+*.transcript
+
+# Visual Studio / VS Code
+.vs/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build artifacts
+bin/
+obj/
+out/
+build/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# IDE
+*.swp
+*.swo
+*~
+.idea/
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Test results
+TestResults/
+coverage/
+
+# Sensitive configuration (use parameters files instead)
+local.settings.json
+appsettings.Development.json
+
+# Backup files
+*.backup
+*.bkp
+
+# ARM template outputs (contain sensitive info)
+arm-output*.json
+deployment-output*.json
+/claude/*

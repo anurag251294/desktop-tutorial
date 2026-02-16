@@ -1,0 +1,176 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "factoryName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the Azure Data Factory instance"
+            }
+        }
+    },
+    "resources": [
+        {
+            "name": "[concat(parameters('factoryName'), '/DS_ADLS_Binary_Sink')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "description": "Binary dataset for storing migrated files in ADLS Gen2. Preserves original folder structure from SharePoint.",
+                "linkedServiceName": {
+                    "referenceName": "LS_ADLS_Gen2",
+                    "type": "LinkedServiceReference"
+                },
+                "annotations": [
+                    "adls",
+                    "sink",
+                    "binary",
+                    "hydro-one-migration"
+                ],
+                "parameters": {
+                    "ContainerName": {
+                        "type": "string",
+                        "defaultValue": "sharepoint-migration",
+                        "description": "ADLS container name"
+                    },
+                    "SiteName": {
+                        "type": "string",
+                        "description": "SharePoint site name (used for folder hierarchy)"
+                    },
+                    "LibraryName": {
+                        "type": "string",
+                        "description": "Document library name"
+                    },
+                    "FolderPath": {
+                        "type": "string",
+                        "defaultValue": "",
+                        "description": "Subfolder path within the library"
+                    },
+                    "FileName": {
+                        "type": "string",
+                        "description": "Target file name"
+                    }
+                },
+                "type": "Binary",
+                "typeProperties": {
+                    "location": {
+                        "type": "AzureBlobFSLocation",
+                        "fileName": {
+                            "value": "@dataset().FileName",
+                            "type": "Expression"
+                        },
+                        "folderPath": {
+                            "value": "@concat(dataset().SiteName, '/', dataset().LibraryName, if(empty(dataset().FolderPath), '', concat('/', dataset().FolderPath)))",
+                            "type": "Expression"
+                        },
+                        "fileSystem": {
+                            "value": "@dataset().ContainerName",
+                            "type": "Expression"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/DS_ADLS_Parquet_Metadata')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "description": "Parquet dataset for storing file metadata and audit information in ADLS Gen2.",
+                "linkedServiceName": {
+                    "referenceName": "LS_ADLS_Gen2",
+                    "type": "LinkedServiceReference"
+                },
+                "annotations": [
+                    "adls",
+                    "metadata",
+                    "parquet",
+                    "hydro-one-migration"
+                ],
+                "parameters": {
+                    "ContainerName": {
+                        "type": "string",
+                        "defaultValue": "migration-metadata"
+                    },
+                    "FolderPath": {
+                        "type": "string",
+                        "defaultValue": "file-inventory"
+                    }
+                },
+                "type": "Parquet",
+                "typeProperties": {
+                    "location": {
+                        "type": "AzureBlobFSLocation",
+                        "folderPath": {
+                            "value": "@dataset().FolderPath",
+                            "type": "Expression"
+                        },
+                        "fileSystem": {
+                            "value": "@dataset().ContainerName",
+                            "type": "Expression"
+                        }
+                    },
+                    "compressionCodec": "snappy"
+                },
+                "schema": []
+            }
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/DS_ADLS_JSON_Manifest')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "description": "JSON dataset for storing migration manifest files with file listings and checksums.",
+                "linkedServiceName": {
+                    "referenceName": "LS_ADLS_Gen2",
+                    "type": "LinkedServiceReference"
+                },
+                "annotations": [
+                    "adls",
+                    "manifest",
+                    "json",
+                    "hydro-one-migration"
+                ],
+                "parameters": {
+                    "ContainerName": {
+                        "type": "string",
+                        "defaultValue": "migration-metadata"
+                    },
+                    "ManifestFileName": {
+                        "type": "string",
+                        "description": "Manifest file name"
+                    }
+                },
+                "type": "Json",
+                "typeProperties": {
+                    "location": {
+                        "type": "AzureBlobFSLocation",
+                        "fileName": {
+                            "value": "@dataset().ManifestFileName",
+                            "type": "Expression"
+                        },
+                        "folderPath": "manifests",
+                        "fileSystem": {
+                            "value": "@dataset().ContainerName",
+                            "type": "Expression"
+                        }
+                    }
+                },
+                "schema": []
+            }
+        }
+    ],
+    "outputs": {
+        "binarySinkDataset": {
+            "type": "string",
+            "value": "DS_ADLS_Binary_Sink"
+        },
+        "metadataDataset": {
+            "type": "string",
+            "value": "DS_ADLS_Parquet_Metadata"
+        },
+        "manifestDataset": {
+            "type": "string",
+            "value": "DS_ADLS_JSON_Manifest"
+        }
+    }
+}

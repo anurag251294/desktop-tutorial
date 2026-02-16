@@ -1,0 +1,251 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "factoryName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the Azure Data Factory instance"
+            }
+        }
+    },
+    "resources": [
+        {
+            "name": "[concat(parameters('factoryName'), '/DS_SQL_MigrationControl')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "description": "Dataset for the migration control table containing SharePoint sites and libraries to migrate with status tracking.",
+                "linkedServiceName": {
+                    "referenceName": "LS_AzureSqlDatabase",
+                    "type": "LinkedServiceReference"
+                },
+                "annotations": [
+                    "sql",
+                    "control-table",
+                    "migration-status",
+                    "hydro-one-migration"
+                ],
+                "parameters": {
+                    "SchemaName": {
+                        "type": "string",
+                        "defaultValue": "dbo"
+                    },
+                    "TableName": {
+                        "type": "string",
+                        "defaultValue": "MigrationControl"
+                    }
+                },
+                "type": "AzureSqlTable",
+                "typeProperties": {
+                    "schema": {
+                        "value": "@dataset().SchemaName",
+                        "type": "Expression"
+                    },
+                    "table": {
+                        "value": "@dataset().TableName",
+                        "type": "Expression"
+                    }
+                },
+                "schema": [
+                    {
+                        "name": "Id",
+                        "type": "int"
+                    },
+                    {
+                        "name": "SiteUrl",
+                        "type": "nvarchar"
+                    },
+                    {
+                        "name": "LibraryName",
+                        "type": "nvarchar"
+                    },
+                    {
+                        "name": "Status",
+                        "type": "nvarchar"
+                    },
+                    {
+                        "name": "FileCount",
+                        "type": "int"
+                    },
+                    {
+                        "name": "TotalSizeBytes",
+                        "type": "bigint"
+                    },
+                    {
+                        "name": "StartTime",
+                        "type": "datetime2"
+                    },
+                    {
+                        "name": "EndTime",
+                        "type": "datetime2"
+                    },
+                    {
+                        "name": "ErrorMessage",
+                        "type": "nvarchar"
+                    },
+                    {
+                        "name": "RetryCount",
+                        "type": "int"
+                    },
+                    {
+                        "name": "BatchId",
+                        "type": "nvarchar"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/DS_SQL_AuditLog')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "description": "Dataset for the per-file audit log tracking individual file migration status, checksums, and errors.",
+                "linkedServiceName": {
+                    "referenceName": "LS_AzureSqlDatabase",
+                    "type": "LinkedServiceReference"
+                },
+                "annotations": [
+                    "sql",
+                    "audit-log",
+                    "file-tracking",
+                    "hydro-one-migration"
+                ],
+                "parameters": {
+                    "SchemaName": {
+                        "type": "string",
+                        "defaultValue": "dbo"
+                    },
+                    "TableName": {
+                        "type": "string",
+                        "defaultValue": "MigrationAuditLog"
+                    }
+                },
+                "type": "AzureSqlTable",
+                "typeProperties": {
+                    "schema": {
+                        "value": "@dataset().SchemaName",
+                        "type": "Expression"
+                    },
+                    "table": {
+                        "value": "@dataset().TableName",
+                        "type": "Expression"
+                    }
+                },
+                "schema": [
+                    {
+                        "name": "Id",
+                        "type": "bigint"
+                    },
+                    {
+                        "name": "FileName",
+                        "type": "nvarchar"
+                    },
+                    {
+                        "name": "SourcePath",
+                        "type": "nvarchar"
+                    },
+                    {
+                        "name": "DestinationPath",
+                        "type": "nvarchar"
+                    },
+                    {
+                        "name": "FileSizeBytes",
+                        "type": "bigint"
+                    },
+                    {
+                        "name": "Checksum",
+                        "type": "nvarchar"
+                    },
+                    {
+                        "name": "MigrationStatus",
+                        "type": "nvarchar"
+                    },
+                    {
+                        "name": "Timestamp",
+                        "type": "datetime2"
+                    },
+                    {
+                        "name": "ErrorDetails",
+                        "type": "nvarchar"
+                    },
+                    {
+                        "name": "PipelineRunId",
+                        "type": "nvarchar"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/DS_SQL_IncrementalWatermark')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "description": "Dataset for storing high watermark values used in incremental/delta sync to track last processed modification date.",
+                "linkedServiceName": {
+                    "referenceName": "LS_AzureSqlDatabase",
+                    "type": "LinkedServiceReference"
+                },
+                "annotations": [
+                    "sql",
+                    "watermark",
+                    "incremental-sync",
+                    "hydro-one-migration"
+                ],
+                "parameters": {
+                    "SchemaName": {
+                        "type": "string",
+                        "defaultValue": "dbo"
+                    },
+                    "TableName": {
+                        "type": "string",
+                        "defaultValue": "IncrementalWatermark"
+                    }
+                },
+                "type": "AzureSqlTable",
+                "typeProperties": {
+                    "schema": {
+                        "value": "@dataset().SchemaName",
+                        "type": "Expression"
+                    },
+                    "table": {
+                        "value": "@dataset().TableName",
+                        "type": "Expression"
+                    }
+                },
+                "schema": [
+                    {
+                        "name": "SiteUrl",
+                        "type": "nvarchar"
+                    },
+                    {
+                        "name": "LibraryName",
+                        "type": "nvarchar"
+                    },
+                    {
+                        "name": "LastSyncTime",
+                        "type": "datetime2"
+                    },
+                    {
+                        "name": "LastModifiedDate",
+                        "type": "datetime2"
+                    }
+                ]
+            }
+        }
+    ],
+    "outputs": {
+        "controlTableDataset": {
+            "type": "string",
+            "value": "DS_SQL_MigrationControl"
+        },
+        "auditLogDataset": {
+            "type": "string",
+            "value": "DS_SQL_AuditLog"
+        },
+        "watermarkDataset": {
+            "type": "string",
+            "value": "DS_SQL_IncrementalWatermark"
+        }
+    }
+}

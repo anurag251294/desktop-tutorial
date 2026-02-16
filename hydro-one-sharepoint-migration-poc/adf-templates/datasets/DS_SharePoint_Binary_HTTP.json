@@ -1,0 +1,49 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "factoryName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the Azure Data Factory instance"
+            }
+        }
+    },
+    "resources": [
+        {
+            "name": "[concat(parameters('factoryName'), '/DS_SharePoint_Binary_HTTP')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "description": "Binary dataset for downloading files from SharePoint via HTTP. Uses the HTTP linked service with OAuth bearer token authentication.",
+                "linkedServiceName": {
+                    "referenceName": "LS_SharePointOnline_HTTP",
+                    "type": "LinkedServiceReference",
+                    "parameters": {}
+                },
+                "annotations": [
+                    "sharepoint",
+                    "binary",
+                    "source",
+                    "hydro-one-migration"
+                ],
+                "parameters": {
+                    "FileUrl": {
+                        "type": "string",
+                        "description": "Full URL to the SharePoint file"
+                    }
+                },
+                "type": "Binary",
+                "typeProperties": {
+                    "location": {
+                        "type": "HttpServerLocation",
+                        "relativeUrl": {
+                            "value": "@dataset().FileUrl",
+                            "type": "Expression"
+                        }
+                    }
+                }
+            }
+        }
+    ]
+}

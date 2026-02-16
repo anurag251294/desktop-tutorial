@@ -1,0 +1,417 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "factoryName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the Azure Data Factory instance"
+            }
+        }
+    },
+    "resources": [
+        {
+            "name": "[concat(parameters('factoryName'), '/PL_Process_Subfolder')]",
+            "type": "Microsoft.DataFactory/factories/pipelines",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "description": "Recursive pipeline to process SharePoint subfolders. Gets files from the current folder, copies them to ADLS, and recursively calls itself for any nested subfolders.",
+                "activities": [
+                    {
+                        "name": "Get_FolderFiles",
+                        "type": "WebActivity",
+                        "dependsOn": [],
+                        "policy": {
+                            "timeout": "0.00:10:00",
+                            "retry": 3,
+                            "retryIntervalInSeconds": 60,
+                            "secureOutput": false,
+                            "secureInput": false
+                        },
+                        "userProperties": [],
+                        "typeProperties": {
+                            "method": "GET",
+                            "headers": {
+                                "Accept": "application/json;odata=verbose"
+                            },
+                            "url": {
+                                "value": "@concat(pipeline().parameters.SharePointTenantUrl, pipeline().parameters.SiteUrl, '/_api/web/GetFolderByServerRelativeUrl(''', pipeline().parameters.FolderServerRelativeUrl, ''')/Files?$select=Name,ServerRelativeUrl,Length,TimeLastModified,UniqueId&$top=5000')",
+                                "type": "Expression"
+                            },
+                            "authentication": {
+                                "type": "MSI",
+                                "resource": {
+                                    "value": "@concat(pipeline().parameters.SharePointTenantUrl, '/')",
+                                    "type": "Expression"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "name": "Get_Subfolders",
+                        "type": "WebActivity",
+                        "dependsOn": [],
+                        "policy": {
+                            "timeout": "0.00:10:00",
+                            "retry": 3,
+                            "retryIntervalInSeconds": 60,
+                            "secureOutput": false,
+                            "secureInput": false
+                        },
+                        "userProperties": [],
+                        "typeProperties": {
+                            "method": "GET",
+                            "headers": {
+                                "Accept": "application/json;odata=verbose"
+                            },
+                            "url": {
+                                "value": "@concat(pipeline().parameters.SharePointTenantUrl, pipeline().parameters.SiteUrl, '/_api/web/GetFolderByServerRelativeUrl(''', pipeline().parameters.FolderServerRelativeUrl, ''')/Folders?$select=Name,ServerRelativeUrl,ItemCount')",
+                                "type": "Expression"
+                            },
+                            "authentication": {
+                                "type": "MSI",
+                                "resource": {
+                                    "value": "@concat(pipeline().parameters.SharePointTenantUrl, '/')",
+                                    "type": "Expression"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "name": "ForEach_File",
+                        "type": "ForEach",
+                        "dependsOn": [
+                            {
+                                "activity": "Get_FolderFiles",
+                                "dependencyConditions": [
+                                    "Succeeded"
+                                ]
+                            }
+                        ],
+                        "userProperties": [],
+                        "typeProperties": {
+                            "items": {
+                                "value": "@activity('Get_FolderFiles').output.d.results",
+                                "type": "Expression"
+                            },
+                            "isSequential": false,
+                            "batchCount": 10,
+                            "activities": [
+                                {
+                                    "name": "Copy_File",
+                                    "type": "Copy",
+                                    "dependsOn": [],
+                                    "policy": {
+                                        "timeout": "0.00:30:00",
+                                        "retry": 3,
+                                        "retryIntervalInSeconds": 60,
+                                        "secureOutput": false,
+                                        "secureInput": false
+                                    },
+                                    "userProperties": [],
+                                    "typeProperties": {
+                                        "source": {
+                                            "type": "BinarySource",
+                                            "storeSettings": {
+                                                "type": "HttpReadSettings",
+                                                "requestMethod": "GET",
+                                                "additionalHeaders": {
+                                                    "value": "Accept: application/octet-stream",
+                                                    "type": "Expression"
+                                                },
+                                                "requestTimeout": "00:10:00"
+                                            },
+                                            "formatSettings": {
+                                                "type": "BinaryReadSettings"
+                                            }
+                                        },
+                                        "sink": {
+                                            "type": "BinarySink",
+                                            "storeSettings": {
+                                                "type": "AzureBlobFSWriteSettings"
+                                            }
+                                        },
+                                        "enableStaging": false
+                                    },
+                                    "inputs": [
+                                        {
+                                            "referenceName": "DS_SharePoint_Binary_HTTP",
+                                            "type": "DatasetReference",
+                                            "parameters": {
+                                                "FileUrl": {
+                                                    "value": "@concat(pipeline().parameters.SharePointTenantUrl, item().ServerRelativeUrl)",
+                                                    "type": "Expression"
+                                                }
+                                            }
+                                        }
+                                    ],
+                                    "outputs": [
+                                        {
+                                            "referenceName": "DS_ADLS_Binary_Sink",
+                                            "type": "DatasetReference",
+                                            "parameters": {
+                                                "ContainerName": {
+                                                    "value": "@pipeline().parameters.ContainerName",
+                                                    "type": "Expression"
+                                                },
+                                                "SiteName": {
+                                                    "value": "@replace(pipeline().parameters.SiteUrl, '/sites/', '')",
+                                                    "type": "Expression"
+                                                },
+                                                "LibraryName": {
+                                                    "value": "@pipeline().parameters.LibraryName",
+                                                    "type": "Expression"
+                                                },
+                                                "FolderPath": {
+                                                    "value": "@replace(replace(pipeline().parameters.FolderServerRelativeUrl, concat(pipeline().parameters.SiteUrl, '/', pipeline().parameters.LibraryName, '/'), ''), concat(pipeline().parameters.SiteUrl, '/', pipeline().parameters.LibraryName), '')",
+                                                    "type": "Expression"
+                                                },
+                                                "FileName": {
+                                                    "value": "@item().Name",
+                                                    "type": "Expression"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                },
+                                {
+                                    "name": "Log_Success",
+                                    "type": "SqlServerStoredProcedure",
+                                    "dependsOn": [
+                                        {
+                                            "activity": "Copy_File",
+                                            "dependencyConditions": [
+                                                "Succeeded"
+                                            ]
+                                        }
+                                    ],
+                                    "policy": {
+                                        "timeout": "0.00:05:00",
+                                        "retry": 2,
+                                        "retryIntervalInSeconds": 30,
+                                        "secureOutput": false,
+                                        "secureInput": false
+                                    },
+                                    "userProperties": [],
+                                    "typeProperties": {
+                                        "storedProcedureName": "[dbo].[usp_LogFileAudit]",
+                                        "storedProcedureParameters": {
+                                            "FileName": {
+                                                "value": {
+                                                    "value": "@item().Name",
+                                                    "type": "Expression"
+                                                },
+                                                "type": "String"
+                                            },
+                                            "SourcePath": {
+                                                "value": {
+                                                    "value": "@item().ServerRelativeUrl",
+                                                    "type": "Expression"
+                                                },
+                                                "type": "String"
+                                            },
+                                            "DestinationPath": {
+                                                "value": {
+                                                    "value": "@concat(pipeline().parameters.ContainerName, '/', replace(pipeline().parameters.SiteUrl, '/sites/', ''), '/', pipeline().parameters.LibraryName, '/', replace(replace(pipeline().parameters.FolderServerRelativeUrl, concat(pipeline().parameters.SiteUrl, '/', pipeline().parameters.LibraryName, '/'), ''), concat(pipeline().parameters.SiteUrl, '/', pipeline().parameters.LibraryName), ''), '/', item().Name)",
+                                                    "type": "Expression"
+                                                },
+                                                "type": "String"
+                                            },
+                                            "FileSizeBytes": {
+                                                "value": {
+                                                    "value": "@item().Length",
+                                                    "type": "Expression"
+                                                },
+                                                "type": "Int64"
+                                            },
+                                            "MigrationStatus": {
+                                                "value": "Success",
+                                                "type": "String"
+                                            },
+                                            "PipelineRunId": {
+                                                "value": {
+                                                    "value": "@pipeline().RunId",
+                                                    "type": "Expression"
+                                                },
+                                                "type": "String"
+                                            },
+                                            "ErrorDetails": {
+                                                "value": null,
+                                                "type": "String"
+                                            }
+                                        }
+                                    },
+                                    "linkedServiceName": {
+                                        "referenceName": "LS_AzureSqlDatabase",
+                                        "type": "LinkedServiceReference"
+                                    }
+                                },
+                                {
+                                    "name": "Log_Failure",
+                                    "type": "SqlServerStoredProcedure",
+                                    "dependsOn": [
+                                        {
+                                            "activity": "Copy_File",
+                                            "dependencyConditions": [
+                                                "Failed"
+                                            ]
+                                        }
+                                    ],
+                                    "policy": {
+                                        "timeout": "0.00:05:00",
+                                        "retry": 2,
+                                        "retryIntervalInSeconds": 30,
+                                        "secureOutput": false,
+                                        "secureInput": false
+                                    },
+                                    "userProperties": [],
+                                    "typeProperties": {
+                                        "storedProcedureName": "[dbo].[usp_LogFileAudit]",
+                                        "storedProcedureParameters": {
+                                            "FileName": {
+                                                "value": {
+                                                    "value": "@item().Name",
+                                                    "type": "Expression"
+                                                },
+                                                "type": "String"
+                                            },
+                                            "SourcePath": {
+                                                "value": {
+                                                    "value": "@item().ServerRelativeUrl",
+                                                    "type": "Expression"
+                                                },
+                                                "type": "String"
+                                            },
+                                            "DestinationPath": {
+                                                "value": {
+                                                    "value": "@concat(pipeline().parameters.ContainerName, '/', replace(pipeline().parameters.SiteUrl, '/sites/', ''), '/', pipeline().parameters.LibraryName)",
+                                                    "type": "Expression"
+                                                },
+                                                "type": "String"
+                                            },
+                                            "FileSizeBytes": {
+                                                "value": {
+                                                    "value": "@item().Length",
+                                                    "type": "Expression"
+                                                },
+                                                "type": "Int64"
+                                            },
+                                            "MigrationStatus": {
+                                                "value": "Failed",
+                                                "type": "String"
+                                            },
+                                            "PipelineRunId": {
+                                                "value": {
+                                                    "value": "@pipeline().RunId",
+                                                    "type": "Expression"
+                                                },
+                                                "type": "String"
+                                            },
+                                            "ErrorDetails": {
+                                                "value": {
+                                                    "value": "@string(activity('Copy_File').output)",
+                                                    "type": "Expression"
+                                                },
+                                                "type": "String"
+                                            }
+                                        }
+                                    },
+                                    "linkedServiceName": {
+                                        "referenceName": "LS_AzureSqlDatabase",
+                                        "type": "LinkedServiceReference"
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "ForEach_Subfolder",
+                        "type": "ForEach",
+                        "dependsOn": [
+                            {
+                                "activity": "Get_Subfolders",
+                                "dependencyConditions": [
+                                    "Succeeded"
+                                ]
+                            }
+                        ],
+                        "userProperties": [],
+                        "typeProperties": {
+                            "items": {
+                                "value": "@activity('Get_Subfolders').output.d.results",
+                                "type": "Expression"
+                            },
+                            "isSequential": true,
+                            "activities": [
+                                {
+                                    "name": "Execute_RecursiveSubfolder",
+                                    "type": "ExecutePipeline",
+                                    "dependsOn": [],
+                                    "policy": {
+                                        "secureInput": false
+                                    },
+                                    "userProperties": [],
+                                    "typeProperties": {
+                                        "pipeline": {
+                                            "referenceName": "PL_Process_Subfolder",
+                                            "type": "PipelineReference"
+                                        },
+                                        "waitOnCompletion": true,
+                                        "parameters": {
+                                            "SiteUrl": {
+                                                "value": "@pipeline().parameters.SiteUrl",
+                                                "type": "Expression"
+                                            },
+                                            "LibraryName": {
+                                                "value": "@pipeline().parameters.LibraryName",
+                                                "type": "Expression"
+                                            },
+                                            "FolderServerRelativeUrl": {
+                                                "value": "@item().ServerRelativeUrl",
+                                                "type": "Expression"
+                                            },
+                                            "ContainerName": {
+                                                "value": "@pipeline().parameters.ContainerName",
+                                                "type": "Expression"
+                                            },
+                                            "SharePointTenantUrl": {
+                                                "value": "@pipeline().parameters.SharePointTenantUrl",
+                                                "type": "Expression"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "parameters": {
+                    "SiteUrl": {
+                        "type": "string"
+                    },
+                    "LibraryName": {
+                        "type": "string"
+                    },
+                    "FolderServerRelativeUrl": {
+                        "type": "string"
+                    },
+                    "ContainerName": {
+                        "type": "string",
+                        "defaultValue": "sharepoint-migration"
+                    },
+                    "SharePointTenantUrl": {
+                        "type": "string",
+                        "defaultValue": "https://hydroone.sharepoint.com"
+                    }
+                },
+                "annotations": [
+                    "recursive-subfolder",
+                    "hydro-one-migration"
+                ],
+                "folder": {
+                    "name": "SharePoint Migration"
+                }
+            }
+        }
+    ]
+}
