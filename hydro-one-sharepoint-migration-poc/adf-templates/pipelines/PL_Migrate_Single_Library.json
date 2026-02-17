@@ -171,7 +171,7 @@
                                             "referenceName": "DS_SharePoint_Binary_HTTP",
                                             "type": "DatasetReference",
                                             "parameters": {
-                                                "FileUrl": { "value": "@item()['@microsoft.graph.downloadUrl']", "type": "Expression" }
+                                                "FileUrl": { "value": "@replace(item()['@microsoft.graph.downloadUrl'], pipeline().parameters.SharePointTenantUrl, '')", "type": "Expression" }
                                             }
                                         }
                                     ],

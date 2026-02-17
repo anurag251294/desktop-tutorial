@@ -122,7 +122,7 @@
                                             "type": "DatasetReference",
                                             "parameters": {
                                                 "FileUrl": {
-                                                    "value": "@item()['@microsoft.graph.downloadUrl']",
+                                                    "value": "@replace(item()['@microsoft.graph.downloadUrl'], pipeline().parameters.SharePointTenantUrl, '')",
                                                     "type": "Expression"
                                                 }
                                             }
@@ -293,6 +293,10 @@
                     },
                     "FolderRelativePath": {
                         "type": "string"
+                    },
+                    "SharePointTenantUrl": {
+                        "type": "string",
+                        "defaultValue": "https://m365x52073746.sharepoint.com"
                     }
                 },
                 "annotations": [
