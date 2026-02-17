@@ -33,7 +33,7 @@
                             "source": {
                                 "type": "AzureSqlSource",
                                 "sqlReaderQuery": {
-                                    "value": "SELECT Id, SiteUrl, LibraryName, FileCount AS ExpectedFileCount, TotalSizeBytes AS ExpectedSizeBytes\nFROM dbo.MigrationControl\nWHERE Status = 'Completed'\nAND (@{pipeline().parameters.ValidateAll} = 1 OR ValidationStatus IS NULL OR ValidationStatus = 'Pending')",
+                                    "value": "SELECT Id, SiteUrl, LibraryName, FileCount AS ExpectedFileCount, TotalSizeBytes AS ExpectedSizeBytes\nFROM dbo.MigrationControl\nWHERE Status = 'Completed'\nAND (@{if(pipeline().parameters.ValidateAll, 1, 0)} = 1 OR ValidationStatus IS NULL OR ValidationStatus = 'Pending')",
                                     "type": "Expression"
                                 },
                                 "queryTimeout": "00:05:00",
@@ -70,36 +70,6 @@
                             "isSequential": false,
                             "batchCount": 5,
                             "activities": [
-                                {
-                                    "name": "Get_SourceFileCount",
-                                    "type": "WebActivity",
-                                    "dependsOn": [],
-                                    "policy": {
-                                        "timeout": "0.00:10:00",
-                                        "retry": 3,
-                                        "retryIntervalInSeconds": 60,
-                                        "secureOutput": false,
-                                        "secureInput": false
-                                    },
-                                    "userProperties": [],
-                                    "typeProperties": {
-                                        "method": "GET",
-                                        "headers": {
-                                            "Accept": "application/json;odata=verbose"
-                                        },
-                                        "url": {
-                                            "value": "@concat(pipeline().parameters.SharePointTenantUrl, item().SiteUrl, '/_api/web/lists/getbytitle(''', item().LibraryName, ''')/ItemCount')",
-                                            "type": "Expression"
-                                        },
-                                        "authentication": {
-                                            "type": "MSI",
-                                            "resource": {
-                                                "value": "@concat(pipeline().parameters.SharePointTenantUrl, '/')",
-                                                "type": "Expression"
-                                            }
-                                        }
-                                    }
-                                },
                                 {
                                     "name": "Lookup_DestinationFileCount",
                                     "type": "Lookup",
@@ -138,12 +108,6 @@
                                     "type": "SqlServerStoredProcedure",
                                     "dependsOn": [
                                         {
-                                            "activity": "Get_SourceFileCount",
-                                            "dependencyConditions": [
-                                                "Succeeded"
-                                            ]
-                                        },
-                                        {
                                             "activity": "Lookup_DestinationFileCount",
                                             "dependencyConditions": [
                                                 "Succeeded"
@@ -170,7 +134,7 @@
                                             },
                                             "ExpectedFileCount": {
                                                 "value": {
-                                                    "value": "@activity('Get_SourceFileCount').output.d.ItemCount",
+                                                    "value": "@item().ExpectedFileCount",
                                                     "type": "Expression"
                                                 },
                                                 "type": "Int32"
@@ -231,7 +195,7 @@
                                     "userProperties": [],
                                     "typeProperties": {
                                         "expression": {
-                                            "value": "@or(greater(activity('Lookup_DestinationFileCount').output.firstRow.FailedCount, 0), not(equals(activity('Get_SourceFileCount').output.d.ItemCount, activity('Lookup_DestinationFileCount').output.firstRow.SuccessCount)))",
+                                            "value": "@or(greater(activity('Lookup_DestinationFileCount').output.firstRow.FailedCount, 0), not(equals(item().ExpectedFileCount, activity('Lookup_DestinationFileCount').output.firstRow.SuccessCount)))",
                                             "type": "Expression"
                                         },
                                         "ifTrueActivities": [
@@ -263,7 +227,7 @@
                                                         },
                                                         "DiscrepancyDetails": {
                                                             "value": {
-                                                                "value": "@concat('Expected: ', string(activity('Get_SourceFileCount').output.d.ItemCount), ', Actual Success: ', string(activity('Lookup_DestinationFileCount').output.firstRow.SuccessCount), ', Failed: ', string(activity('Lookup_DestinationFileCount').output.firstRow.FailedCount))",
+                                                                "value": "@concat('Expected: ', string(item().ExpectedFileCount), ', Actual Success: ', string(activity('Lookup_DestinationFileCount').output.firstRow.SuccessCount), ', Failed: ', string(activity('Lookup_DestinationFileCount').output.firstRow.FailedCount))",
                                                                 "type": "Expression"
                                                             },
                                                             "type": "String"
