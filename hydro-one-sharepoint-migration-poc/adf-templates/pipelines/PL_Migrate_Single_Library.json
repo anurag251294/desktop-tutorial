@@ -671,10 +671,7 @@
                                     "type": "DateTime"
                                 },
                                 "ErrorMessage": {
-                                    "value": {
-                                        "value": "@string(activity('ForEach_RootFile').output)",
-                                        "type": "Expression"
-                                    },
+                                    "value": "Migration failed during file copy. Check pipeline run details for specifics.",
                                     "type": "String"
                                 },
                                 "IncrementRetryCount": {
