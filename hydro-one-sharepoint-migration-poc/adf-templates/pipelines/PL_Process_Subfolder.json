@@ -15,10 +15,11 @@
             "type": "Microsoft.DataFactory/factories/pipelines",
             "apiVersion": "2018-06-01",
             "properties": {
-                "description": "Recursive pipeline to process SharePoint subfolders. Gets files from the current folder, copies them to ADLS, and recursively calls itself for any nested subfolders.",
+                "description": "Pipeline to process files within a SharePoint subfolder via Microsoft Graph API. Lists folder children, filters to files only, and copies using pre-authenticated download URLs.",
                 "activities": [
                     {
-                        "name": "Get_FolderFiles",
+                        "name": "Get_FolderChildren",
+                        "description": "List all children (files and subfolders) in the current folder via Graph API",
                         "type": "WebActivity",
                         "dependsOn": [],
                         "policy": {
@@ -32,14 +33,35 @@
                         "typeProperties": {
                             "method": "GET",
                             "headers": {
-                                "Accept": "application/json;odata=verbose",
                                 "Authorization": {
                                     "value": "@concat('Bearer ', pipeline().parameters.AccessToken)",
                                     "type": "Expression"
                                 }
                             },
                             "url": {
-                                "value": "@concat(pipeline().parameters.SharePointTenantUrl, pipeline().parameters.SiteUrl, '/_api/web/GetFolderByServerRelativeUrl(''', pipeline().parameters.FolderServerRelativeUrl, ''')/Files?$select=Name,ServerRelativeUrl,Length,TimeLastModified,UniqueId&$top=5000')",
+                                "value": "@concat('https://graph.microsoft.com/v1.0/drives/', pipeline().parameters.DriveId, '/items/', pipeline().parameters.FolderId, '/children?$top=999')",
+                                "type": "Expression"
+                            }
+                        }
+                    },
+                    {
+                        "name": "Filter_Files",
+                        "description": "Filter Graph response to only file items (those with downloadUrl)",
+                        "type": "Filter",
+                        "dependsOn": [
+                            {
+                                "activity": "Get_FolderChildren",
+                                "dependencyConditions": ["Succeeded"]
+                            }
+                        ],
+                        "userProperties": [],
+                        "typeProperties": {
+                            "items": {
+                                "value": "@activity('Get_FolderChildren').output.value",
+                                "type": "Expression"
+                            },
+                            "condition": {
+                                "value": "@contains(string(item()), '\"@microsoft.graph.downloadUrl\"')",
                                 "type": "Expression"
                             }
                         }
@@ -49,16 +71,14 @@
                         "type": "ForEach",
                         "dependsOn": [
                             {
-                                "activity": "Get_FolderFiles",
-                                "dependencyConditions": [
-                                    "Succeeded"
-                                ]
+                                "activity": "Filter_Files",
+                                "dependencyConditions": ["Succeeded"]
                             }
                         ],
                         "userProperties": [],
                         "typeProperties": {
                             "items": {
-                                "value": "@activity('Get_FolderFiles').output.d.results",
+                                "value": "@activity('Filter_Files').output.value",
                                 "type": "Expression"
                             },
                             "isSequential": false,
@@ -82,10 +102,6 @@
                                             "storeSettings": {
                                                 "type": "HttpReadSettings",
                                                 "requestMethod": "GET",
-                                                "additionalHeaders": {
-                                                    "value": "@concat('Authorization: Bearer ', pipeline().parameters.AccessToken)",
-                                                    "type": "Expression"
-                                                },
                                                 "requestTimeout": "00:10:00"
                                             },
                                             "formatSettings": {
@@ -106,7 +122,7 @@
                                             "type": "DatasetReference",
                                             "parameters": {
                                                 "FileUrl": {
-                                                    "value": "@concat(pipeline().parameters.SharePointTenantUrl, item().ServerRelativeUrl)",
+                                                    "value": "@item()['@microsoft.graph.downloadUrl']",
                                                     "type": "Expression"
                                                 }
                                             }
@@ -130,11 +146,11 @@
                                                     "type": "Expression"
                                                 },
                                                 "FolderPath": {
-                                                    "value": "@replace(replace(pipeline().parameters.FolderServerRelativeUrl, concat(pipeline().parameters.SiteUrl, '/', pipeline().parameters.LibraryName, '/'), ''), concat(pipeline().parameters.SiteUrl, '/', pipeline().parameters.LibraryName), '')",
+                                                    "value": "@pipeline().parameters.FolderRelativePath",
                                                     "type": "Expression"
                                                 },
                                                 "FileName": {
-                                                    "value": "@item().Name",
+                                                    "value": "@item().name",
                                                     "type": "Expression"
                                                 }
                                             }
@@ -147,9 +163,7 @@
                                     "dependsOn": [
                                         {
                                             "activity": "Copy_File",
-                                            "dependencyConditions": [
-                                                "Succeeded"
-                                            ]
+                                            "dependencyConditions": ["Succeeded"]
                                         }
                                     ],
                                     "policy": {
@@ -164,31 +178,19 @@
                                         "storedProcedureName": "[[dbo].[usp_LogFileAudit]",
                                         "storedProcedureParameters": {
                                             "FileName": {
-                                                "value": {
-                                                    "value": "@item().Name",
-                                                    "type": "Expression"
-                                                },
+                                                "value": { "value": "@item().name", "type": "Expression" },
                                                 "type": "String"
                                             },
                                             "SourcePath": {
-                                                "value": {
-                                                    "value": "@item().ServerRelativeUrl",
-                                                    "type": "Expression"
-                                                },
+                                                "value": { "value": "@concat(pipeline().parameters.SiteUrl, '/', pipeline().parameters.LibraryName, '/', pipeline().parameters.FolderRelativePath, '/', item().name)", "type": "Expression" },
                                                 "type": "String"
                                             },
                                             "DestinationPath": {
-                                                "value": {
-                                                    "value": "@concat(pipeline().parameters.ContainerName, '/', replace(pipeline().parameters.SiteUrl, '/sites/', ''), '/', pipeline().parameters.LibraryName, '/', replace(replace(pipeline().parameters.FolderServerRelativeUrl, concat(pipeline().parameters.SiteUrl, '/', pipeline().parameters.LibraryName, '/'), ''), concat(pipeline().parameters.SiteUrl, '/', pipeline().parameters.LibraryName), ''), '/', item().Name)",
-                                                    "type": "Expression"
-                                                },
+                                                "value": { "value": "@concat(pipeline().parameters.ContainerName, '/', replace(pipeline().parameters.SiteUrl, '/sites/', ''), '/', pipeline().parameters.LibraryName, '/', pipeline().parameters.FolderRelativePath, '/', item().name)", "type": "Expression" },
                                                 "type": "String"
                                             },
                                             "FileSizeBytes": {
-                                                "value": {
-                                                    "value": "@item().Length",
-                                                    "type": "Expression"
-                                                },
+                                                "value": { "value": "@item().size", "type": "Expression" },
                                                 "type": "Int64"
                                             },
                                             "MigrationStatus": {
@@ -196,10 +198,7 @@
                                                 "type": "String"
                                             },
                                             "PipelineRunId": {
-                                                "value": {
-                                                    "value": "@pipeline().RunId",
-                                                    "type": "Expression"
-                                                },
+                                                "value": { "value": "@pipeline().RunId", "type": "Expression" },
                                                 "type": "String"
                                             },
                                             "ErrorDetails": {
@@ -219,9 +218,7 @@
                                     "dependsOn": [
                                         {
                                             "activity": "Copy_File",
-                                            "dependencyConditions": [
-                                                "Failed"
-                                            ]
+                                            "dependencyConditions": ["Failed"]
                                         }
                                     ],
                                     "policy": {
@@ -236,31 +233,19 @@
                                         "storedProcedureName": "[[dbo].[usp_LogFileAudit]",
                                         "storedProcedureParameters": {
                                             "FileName": {
-                                                "value": {
-                                                    "value": "@item().Name",
-                                                    "type": "Expression"
-                                                },
+                                                "value": { "value": "@item().name", "type": "Expression" },
                                                 "type": "String"
                                             },
                                             "SourcePath": {
-                                                "value": {
-                                                    "value": "@item().ServerRelativeUrl",
-                                                    "type": "Expression"
-                                                },
+                                                "value": { "value": "@concat(pipeline().parameters.SiteUrl, '/', pipeline().parameters.LibraryName, '/', pipeline().parameters.FolderRelativePath, '/', item().name)", "type": "Expression" },
                                                 "type": "String"
                                             },
                                             "DestinationPath": {
-                                                "value": {
-                                                    "value": "@concat(pipeline().parameters.ContainerName, '/', replace(pipeline().parameters.SiteUrl, '/sites/', ''), '/', pipeline().parameters.LibraryName)",
-                                                    "type": "Expression"
-                                                },
+                                                "value": { "value": "@concat(pipeline().parameters.ContainerName, '/', replace(pipeline().parameters.SiteUrl, '/sites/', ''), '/', pipeline().parameters.LibraryName, '/', pipeline().parameters.FolderRelativePath)", "type": "Expression" },
                                                 "type": "String"
                                             },
                                             "FileSizeBytes": {
-                                                "value": {
-                                                    "value": "@item().Length",
-                                                    "type": "Expression"
-                                                },
+                                                "value": { "value": "@item().size", "type": "Expression" },
                                                 "type": "Int64"
                                             },
                                             "MigrationStatus": {
@@ -268,17 +253,11 @@
                                                 "type": "String"
                                             },
                                             "PipelineRunId": {
-                                                "value": {
-                                                    "value": "@pipeline().RunId",
-                                                    "type": "Expression"
-                                                },
+                                                "value": { "value": "@pipeline().RunId", "type": "Expression" },
                                                 "type": "String"
                                             },
                                             "ErrorDetails": {
-                                                "value": {
-                                                    "value": "@string(activity('Copy_File').output)",
-                                                    "type": "Expression"
-                                                },
+                                                "value": { "value": "@activity('Copy_File').output.errors[0].Message", "type": "Expression" },
                                                 "type": "String"
                                             }
                                         }
@@ -299,24 +278,27 @@
                     "LibraryName": {
                         "type": "string"
                     },
-                    "FolderServerRelativeUrl": {
-                        "type": "string"
-                    },
                     "ContainerName": {
                         "type": "string",
                         "defaultValue": "sharepoint-migration"
                     },
-                    "SharePointTenantUrl": {
-                        "type": "string",
-                        "defaultValue": "https://m365x52073746.sharepoint.com"
-                    },
                     "AccessToken": {
+                        "type": "string"
+                    },
+                    "DriveId": {
+                        "type": "string"
+                    },
+                    "FolderId": {
+                        "type": "string"
+                    },
+                    "FolderRelativePath": {
                         "type": "string"
                     }
                 },
                 "annotations": [
                     "recursive-subfolder",
-                    "hydro-one-migration"
+                    "hydro-one-migration",
+                    "graph-api"
                 ],
                 "folder": {
                     "name": "SharePoint Migration"
