@@ -168,10 +168,10 @@
                                     },
                                     "inputs": [
                                         {
-                                            "referenceName": "DS_SharePoint_Binary_HTTP",
+                                            "referenceName": "DS_Graph_Binary_Download",
                                             "type": "DatasetReference",
                                             "parameters": {
-                                                "FileUrl": { "value": "@replace(item()['@microsoft.graph.downloadUrl'], pipeline().parameters.SharePointTenantUrl, '')", "type": "Expression" }
+                                                "DownloadUrl": { "value": "@item()['@microsoft.graph.downloadUrl']", "type": "Expression" }
                                             }
                                         }
                                     ],

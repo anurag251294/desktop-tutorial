@@ -1,0 +1,35 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "factoryName": {
+            "type": "string"
+        }
+    },
+    "resources": [
+        {
+            "name": "[concat(parameters('factoryName'), '/LS_HTTP_Graph_Download')]",
+            "type": "Microsoft.DataFactory/factories/linkedServices",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "description": "Parameterized HTTP linked service for downloading files via pre-authenticated Graph API download URLs.",
+                "annotations": ["graph-api", "download", "hydro-one-migration"],
+                "type": "HttpServer",
+                "typeProperties": {
+                    "url": "@{linkedService().downloadUrl}",
+                    "enableServerCertificateValidation": true,
+                    "authenticationType": "Anonymous"
+                },
+                "parameters": {
+                    "downloadUrl": {
+                        "type": "String"
+                    }
+                },
+                "connectVia": {
+                    "referenceName": "AutoResolveIntegrationRuntime",
+                    "type": "IntegrationRuntimeReference"
+                }
+            }
+        }
+    ]
+}
