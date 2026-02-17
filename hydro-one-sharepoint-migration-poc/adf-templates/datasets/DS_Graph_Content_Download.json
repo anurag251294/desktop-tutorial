@@ -1,0 +1,42 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "factoryName": {
+            "type": "string"
+        }
+    },
+    "resources": [
+        {
+            "name": "[concat(parameters('factoryName'), '/DS_Graph_Content_Download')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "description": "Binary dataset for downloading files via Graph API /content endpoint. Uses item ID to construct download path.",
+                "linkedServiceName": {
+                    "referenceName": "LS_HTTP_Graph_API",
+                    "type": "LinkedServiceReference",
+                    "parameters": {}
+                },
+                "annotations": ["graph-api", "binary", "download", "hydro-one-migration"],
+                "parameters": {
+                    "ContentPath": {
+                        "type": "string",
+                        "description": "Relative path e.g. /v1.0/drives/{driveId}/items/{itemId}/content"
+                    }
+                },
+                "type": "Binary",
+                "typeProperties": {
+                    "location": {
+                        "type": "HttpServerLocation",
+                        "relativeUrl": {
+                            "value": "@dataset().ContentPath",
+                            "type": "Expression"
+                        }
+                    }
+                }
+            },
+            "dependsOn": []
+        }
+    ]
+}

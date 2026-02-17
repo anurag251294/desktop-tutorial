@@ -157,7 +157,12 @@
                                     "typeProperties": {
                                         "source": {
                                             "type": "BinarySource",
-                                            "storeSettings": { "type": "HttpReadSettings", "requestMethod": "GET", "requestTimeout": "00:10:00" },
+                                            "storeSettings": {
+                                                "type": "HttpReadSettings",
+                                                "requestMethod": "GET",
+                                                "additionalHeaders": { "value": "@concat('Authorization: Bearer ', variables('AccessToken'))", "type": "Expression" },
+                                                "requestTimeout": "00:10:00"
+                                            },
                                             "formatSettings": { "type": "BinaryReadSettings" }
                                         },
                                         "sink": {
@@ -168,10 +173,10 @@
                                     },
                                     "inputs": [
                                         {
-                                            "referenceName": "DS_Graph_Binary_Download",
+                                            "referenceName": "DS_Graph_Content_Download",
                                             "type": "DatasetReference",
                                             "parameters": {
-                                                "DownloadUrl": { "value": "@item()['@microsoft.graph.downloadUrl']", "type": "Expression" }
+                                                "ContentPath": { "value": "@concat('/v1.0/drives/', variables('DriveId'), '/items/', item().id, '/content')", "type": "Expression" }
                                             }
                                         }
                                     ],

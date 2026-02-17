@@ -102,6 +102,10 @@
                                             "storeSettings": {
                                                 "type": "HttpReadSettings",
                                                 "requestMethod": "GET",
+                                                "additionalHeaders": {
+                                                    "value": "@concat('Authorization: Bearer ', pipeline().parameters.AccessToken)",
+                                                    "type": "Expression"
+                                                },
                                                 "requestTimeout": "00:10:00"
                                             },
                                             "formatSettings": {
@@ -118,11 +122,11 @@
                                     },
                                     "inputs": [
                                         {
-                                            "referenceName": "DS_Graph_Binary_Download",
+                                            "referenceName": "DS_Graph_Content_Download",
                                             "type": "DatasetReference",
                                             "parameters": {
-                                                "DownloadUrl": {
-                                                    "value": "@item()['@microsoft.graph.downloadUrl']",
+                                                "ContentPath": {
+                                                    "value": "@concat('/v1.0/drives/', pipeline().parameters.DriveId, '/items/', item().id, '/content')",
                                                     "type": "Expression"
                                                 }
                                             }
