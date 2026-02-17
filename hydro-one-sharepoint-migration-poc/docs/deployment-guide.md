@@ -93,7 +93,10 @@ Azure Data Factory (Orchestration)
 ### 2.2 Azure AD Requirements
 
 - [ ] Application Administrator or Global Administrator role (for app registration)
-- [ ] Ability to grant admin consent for API permissions
+- [ ] **CRITICAL: Global Administrator or Privileged Role Administrator** is required to grant admin consent for SharePoint API permissions. Without admin consent, the service principal **cannot access SharePoint Online** and no migration pipelines will function. This is a **hard blocker** that must be resolved before any testing begins.
+
+> **Action Required for Hydro One IT Admin:**
+> A Global Administrator must grant admin consent for the registered application's SharePoint API permissions. See [Section 4.5](#45-grant-admin-consent-critical) for detailed steps.
 
 ### 2.3 SharePoint Requirements
 
@@ -291,19 +294,53 @@ az ad app permission add \
     --api-permissions "9492366f-7969-46a4-8d15-ed1a20078fff=Role"
 ```
 
-### 4.5 Grant Admin Consent
+### 4.5 Grant Admin Consent (CRITICAL)
 
-**Option A: Azure CLI (requires Global Admin)**
+> **This step requires a Global Administrator or Privileged Role Administrator.**
+> Without admin consent, all SharePoint API permissions remain in "Not granted" status and the migration pipelines **will not work**. This is a hard blocker.
+
+**Required Permissions to Consent:**
+
+| API | Permission | Type | Purpose |
+|-----|-----------|------|---------|
+| SharePoint | Sites.FullControl.All | Application | Full read/write access to all site collections |
+| SharePoint | Sites.ReadWrite.All | Application | Read/write access to files and lists |
+| Microsoft Graph | Sites.ReadWrite.All | Application | Graph API access for metadata operations |
+
+**Option A: Azure Portal (Recommended)**
+1. Sign in to [Azure Portal](https://portal.azure.com) as a **Global Administrator**
+2. Navigate to **Azure Active Directory** > **App registrations**
+3. Select **HydroOne-SPO-Migration** (or the registered app name)
+4. Click **API permissions** in the left menu
+5. Verify all permissions listed above are shown
+6. Click the **Grant admin consent for {tenant}** button
+7. Confirm by clicking **Yes**
+8. Verify all permissions now show a green checkmark with **"Granted for {tenant}"**
+
+**Option B: Azure CLI (requires Global Admin session)**
 ```bash
 az ad app permission admin-consent --id "<app-id>"
 ```
 
-**Option B: Azure Portal (recommended)**
-1. Go to **Azure Portal** > **Azure Active Directory** > **App registrations**
-2. Select **HydroOne-SPO-Migration**
-3. Navigate to **API permissions**
-4. Click **Grant admin consent for {tenant}**
-5. Confirm by clicking **Yes**
+**Option C: Microsoft Graph API (PowerShell)**
+```powershell
+# Connect as Global Admin
+Connect-MgGraph -Scopes "Application.ReadWrite.All", "AppRoleAssignment.ReadWrite.All"
+
+# Grant consent for the service principal
+$spId = "<service-principal-object-id>"
+
+# SharePoint Sites.FullControl.All
+New-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $spId `
+    -PrincipalId $spId `
+    -ResourceId "<sharepoint-sp-object-id>" `
+    -AppRoleId "678536fe-1083-478a-9c59-b99265e6b0d3"
+```
+
+**Verification:**
+After granting consent, verify in Azure Portal > App registrations > API permissions that all entries show **"Granted for {tenant}"** (green checkmark), not "Not granted".
+
+> **If consent cannot be granted:** See [Section 7.6 - Alternative: ADF Managed Identity for SharePoint](#76-alternative-adf-managed-identity-for-sharepoint) for an alternative authentication approach.
 
 ### 4.6 Store Secret in Key Vault
 
@@ -532,6 +569,78 @@ In Azure Data Factory Studio:
    - `LS_ADLS_Gen2` - Should connect to storage account
    - `LS_AzureSqlDatabase` - Should connect to SQL database
    - `LS_SharePointOnline_REST` - Should connect to SharePoint (requires admin consent first)
+
+### 7.6 Alternative: ADF Managed Identity for SharePoint
+
+If service principal admin consent is not available, the ADF Managed Identity can be granted SharePoint access directly using Microsoft Graph PowerShell. This still requires a **Global Administrator** but uses the ADF's own identity rather than a separate app registration.
+
+```powershell
+# Connect as Global Admin
+Connect-MgGraph -Scopes "AppRoleAssignment.ReadWrite.All"
+
+# Get ADF Managed Identity service principal
+$adfMsiId = "<adf-managed-identity-principal-id>"  # From section 7.1
+
+# Get SharePoint Online service principal
+$spoSp = Get-MgServicePrincipal -Filter "displayName eq 'Office 365 SharePoint Online'"
+
+# Grant Sites.FullControl.All to ADF MSI
+$appRole = $spoSp.AppRoles | Where-Object { $_.Value -eq "Sites.FullControl.All" }
+New-MgServicePrincipalAppRoleAssignment `
+    -ServicePrincipalId $adfMsiId `
+    -PrincipalId $adfMsiId `
+    -ResourceId $spoSp.Id `
+    -AppRoleId $appRole.Id
+```
+
+> **Note:** The ADF pipelines already use MSI authentication for SharePoint WebActivity calls. If this approach is used, the Key Vault linked service for client secret is not needed for SharePoint access.
+
+### 7.7 Partial Testing (Without SharePoint Access)
+
+If SharePoint admin consent is not yet available, you can still validate the following pipeline components:
+
+**What CAN be tested:**
+1. **SQL Connectivity** - Verify ADF can read/write to Azure SQL (Lookup and StoredProcedure activities)
+2. **ADLS Connectivity** - Verify ADF can write to ADLS Gen2 storage
+3. **Pipeline Orchestration Logic** - Verify ForEach, IfCondition, and pipeline chaining work correctly
+4. **Control Table Operations** - Verify Lookup queries, status updates, and audit logging
+5. **Key Vault Access** - Verify ADF can retrieve secrets
+
+**What CANNOT be tested without SharePoint consent:**
+1. SharePoint REST API file enumeration
+2. Actual file copy from SharePoint to ADLS
+3. Metadata extraction from SharePoint
+4. Incremental sync (requires SharePoint Modified date queries)
+
+**Partial Test Steps:**
+
+```sql
+-- 1. Insert a test control record
+INSERT INTO dbo.MigrationControl (
+    SiteUrl, LibraryName, SiteName,
+    TotalFileCount, TotalSizeBytes,
+    Status, Priority, ContainerName
+)
+VALUES (
+    '/sites/TestSite', 'TestLibrary', 'TestSite',
+    0, 0, 'Pending', 1, 'sharepoint-migration'
+);
+```
+
+In ADF Studio:
+1. Open `PL_Master_Migration_Orchestrator` > Click **Debug**
+2. The `Lookup_PendingLibraries` activity should **succeed** (proving SQL connectivity)
+3. The `ForEach_Library` will attempt SharePoint calls and **fail** (expected without consent)
+4. Verify in SQL that the control table status was updated to 'InProgress'
+
+```sql
+-- 2. Verify the pipeline touched the control table
+SELECT Id, SiteUrl, LibraryName, Status, MigrationStartTime
+FROM dbo.MigrationControl
+WHERE LibraryName = 'TestLibrary';
+```
+
+This confirms the infrastructure (ADF -> SQL -> ADLS) is wired correctly. Once admin consent is granted, the SharePoint activities will start working without any code changes.
 
 ---
 

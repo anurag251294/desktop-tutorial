@@ -1,12 +1,61 @@
 # Hydro One SharePoint Migration - Operational Runbook
 
 ## Table of Contents
-1. [Pre-Migration](#pre-migration)
-2. [Migration Execution](#migration-execution)
-3. [Throttling Management](#throttling-management)
-4. [Error Handling & Recovery](#error-handling--recovery)
-5. [Post-Migration](#post-migration)
-6. [Rollback Plan](#rollback-plan)
+1. [Critical Prerequisites for Hydro One](#critical-prerequisites-for-hydro-one)
+2. [Pre-Migration](#pre-migration)
+3. [Migration Execution](#migration-execution)
+4. [Throttling Management](#throttling-management)
+5. [Error Handling & Recovery](#error-handling--recovery)
+6. [Post-Migration](#post-migration)
+7. [Rollback Plan](#rollback-plan)
+
+---
+
+## Critical Prerequisites for Hydro One
+
+> **These items MUST be completed by Hydro One IT before migration testing or execution can begin.**
+
+### 1. Grant Admin Consent for SharePoint API Permissions (BLOCKER)
+
+A **Global Administrator** in the Hydro One Azure AD tenant must grant admin consent for the registered application's SharePoint API permissions. Without this, the Azure Data Factory pipelines **cannot access SharePoint Online** and the entire migration is blocked.
+
+**Steps for Hydro One Global Admin:**
+1. Sign in to [Azure Portal](https://portal.azure.com) as Global Administrator
+2. Navigate to **Azure Active Directory** > **App registrations**
+3. Select the migration app (e.g., `HydroOne-SPO-Migration`)
+4. Click **API permissions**
+5. Click **Grant admin consent for Hydro One**
+6. Confirm by clicking **Yes**
+7. Verify all permissions show green checkmark: **"Granted for Hydro One"**
+
+**Required Permissions:**
+
+| API | Permission | Type |
+|-----|-----------|------|
+| SharePoint Online | Sites.FullControl.All | Application |
+| SharePoint Online | Sites.ReadWrite.All | Application |
+| SharePoint Online | Migration.Read.All | Application |
+| SharePoint Online | Migration.ReadWrite.All | Application |
+| Microsoft Graph | Sites.ReadWrite.All | Application |
+
+### 2. Grant ADF Managed Identity Access to SQL Database
+
+Run this SQL command in the `MigrationControl` database:
+
+```sql
+CREATE USER [adf-hydroone-migration-{env}] FROM EXTERNAL PROVIDER;
+ALTER ROLE db_datareader ADD MEMBER [adf-hydroone-migration-{env}];
+ALTER ROLE db_datawriter ADD MEMBER [adf-hydroone-migration-{env}];
+GRANT EXECUTE ON SCHEMA::dbo TO [adf-hydroone-migration-{env}];
+```
+
+### 3. Provide SharePoint Site Collection Inventory
+
+Provide a complete list of:
+- All site collection URLs to be migrated
+- Document libraries within each site
+- Estimated file counts and sizes per library
+- Any libraries or files to exclude
 
 ---
 
@@ -31,7 +80,8 @@
 
 - [ ] **Azure AD Permissions**
   - [ ] Application Administrator or Global Administrator (for app registration)
-  - [ ] Ability to grant admin consent for SharePoint API permissions
+  - [ ] **CRITICAL: Global Administrator or Privileged Role Administrator** required to grant admin consent for SharePoint API permissions
+  - [ ] Without admin consent, the migration **cannot proceed** — all SharePoint API calls will return HTTP 401/403
 
 - [ ] **Network Requirements**
   - [ ] Outbound HTTPS (443) to SharePoint Online
@@ -45,8 +95,12 @@
   - [ ] Access to all site collections to be migrated
 
 - [ ] **App Registration**
-  - [ ] Azure AD App registered with SharePoint permissions
-  - [ ] Admin consent granted for Sites.Read.All (Application)
+  - [ ] Azure AD App registered with SharePoint permissions:
+    - `Sites.FullControl.All` (Application) — required for full file access
+    - `Sites.ReadWrite.All` (Application) — required for file read/write
+    - `Migration.Read.All` (Application) — required for migration APIs
+    - `Migration.ReadWrite.All` (Application) — required for migration write
+  - [ ] **Admin consent granted** for all above permissions (must show green "Granted" status)
   - [ ] Client secret generated and stored in Key Vault
 
 - [ ] **Site Collection Inventory**
