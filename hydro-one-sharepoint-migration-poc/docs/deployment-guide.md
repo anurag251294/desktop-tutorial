@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project | Hydro One SharePoint to Azure Data Lake Migration |
-| Version | 1.0 |
+| Version | 2.0 |
 | Author | Microsoft Azure Data Engineering Team |
 | Last Updated | February 2026 |
 | Classification | Confidential |
@@ -42,19 +42,32 @@ This POC migrates **~25 TB** of documents from SharePoint Online to Azure Data L
 ### 1.2 Architecture Summary
 
 ```
-SharePoint Online (Source)
+SharePoint Online (Source) - Tenant: 5447cfcd-3af1-439a-8157-760bd52b12df
         |
-        | REST API (HTTPS/OAuth2)
+        | Microsoft Graph API (HTTPS/OAuth2 client_credentials)
         v
-Azure Data Factory (Orchestration)
+Azure Data Factory (Orchestration) - MCAPS Tenant: fe64e912-f83c-44e9-9389-f66812c7fa57
         |
         |--- Managed Identity ---> ADLS Gen2 (Destination)
         |--- Managed Identity ---> Azure SQL (Control/Audit)
         |--- Managed Identity ---> Key Vault (Secrets)
-        |--- Service Principal --> SharePoint Online
+        |--- Service Principal --> Graph API --> SharePoint Online (cross-tenant)
+        |--- HTTP Linked Service -> Graph API /content endpoint (file downloads)
 ```
 
-### 1.3 Key Components
+### 1.3 Cross-Tenant Authentication Model
+
+This is a **cross-tenant** migration scenario:
+- **ADF** runs in the MCAPS tenant (`fe64e912-f83c-44e9-9389-f66812c7fa57`)
+- **SharePoint Online** resides in a different tenant (`5447cfcd-3af1-439a-8157-760bd52b12df`)
+
+Authentication uses the **OAuth2 client_credentials flow** against the **SharePoint tenant**:
+- The App Registration is created in the SharePoint tenant (`5447cfcd-3af1-439a-8157-760bd52b12df`)
+- ADF acquires a token from `https://login.microsoftonline.com/5447cfcd-3af1-439a-8157-760bd52b12df/oauth2/v2.0/token`
+- The token scope is `https://graph.microsoft.com/.default`
+- The token is used for both Graph API metadata calls and file content downloads
+
+### 1.4 Key Components
 
 | Component | Resource Name | Purpose |
 |-----------|---------------|---------|
@@ -63,9 +76,9 @@ Azure Data Factory (Orchestration)
 | Azure SQL | `sql-hydroone-migration-{env}` | Migration control and audit tables |
 | Key Vault | `kv-hydroone-mig-{env}` | Stores SharePoint client secret |
 | Data Factory | `adf-hydroone-migration-{env}` | Pipeline orchestration engine |
-| Azure AD App | `HydroOne-SPO-Migration` | Service principal for SharePoint access |
+| Azure AD App | `HydroOne-SPO-Migration` | Service principal for Microsoft Graph API access (registered in SharePoint tenant) |
 
-### 1.4 Deployment Environments
+### 1.5 Deployment Environments
 
 | Environment | Region | Purpose |
 |-------------|--------|---------|
@@ -92,11 +105,11 @@ Azure Data Factory (Orchestration)
 
 ### 2.2 Azure AD Requirements
 
-- [ ] Application Administrator or Global Administrator role (for app registration)
-- [ ] **CRITICAL: Global Administrator or Privileged Role Administrator** is required to grant admin consent for SharePoint API permissions. Without admin consent, the service principal **cannot access SharePoint Online** and no migration pipelines will function. This is a **hard blocker** that must be resolved before any testing begins.
+- [ ] Application Administrator or Global Administrator role in the **SharePoint tenant** (`5447cfcd-3af1-439a-8157-760bd52b12df`) for app registration
+- [ ] **CRITICAL: Global Administrator or Privileged Role Administrator** in the SharePoint tenant is required to grant admin consent for Microsoft Graph API permissions. Without admin consent, the service principal **cannot access SharePoint Online via Graph API** and no migration pipelines will function. This is a **hard blocker** that must be resolved before any testing begins.
 
 > **Action Required for Hydro One IT Admin:**
-> A Global Administrator must grant admin consent for the registered application's SharePoint API permissions. See [Section 4.5](#45-grant-admin-consent-critical) for detailed steps.
+> A Global Administrator in the SharePoint tenant must grant admin consent for the registered application's Microsoft Graph API permissions. See [Section 4.5](#45-grant-admin-consent-critical) for detailed steps.
 
 ### 2.3 SharePoint Requirements
 
@@ -117,9 +130,12 @@ Azure Data Factory (Orchestration)
 
 ### 2.5 Network Requirements
 
-- Outbound HTTPS (443) to `*.sharepoint.com`
+- Outbound HTTPS (443) to `graph.microsoft.com`
+- Outbound HTTPS (443) to `*.sharepoint.com` (for Graph API-initiated downloads)
 - Outbound HTTPS (443) to `*.azure.com`, `*.azure.net`
+- Outbound HTTPS (443) to `login.microsoftonline.com` (OAuth2 token endpoint)
 - No firewall blocking Azure Data Factory managed runtime IPs
+- **POC Requirement:** Public network access must be enabled on Storage Account, SQL Server, and Key Vault (see [Section 3.7](#37-enable-public-network-access-poc))
 
 ---
 
@@ -239,13 +255,44 @@ az keyvault create \
     --sku "standard"
 ```
 
+### 3.7 Enable Public Network Access (POC)
+
+For the POC environment, public network access must be enabled on the Storage Account, SQL Server, and Key Vault so that ADF and portal users can connect without private endpoints.
+
+```bash
+# Enable public network access on Storage Account
+az storage account update \
+    --name sthydroonemigtest \
+    --resource-group rg-hydroone-migration-test \
+    --public-network-access Enabled
+
+# Enable public network access on SQL Server
+az sql server update \
+    --name sql-hydroone-migration-test \
+    --resource-group rg-hydroone-migration-test \
+    --enable-public-network true
+
+# Enable public network access on Key Vault
+az keyvault update \
+    --name kv-hydroone-test2 \
+    --resource-group rg-hydroone-migration-test \
+    --public-network-access Enabled
+```
+
+> **Note:** For production, replace public network access with Private Endpoints and VNet integration.
+
 ---
 
 ## 4. Phase 2: Azure AD & SharePoint Configuration
 
+> **Important:** The App Registration must be created in the **SharePoint tenant** (`5447cfcd-3af1-439a-8157-760bd52b12df`), not the MCAPS tenant where ADF runs. This is because the OAuth2 client_credentials token is acquired against the SharePoint tenant to authorize Graph API calls to that tenant's SharePoint data.
+
 ### 4.1 Register Azure AD Application
 
 ```bash
+# Login to the SharePoint tenant
+az login --tenant "5447cfcd-3af1-439a-8157-760bd52b12df"
+
 # Create the app registration
 az ad app create \
     --display-name "HydroOne-SPO-Migration" \
@@ -272,43 +319,40 @@ az ad app credential reset \
 az ad sp create --id "<app-id>"
 ```
 
-### 4.4 Add SharePoint API Permissions
+### 4.4 Add Microsoft Graph API Permissions
+
+The pipeline uses **Microsoft Graph API** (not the SharePoint REST API directly) for both metadata enumeration and file downloads. The required permissions are **application** permissions on Microsoft Graph.
 
 ```bash
-# SharePoint Online - Sites.FullControl.All (Application)
-az ad app permission add \
-    --id "<app-id>" \
-    --api "00000003-0000-0ff1-ce00-000000000000" \
-    --api-permissions "678536fe-1083-478a-9c59-b99265e6b0d3=Role"
-
-# SharePoint Online - Sites.ReadWrite.All (Application)
-az ad app permission add \
-    --id "<app-id>" \
-    --api "00000003-0000-0ff1-ce00-000000000000" \
-    --api-permissions "fbcd29d2-fcca-4405-aded-518d457caae4=Role"
-
-# Microsoft Graph - Sites.ReadWrite.All (Application)
+# Microsoft Graph - Sites.Read.All (Application)
+# Allows reading all site collections and their contents via Graph API
 az ad app permission add \
     --id "<app-id>" \
     --api "00000003-0000-0000-c000-000000000000" \
-    --api-permissions "9492366f-7969-46a4-8d15-ed1a20078fff=Role"
+    --api-permissions "332a536c-c7ef-4017-ab91-336970924f0d=Role"
+
+# Microsoft Graph - Files.Read.All (Application)
+# Allows reading all files across all site collections via Graph API
+az ad app permission add \
+    --id "<app-id>" \
+    --api "00000003-0000-0000-c000-000000000000" \
+    --api-permissions "01d4f6ba-6a36-4f35-87f1-3298de13b0a7=Role"
 ```
 
 ### 4.5 Grant Admin Consent (CRITICAL)
 
-> **This step requires a Global Administrator or Privileged Role Administrator.**
-> Without admin consent, all SharePoint API permissions remain in "Not granted" status and the migration pipelines **will not work**. This is a hard blocker.
+> **This step requires a Global Administrator or Privileged Role Administrator in the SharePoint tenant.**
+> Without admin consent, all Microsoft Graph API permissions remain in "Not granted" status and the migration pipelines **will not work**. This is a hard blocker.
 
 **Required Permissions to Consent:**
 
 | API | Permission | Type | Purpose |
 |-----|-----------|------|---------|
-| SharePoint | Sites.FullControl.All | Application | Full read/write access to all site collections |
-| SharePoint | Sites.ReadWrite.All | Application | Read/write access to files and lists |
-| Microsoft Graph | Sites.ReadWrite.All | Application | Graph API access for metadata operations |
+| Microsoft Graph | Sites.Read.All | Application | Read all site collections and document library metadata via Graph API |
+| Microsoft Graph | Files.Read.All | Application | Read all files and download content via Graph API `/content` endpoint |
 
 **Option A: Azure Portal (Recommended)**
-1. Sign in to [Azure Portal](https://portal.azure.com) as a **Global Administrator**
+1. Sign in to [Azure Portal](https://portal.azure.com) as a **Global Administrator** in the SharePoint tenant
 2. Navigate to **Azure Active Directory** > **App registrations**
 3. Select **HydroOne-SPO-Migration** (or the registered app name)
 4. Click **API permissions** in the left menu
@@ -324,27 +368,40 @@ az ad app permission admin-consent --id "<app-id>"
 
 **Option C: Microsoft Graph API (PowerShell)**
 ```powershell
-# Connect as Global Admin
-Connect-MgGraph -Scopes "Application.ReadWrite.All", "AppRoleAssignment.ReadWrite.All"
+# Connect as Global Admin in SharePoint tenant
+Connect-MgGraph -TenantId "5447cfcd-3af1-439a-8157-760bd52b12df" `
+    -Scopes "Application.ReadWrite.All", "AppRoleAssignment.ReadWrite.All"
 
 # Grant consent for the service principal
 $spId = "<service-principal-object-id>"
 
-# SharePoint Sites.FullControl.All
+# Get Microsoft Graph service principal
+$graphSp = Get-MgServicePrincipal -Filter "appId eq '00000003-0000-0000-c000-000000000000'"
+
+# Sites.Read.All
+$sitesReadRole = $graphSp.AppRoles | Where-Object { $_.Value -eq "Sites.Read.All" }
 New-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $spId `
     -PrincipalId $spId `
-    -ResourceId "<sharepoint-sp-object-id>" `
-    -AppRoleId "678536fe-1083-478a-9c59-b99265e6b0d3"
+    -ResourceId $graphSp.Id `
+    -AppRoleId $sitesReadRole.Id
+
+# Files.Read.All
+$filesReadRole = $graphSp.AppRoles | Where-Object { $_.Value -eq "Files.Read.All" }
+New-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $spId `
+    -PrincipalId $spId `
+    -ResourceId $graphSp.Id `
+    -AppRoleId $filesReadRole.Id
 ```
 
 **Verification:**
 After granting consent, verify in Azure Portal > App registrations > API permissions that all entries show **"Granted for {tenant}"** (green checkmark), not "Not granted".
 
-> **If consent cannot be granted:** See [Section 7.6 - Alternative: ADF Managed Identity for SharePoint](#76-alternative-adf-managed-identity-for-sharepoint) for an alternative authentication approach.
-
 ### 4.6 Store Secret in Key Vault
 
 ```bash
+# Switch back to MCAPS tenant where ADF and Key Vault reside
+az login --tenant "fe64e912-f83c-44e9-9389-f66812c7fa57"
+
 az keyvault secret set \
     --vault-name "kv-hydroone-mig-{env}" \
     --name "sharepoint-client-secret" \
@@ -356,12 +413,32 @@ az keyvault secret set \
     --name "sharepoint-client-id" \
     --value "<app-id>"
 
-# Store the Tenant ID
+# Store the SharePoint Tenant ID (the tenant where SharePoint resides)
 az keyvault secret set \
     --vault-name "kv-hydroone-mig-{env}" \
-    --name "tenant-id" \
-    --value "<tenant-id>"
+    --name "sharepoint-tenant-id" \
+    --value "5447cfcd-3af1-439a-8157-760bd52b12df"
 ```
+
+### 4.7 Token Acquisition Flow
+
+The pipeline acquires tokens using the **OAuth2 client_credentials** flow against the SharePoint tenant:
+
+**Token Request:**
+```
+POST https://login.microsoftonline.com/5447cfcd-3af1-439a-8157-760bd52b12df/oauth2/v2.0/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=client_credentials
+&client_id=<app-id>
+&client_secret=<client-secret>
+&scope=https://graph.microsoft.com/.default
+```
+
+**Token Usage:**
+- The returned `access_token` is used as a Bearer token in the `Authorization` header for all Microsoft Graph API calls
+- Graph API endpoint for file enumeration: `GET https://graph.microsoft.com/v1.0/sites/{site-id}/drives/{drive-id}/root/children`
+- Graph API endpoint for file download: `GET https://graph.microsoft.com/v1.0/sites/{site-id}/drives/{drive-id}/items/{item-id}/content`
 
 ---
 
@@ -378,7 +455,7 @@ az deployment group create \
         location="canadacentral" \
         sharePointTenantUrl="https://{tenant}.sharepoint.com" \
         servicePrincipalId="<app-id>" \
-        tenantId="<tenant-id>" \
+        servicePrincipalTenantId="5447cfcd-3af1-439a-8157-760bd52b12df" \
         keyVaultName="kv-hydroone-mig-{env}" \
         storageAccountName="sthydroonemig{env}" \
         sqlServerName="sql-hydroone-migration-{env}" \
@@ -387,10 +464,30 @@ az deployment group create \
 
 This deploys:
 - **ADF instance** with system-assigned managed identity
-- **5 Linked Services**: Key Vault, SharePoint REST, SharePoint HTTP, ADLS Gen2, Azure SQL
-- **6 Datasets**: SharePoint Binary HTTP, ADLS Binary Sink, ADLS Parquet Metadata, SQL MigrationControl, SQL AuditLog
+- **6 Linked Services**: Key Vault, Graph API REST (for metadata), Graph API HTTP (for file downloads), ADLS Gen2, Azure SQL
+- **7 Datasets**: Graph Content Download (HTTP binary), ADLS Binary Sink, ADLS Parquet Metadata, SQL MigrationControl, SQL AuditLog
 
-### 5.2 Deploy Pipelines
+### 5.2 Linked Services Detail
+
+| Linked Service | Type | Base URL / Target | Auth Method | Purpose |
+|----------------|------|-------------------|-------------|---------|
+| `LS_AzureKeyVault` | AzureKeyVault | `https://kv-hydroone-mig-{env}.vault.azure.net/` | Managed Identity | Retrieve client secret for token acquisition |
+| `LS_REST_Graph_API` | REST | `https://graph.microsoft.com` | Anonymous (token passed via headers) | Graph API calls for site/drive/file enumeration |
+| `LS_HTTP_Graph_API` | HTTP | `https://graph.microsoft.com` | Anonymous (token passed via headers) | File content downloads via Graph `/content` endpoint |
+| `LS_ADLS_Gen2` | AzureBlobFS | `https://sthydroonemig{env}.dfs.core.windows.net` | Managed Identity | Write migrated files to ADLS Gen2 |
+| `LS_AzureSqlDatabase` | AzureSqlDatabase | `sql-hydroone-migration-{env}.database.windows.net` | Managed Identity | Read/write migration control and audit tables |
+
+### 5.3 Datasets Detail
+
+| Dataset | Linked Service | Purpose | Parameters |
+|---------|---------------|---------|------------|
+| `DS_Graph_Content_Download` | `LS_HTTP_Graph_API` | Download file content via Graph API `/content` endpoint | `ContentPath` - the relative URL path for the Graph API item content request |
+| `DS_ADLS_Binary_Sink` | `LS_ADLS_Gen2` | Write binary file to ADLS Gen2 | Container, FolderPath, FileName |
+| `DS_ADLS_Parquet_Metadata` | `LS_ADLS_Gen2` | Write metadata in Parquet format | Container, FolderPath |
+| `DS_SQL_MigrationControl` | `LS_AzureSqlDatabase` | Migration control table operations | None |
+| `DS_SQL_AuditLog` | `LS_AzureSqlDatabase` | Audit log table operations | None |
+
+### 5.4 Deploy Pipelines
 
 Deploy each pipeline ARM template:
 
@@ -431,7 +528,7 @@ az deployment group create \
     --name "pipeline-incremental"
 ```
 
-### 5.3 Verify Deployment
+### 5.5 Verify Deployment
 
 ```bash
 # List all deployed pipelines
@@ -533,10 +630,12 @@ az keyvault set-policy \
     --secret-permissions get list
 ```
 
-### 7.3 Grant ADF Access to Storage Account
+### 7.3 Grant ADF Managed Identity Access to Storage Account
+
+The ADF Managed Identity requires **Storage Blob Data Contributor** on the storage account to write migrated files.
 
 ```bash
-# Grant Storage Blob Data Contributor role
+# Grant Storage Blob Data Contributor role to ADF Managed Identity
 az role assignment create \
     --role "Storage Blob Data Contributor" \
     --assignee-object-id "<adf-principal-id>" \
@@ -544,7 +643,21 @@ az role assignment create \
     --scope "/subscriptions/{sub-id}/resourceGroups/rg-hydroone-migration-{env}/providers/Microsoft.Storage/storageAccounts/sthydroonemig{env}"
 ```
 
-### 7.4 Grant ADF Access to SQL Database
+### 7.4 Grant User Access to Storage Account (Portal Browsing)
+
+To browse and verify migrated files in the Azure Portal, the user also needs **Storage Blob Data Contributor** on the storage account.
+
+```bash
+# Grant Storage Blob Data Contributor role to the user
+az role assignment create \
+    --role "Storage Blob Data Contributor" \
+    --assignee "<user-email-or-object-id>" \
+    --scope "/subscriptions/{sub-id}/resourceGroups/rg-hydroone-migration-{env}/providers/Microsoft.Storage/storageAccounts/sthydroonemig{env}"
+```
+
+> **Note:** Without this role assignment, the user will see "You do not have permissions to list data" when trying to browse containers in the Azure Portal, even if they have Contributor on the resource group.
+
+### 7.5 Grant ADF Access to SQL Database
 
 Connect to SQL and run:
 
@@ -560,7 +673,7 @@ ALTER ROLE db_datawriter ADD MEMBER [adf-hydroone-migration-{env}];
 GRANT EXECUTE ON SCHEMA::dbo TO [adf-hydroone-migration-{env}];
 ```
 
-### 7.5 Verify Linked Service Connections
+### 7.6 Verify Linked Service Connections
 
 In Azure Data Factory Studio:
 1. Navigate to **Manage** > **Linked services**
@@ -568,36 +681,12 @@ In Azure Data Factory Studio:
    - `LS_AzureKeyVault` - Should connect to Key Vault
    - `LS_ADLS_Gen2` - Should connect to storage account
    - `LS_AzureSqlDatabase` - Should connect to SQL database
-   - `LS_SharePointOnline_REST` - Should connect to SharePoint (requires admin consent first)
-
-### 7.6 Alternative: ADF Managed Identity for SharePoint
-
-If service principal admin consent is not available, the ADF Managed Identity can be granted SharePoint access directly using Microsoft Graph PowerShell. This still requires a **Global Administrator** but uses the ADF's own identity rather than a separate app registration.
-
-```powershell
-# Connect as Global Admin
-Connect-MgGraph -Scopes "AppRoleAssignment.ReadWrite.All"
-
-# Get ADF Managed Identity service principal
-$adfMsiId = "<adf-managed-identity-principal-id>"  # From section 7.1
-
-# Get SharePoint Online service principal
-$spoSp = Get-MgServicePrincipal -Filter "displayName eq 'Office 365 SharePoint Online'"
-
-# Grant Sites.FullControl.All to ADF MSI
-$appRole = $spoSp.AppRoles | Where-Object { $_.Value -eq "Sites.FullControl.All" }
-New-MgServicePrincipalAppRoleAssignment `
-    -ServicePrincipalId $adfMsiId `
-    -PrincipalId $adfMsiId `
-    -ResourceId $spoSp.Id `
-    -AppRoleId $appRole.Id
-```
-
-> **Note:** The ADF pipelines already use MSI authentication for SharePoint WebActivity calls. If this approach is used, the Key Vault linked service for client secret is not needed for SharePoint access.
+   - `LS_REST_Graph_API` - Anonymous auth (token added at runtime); verify base URL is reachable
+   - `LS_HTTP_Graph_API` - Anonymous auth (token added at runtime); verify base URL is reachable
 
 ### 7.7 Partial Testing (Without SharePoint Access)
 
-If SharePoint admin consent is not yet available, you can still validate the following pipeline components:
+If Graph API admin consent in the SharePoint tenant is not yet available, you can still validate the following pipeline components:
 
 **What CAN be tested:**
 1. **SQL Connectivity** - Verify ADF can read/write to Azure SQL (Lookup and StoredProcedure activities)
@@ -605,12 +694,13 @@ If SharePoint admin consent is not yet available, you can still validate the fol
 3. **Pipeline Orchestration Logic** - Verify ForEach, IfCondition, and pipeline chaining work correctly
 4. **Control Table Operations** - Verify Lookup queries, status updates, and audit logging
 5. **Key Vault Access** - Verify ADF can retrieve secrets
+6. **Token Acquisition** - Verify the WebActivity can POST to the token endpoint (will fail with invalid credentials but confirms network connectivity)
 
-**What CANNOT be tested without SharePoint consent:**
-1. SharePoint REST API file enumeration
-2. Actual file copy from SharePoint to ADLS
-3. Metadata extraction from SharePoint
-4. Incremental sync (requires SharePoint Modified date queries)
+**What CANNOT be tested without Graph API consent:**
+1. Graph API file/folder enumeration
+2. Actual file download from SharePoint via Graph `/content` endpoint
+3. Metadata extraction from SharePoint sites and drives
+4. Incremental sync (requires Graph API delta queries)
 
 **Partial Test Steps:**
 
@@ -630,7 +720,7 @@ VALUES (
 In ADF Studio:
 1. Open `PL_Master_Migration_Orchestrator` > Click **Debug**
 2. The `Lookup_PendingLibraries` activity should **succeed** (proving SQL connectivity)
-3. The `ForEach_Library` will attempt SharePoint calls and **fail** (expected without consent)
+3. The `ForEach_Library` will attempt Graph API calls and **fail** (expected without consent)
 4. Verify in SQL that the control table status was updated to 'InProgress'
 
 ```sql
@@ -640,7 +730,7 @@ FROM dbo.MigrationControl
 WHERE LibraryName = 'TestLibrary';
 ```
 
-This confirms the infrastructure (ADF -> SQL -> ADLS) is wired correctly. Once admin consent is granted, the SharePoint activities will start working without any code changes.
+This confirms the infrastructure (ADF -> SQL -> ADLS) is wired correctly. Once admin consent is granted in the SharePoint tenant, the Graph API activities will start working without any code changes.
 
 ---
 
@@ -723,15 +813,18 @@ ORDER BY TotalSizeBytes ASC;
 3. Click **Debug**
 4. Enter parameters:
 
-| Parameter | Value |
-|-----------|-------|
-| SiteUrl | `/sites/TestSite` |
-| LibraryName | `Documents` |
-| ControlTableId | `1` (from control table) |
-| BatchId | `PILOT-001` |
-| ContainerName | `sharepoint-migration` |
-| SharePointTenantUrl | `https://{tenant}.sharepoint.com` |
-| ThrottleWaitSeconds | `120` |
+| Parameter | Value | Notes |
+|-----------|-------|-------|
+| SiteUrl | `/sites/TestSite` | SharePoint site relative URL |
+| LibraryName | `Documents` | Library name |
+| ControlTableId | `1` (from control table) | |
+| BatchId | `PILOT-001` | |
+| ContainerName | `sharepoint-migration` | |
+| SharePointTenantUrl | `https://{tenant}.sharepoint.com` | |
+| ThrottleWaitSeconds | `120` | |
+| ServicePrincipalId | `3a412ede-620a-4f21-8501-ef62a5161dc2` | App registration client ID (defaults to test env value) |
+| ServicePrincipalTenantId | `5447cfcd-3af1-439a-8157-760bd52b12df` | SharePoint tenant ID for token acquisition (defaults to test env value) |
+| KeyVaultUrl | `https://kv-hydroone-test2.vault.azure.net/` | Key Vault URL for secret retrieval (defaults to test env value) |
 
 5. Click **OK** to start
 
@@ -762,7 +855,7 @@ GROUP BY MigrationStatus;
 SELECT
     mc.LibraryName,
     mc.TotalFileCount AS ExpectedFiles,
-    COUNT(al.Id) AS MigratedFiles,
+    COUNT(DISTINCT al.SourcePath) AS MigratedFiles,
     SUM(CASE WHEN al.MigrationStatus = 'Success' THEN 1 ELSE 0 END) AS SuccessCount,
     SUM(CASE WHEN al.MigrationStatus = 'Failed' THEN 1 ELSE 0 END) AS FailedCount
 FROM dbo.MigrationControl mc
@@ -775,6 +868,8 @@ GROUP BY mc.LibraryName, mc.TotalFileCount;
 1. Go to Storage Account > Containers > `sharepoint-migration`
 2. Navigate to the site/library folder
 3. Verify files exist and sizes match
+
+> **Note:** You must have **Storage Blob Data Contributor** role on the storage account to browse files in the Azure Portal (see [Section 7.4](#74-grant-user-access-to-storage-account-portal-browsing)).
 
 ---
 
@@ -1031,28 +1126,42 @@ Then re-enable the trigger or manually trigger the master pipeline.
 
 | Error | Cause | Resolution |
 |-------|-------|------------|
-| HTTP 401 | Token expired/invalid | Regenerate client secret, update Key Vault |
-| HTTP 403 | Insufficient permissions | Verify admin consent, check site permissions |
-| HTTP 404 | File deleted after enumeration | Log and skip (expected) |
-| HTTP 429 | SharePoint throttling | Reduce parallelism, wait, contact Microsoft |
-| HTTP 503 | SharePoint unavailable | Retry automatically, check service health |
+| HTTP 401 | Token expired/invalid or wrong tenant | Regenerate client secret in SharePoint tenant, update Key Vault; verify `ServicePrincipalTenantId` points to SharePoint tenant |
+| HTTP 403 | Insufficient Graph API permissions | Verify admin consent granted in SharePoint tenant for Sites.Read.All and Files.Read.All |
+| HTTP 404 | File deleted after enumeration or invalid Graph path | Log and skip (expected for deletions); verify site-id and drive-id are correct |
+| HTTP 429 | Graph API / SharePoint throttling | Reduce parallelism, wait, contact Microsoft |
+| HTTP 503 | Graph API / SharePoint unavailable | Retry automatically, check service health |
 | Timeout | Large file or slow network | Increase timeout settings |
+| AADSTS700016 | App not found in tenant | Verify app registration exists in the SharePoint tenant, not the MCAPS tenant |
+| AADSTS7000215 | Invalid client secret | Regenerate secret in SharePoint tenant app registration and update Key Vault |
 | Circular reference | Pipeline self-referencing | Already fixed in templates |
 
-### 14.2 Linked Service Connection Failures
+### 14.2 Cross-Tenant Authentication Failures
 
-**Key Vault:** Verify ADF managed identity has Key Vault access policy
-**Storage:** Verify ADF has Storage Blob Data Contributor role
+If token acquisition fails:
+1. Verify the app registration exists in the **SharePoint tenant** (`5447cfcd-3af1-439a-8157-760bd52b12df`)
+2. Verify the `ServicePrincipalTenantId` pipeline parameter points to the SharePoint tenant
+3. Verify the client secret stored in Key Vault matches the current secret on the app registration
+4. Verify admin consent was granted in the SharePoint tenant (not the MCAPS tenant)
+5. Check the token endpoint URL: `https://login.microsoftonline.com/5447cfcd-3af1-439a-8157-760bd52b12df/oauth2/v2.0/token`
+6. Verify the scope is `https://graph.microsoft.com/.default`
+
+### 14.3 Linked Service Connection Failures
+
+**Key Vault:** Verify ADF managed identity has Key Vault access policy (get, list)
+**Storage:** Verify ADF managed identity has Storage Blob Data Contributor role
 **SQL:** Verify ADF user created in SQL with proper permissions
-**SharePoint:** Verify admin consent granted and secret is valid
+**Graph API REST/HTTP:** These use Anonymous auth at the linked service level; the Bearer token is injected at runtime by the pipeline. Verify that the token acquisition WebActivity is succeeding.
 
-### 14.3 Pipeline Debug Steps
+### 14.4 Pipeline Debug Steps
 
 1. Check ADF Monitor for error messages
 2. Click on failed activity for details
 3. Check Input/Output tabs for request/response data
-4. Check SQL audit log for file-level errors
-5. Verify linked service connections are working
+4. For token acquisition failures: check the WebActivity output for the OAuth2 error response
+5. For Graph API failures: check the HTTP status code and response body for detailed error messages
+6. Check SQL audit log for file-level errors
+7. Verify linked service connections are working
 
 ---
 
@@ -1089,16 +1198,25 @@ Then re-enable the trigger or manually trigger the master pipeline.
 | Resource | Value |
 |----------|-------|
 | Subscription | `671b1321-4407-420b-b877-97cd40ba898a` |
-| Tenant | `fe64e912-f83c-44e9-9389-f66812c7fa57` |
+| ADF Tenant (MCAPS) | `fe64e912-f83c-44e9-9389-f66812c7fa57` |
+| SharePoint Tenant | `5447cfcd-3af1-439a-8157-760bd52b12df` |
 | Resource Group | `rg-hydroone-migration-test` |
 | Storage Account | `sthydroonemigtest` |
 | SQL Server | `sql-hydroone-migration-test.database.windows.net` |
 | Key Vault | `kv-hydroone-test2` |
 | Data Factory | `adf-hydroone-migration-test` |
-| App Registration | `3a412ede-620a-4f21-8501-ef62a5161dc2` |
+| App Registration (in SharePoint tenant) | `3a412ede-620a-4f21-8501-ef62a5161dc2` |
 | ADF Managed Identity | `b509d6d6-4d95-4e74-9de6-952b764556d3` |
 
-### 16.3 Cost Estimation (Monthly)
+### 16.3 PL_Migrate_Single_Library Default Parameters (Test Environment)
+
+| Parameter | Default Value | Description |
+|-----------|---------------|-------------|
+| ServicePrincipalId | `3a412ede-620a-4f21-8501-ef62a5161dc2` | App registration client ID in SharePoint tenant |
+| ServicePrincipalTenantId | `5447cfcd-3af1-439a-8157-760bd52b12df` | SharePoint tenant ID for OAuth2 token acquisition |
+| KeyVaultUrl | `https://kv-hydroone-test2.vault.azure.net/` | Key Vault URL for retrieving client secret |
+
+### 16.4 Cost Estimation (Monthly)
 
 | Resource | Tier | Estimated Cost |
 |----------|------|----------------|

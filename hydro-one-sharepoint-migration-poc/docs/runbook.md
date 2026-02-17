@@ -11,45 +11,95 @@
 
 ---
 
+## Environment Details
+
+| Resource | Name | Region |
+|----------|------|--------|
+| Resource Group | rg-hydroone-migration-test | Canada Central |
+| SharePoint Tenant | https://m365x52073746.sharepoint.com | - |
+| Azure Data Factory | adf-hydroone-migration-test | Canada Central |
+| Storage Account (ADLS Gen2) | sthydroonemigtest | Canada Central |
+| SQL Server | sql-hydroone-migration-test | Canada Central |
+| Key Vault | kv-hydroone-test2 | Canada Central |
+
+---
+
 ## Critical Prerequisites for Hydro One
 
-> **These items MUST be completed by Hydro One IT before migration testing or execution can begin.**
+> **These items MUST be completed before migration testing or execution can begin.**
 
-### 1. Grant Admin Consent for SharePoint API Permissions (BLOCKER)
+### 1. Grant Admin Consent for Microsoft Graph API Permissions (BLOCKER)
 
-A **Global Administrator** in the Hydro One Azure AD tenant must grant admin consent for the registered application's SharePoint API permissions. Without this, the Azure Data Factory pipelines **cannot access SharePoint Online** and the entire migration is blocked.
+A **Global Administrator** in the Azure AD tenant must grant admin consent for the registered application's **Microsoft Graph API** permissions. Without this, the Azure Data Factory pipelines **cannot access SharePoint Online** and the entire migration is blocked.
 
-**Steps for Hydro One Global Admin:**
+> **IMPORTANT:** The migration uses the **Microsoft Graph API** -- NOT the SharePoint REST API. App-only tokens with SharePoint REST API will return "Unsupported app only token" errors. All file access must go through Graph API endpoints.
+
+**Steps for Global Admin:**
 1. Sign in to [Azure Portal](https://portal.azure.com) as Global Administrator
 2. Navigate to **Azure Active Directory** > **App registrations**
 3. Select the migration app (e.g., `HydroOne-SPO-Migration`)
 4. Click **API permissions**
-5. Click **Grant admin consent for Hydro One**
+5. Click **Grant admin consent**
 6. Confirm by clicking **Yes**
-7. Verify all permissions show green checkmark: **"Granted for Hydro One"**
+7. Verify all permissions show green checkmark: **"Granted"**
 
 **Required Permissions:**
 
 | API | Permission | Type |
 |-----|-----------|------|
-| SharePoint Online | Sites.FullControl.All | Application |
-| SharePoint Online | Sites.ReadWrite.All | Application |
-| SharePoint Online | Migration.Read.All | Application |
-| SharePoint Online | Migration.ReadWrite.All | Application |
-| Microsoft Graph | Sites.ReadWrite.All | Application |
+| Microsoft Graph | Sites.Read.All | Application |
+| Microsoft Graph | Files.Read.All | Application |
 
-### 2. Grant ADF Managed Identity Access to SQL Database
+**Token Acquisition:**
+- Token endpoint: `https://login.microsoftonline.com/{tenant-id}/oauth2/v2.0/token`
+- Scope: `https://graph.microsoft.com/.default`
+- Grant type: `client_credentials`
+- Client ID and Client Secret stored in Key Vault
+
+### 2. Enable Public Network Access on Azure Resources (BLOCKER)
+
+The following resources **must** have public network access enabled (or have private endpoints configured):
+
+- **Key Vault (`kv-hydroone-test2`):** ADF must be able to retrieve secrets (Client ID, Client Secret, Tenant ID). Enable public network access or configure a private endpoint.
+- **Storage Account (`sthydroonemigtest`):** ADF must be able to write files to ADLS Gen2. Enable public network access or configure a private endpoint.
+- **SQL Server (`sql-hydroone-migration-test`):** ADF must be able to read/write the control table and audit log. Enable public network access and add ADF's outbound IPs to the firewall, or configure a private endpoint.
+
+### 3. Grant ADF Managed Identity RBAC Permissions
+
+The ADF Managed Identity (`adf-hydroone-migration-test`) requires the following role assignments:
+
+| Resource | Role | Purpose |
+|----------|------|---------|
+| Storage Account (`sthydroonemigtest`) | Storage Blob Data Contributor | Read/write files to ADLS Gen2 containers |
+| Key Vault (`kv-hydroone-test2`) | Key Vault Secrets User | Retrieve Client ID, Client Secret, and Tenant ID |
+
+**To assign roles:**
+```bash
+# Storage Blob Data Contributor on storage account
+az role assignment create \
+    --role "Storage Blob Data Contributor" \
+    --assignee "<adf-managed-identity-object-id>" \
+    --scope "/subscriptions/<sub-id>/resourceGroups/rg-hydroone-migration-test/providers/Microsoft.Storage/storageAccounts/sthydroonemigtest"
+
+# Key Vault Secrets User on Key Vault
+az role assignment create \
+    --role "Key Vault Secrets User" \
+    --assignee "<adf-managed-identity-object-id>" \
+    --scope "/subscriptions/<sub-id>/resourceGroups/rg-hydroone-migration-test/providers/Microsoft.KeyVault/vaults/kv-hydroone-test2"
+```
+
+### 4. Grant ADF Managed Identity Access to SQL Database
 
 Run this SQL command in the `MigrationControl` database:
 
 ```sql
-CREATE USER [adf-hydroone-migration-{env}] FROM EXTERNAL PROVIDER;
-ALTER ROLE db_datareader ADD MEMBER [adf-hydroone-migration-{env}];
-ALTER ROLE db_datawriter ADD MEMBER [adf-hydroone-migration-{env}];
-GRANT EXECUTE ON SCHEMA::dbo TO [adf-hydroone-migration-{env}];
+CREATE USER [adf-hydroone-migration-test] FROM EXTERNAL PROVIDER;
+ALTER ROLE db_datareader ADD MEMBER [adf-hydroone-migration-test];
+ALTER ROLE db_datawriter ADD MEMBER [adf-hydroone-migration-test];
+GRANT EXECUTE ON SCHEMA::dbo TO [adf-hydroone-migration-test];
 ```
 
-### 3. Provide SharePoint Site Collection Inventory
+### 5. Provide SharePoint Site Collection Inventory
 
 Provide a complete list of:
 - All site collection URLs to be migrated
@@ -80,28 +130,29 @@ Provide a complete list of:
 
 - [ ] **Azure AD Permissions**
   - [ ] Application Administrator or Global Administrator (for app registration)
-  - [ ] **CRITICAL: Global Administrator or Privileged Role Administrator** required to grant admin consent for SharePoint API permissions
-  - [ ] Without admin consent, the migration **cannot proceed** — all SharePoint API calls will return HTTP 401/403
+  - [ ] **CRITICAL: Global Administrator or Privileged Role Administrator** required to grant admin consent for Microsoft Graph API permissions
+  - [ ] Without admin consent, the migration **cannot proceed** -- all Graph API calls will return HTTP 401/403
 
-- [ ] **Network Requirements**
-  - [ ] Outbound HTTPS (443) to SharePoint Online
+- [ ] **Network / Access Requirements**
+  - [ ] Outbound HTTPS (443) to Microsoft Graph API (`graph.microsoft.com`)
+  - [ ] Outbound HTTPS (443) to Azure AD (`login.microsoftonline.com`)
   - [ ] Outbound HTTPS (443) to Azure services
-  - [ ] No firewall blocking Azure Data Factory IPs
+  - [ ] Key Vault public network access **enabled** (or private endpoint configured)
+  - [ ] Storage account public network access **enabled** (or private endpoint configured)
+  - [ ] SQL Server public network access **enabled** (or private endpoint configured)
+  - [ ] ADF Managed Identity has **Storage Blob Data Contributor** on the storage account
+  - [ ] ADF Managed Identity has **Key Vault Secrets User** on the Key Vault
 
 ### SharePoint Prerequisites
 
-- [ ] **Admin Access**
-  - [ ] SharePoint Online Administrator role
-  - [ ] Access to all site collections to be migrated
-
 - [ ] **App Registration**
-  - [ ] Azure AD App registered with SharePoint permissions:
-    - `Sites.FullControl.All` (Application) — required for full file access
-    - `Sites.ReadWrite.All` (Application) — required for file read/write
-    - `Migration.Read.All` (Application) — required for migration APIs
-    - `Migration.ReadWrite.All` (Application) — required for migration write
+  - [ ] Azure AD App registered with **Microsoft Graph** permissions:
+    - `Sites.Read.All` (Application) -- required to resolve sites and drives
+    - `Files.Read.All` (Application) -- required to enumerate and download files
   - [ ] **Admin consent granted** for all above permissions (must show green "Granted" status)
-  - [ ] Client secret generated and stored in Key Vault
+  - [ ] Client ID stored in Key Vault (`SPO-ClientId`)
+  - [ ] Client Secret stored in Key Vault (`SPO-ClientSecret`)
+  - [ ] Tenant ID stored in Key Vault (`SPO-TenantId`)
 
 - [ ] **Site Collection Inventory**
   - [ ] List of all site collections to migrate
@@ -144,17 +195,17 @@ Provide a complete list of:
 **Email Template to Microsoft Account Team:**
 
 ```
-Subject: SharePoint Online API Throttling Limit Increase Request - Hydro One Migration
+Subject: Microsoft Graph API Throttling Limit Increase Request - Hydro One Migration
 
 Dear Microsoft Account Team,
 
-We are planning a large-scale data migration from SharePoint Online to Azure Data Lake Storage Gen2 for Hydro One. We request a temporary increase in SharePoint Online API throttling limits to facilitate this migration.
+We are planning a large-scale data migration from SharePoint Online to Azure Data Lake Storage Gen2 for Hydro One. We request a temporary increase in Microsoft Graph API throttling limits to facilitate this migration.
 
 Migration Details:
-- Tenant: hydroone.sharepoint.com
+- Tenant: m365x52073746.sharepoint.com
 - Data Volume: ~25 TB
 - Timeline: [INSERT DATES]
-- Migration Tool: Azure Data Factory with SharePoint REST API
+- Migration Tool: Azure Data Factory with Microsoft Graph API
 - Service Principal App ID: [INSERT APP ID]
 
 Current Limits We're Experiencing:
@@ -182,6 +233,26 @@ Best regards,
 
 ## Migration Execution
 
+### Pipeline Architecture (Graph API Flow)
+
+The migration pipelines follow this flow:
+
+1. **Token Acquisition:** ADF retrieves Client ID, Client Secret, and Tenant ID from Key Vault (`kv-hydroone-test2`), then acquires an OAuth2 app-only token from Azure AD with scope `https://graph.microsoft.com/.default`.
+
+2. **Drive Resolution:** Using the token, ADF calls the Graph API to resolve the SharePoint site and document library to a Drive ID:
+   - `GET https://graph.microsoft.com/v1.0/sites/{host}:{site-path}` to get the Site ID
+   - `GET https://graph.microsoft.com/v1.0/sites/{site-id}/drives` to get the Drive ID for the library
+
+3. **File Enumeration:** ADF enumerates files using the Graph children endpoint:
+   - `GET https://graph.microsoft.com/v1.0/drives/{drive-id}/root/children` for root-level items
+   - `GET https://graph.microsoft.com/v1.0/drives/{drive-id}/items/{item-id}/children` for subfolder items
+
+4. **File Copy:** ADF downloads each file using the Graph `/content` endpoint with a Bearer token in the Authorization header:
+   - `GET https://graph.microsoft.com/v1.0/drives/{drive-id}/items/{item-id}/content`
+   - The file is streamed directly to ADLS Gen2 (`sthydroonemigtest`) via a Copy activity
+
+5. **Subfolder Processing:** `PL_Process_Subfolder` is called by `PL_Migrate_Library` for each subfolder. It does NOT self-recurse; instead, `PL_Migrate_Library` handles recursive traversal to avoid ADF circular reference errors.
+
 ### Step 1: Deploy Azure Resources
 
 ```bash
@@ -192,19 +263,20 @@ az login
 az account set --subscription "<subscription-id>"
 
 # Deploy resources using PowerShell script
-.\scripts\Setup-AzureResources.ps1 -Environment "dev" -Location "canadacentral"
+.\scripts\Setup-AzureResources.ps1 -Environment "test" -Location "canadacentral"
 ```
 
-### Step 2: Register SharePoint App
+### Step 2: Register App and Configure Key Vault
 
 ```powershell
 # Register app and store credentials in Key Vault
 .\scripts\Register-SharePointApp.ps1 `
     -TenantId "<tenant-id>" `
-    -KeyVaultName "kv-hydroone-mig-dev"
+    -KeyVaultName "kv-hydroone-test2"
 
 # IMPORTANT: Grant admin consent in Azure Portal
 # Go to: Azure AD > App Registrations > HydroOne-SPO-Migration > API Permissions > Grant admin consent
+# Required: Sites.Read.All and Files.Read.All (Microsoft Graph, Application)
 ```
 
 ### Step 3: Deploy ADF ARM Templates
@@ -212,40 +284,44 @@ az account set --subscription "<subscription-id>"
 ```bash
 # Deploy ADF resources
 az deployment group create \
-    --resource-group rg-hydroone-migration-dev \
+    --resource-group rg-hydroone-migration-test \
     --template-file adf-templates/arm-template.json \
-    --parameters @config/parameters.dev.json
+    --parameters @config/parameters.test.json
 ```
 
 ### Step 4: Initialize SQL Database
 
 ```bash
 # Connect to SQL and run scripts
-sqlcmd -S sql-hydroone-migration-dev.database.windows.net \
+sqlcmd -S sql-hydroone-migration-test.database.windows.net \
     -d MigrationControl \
     -i sql/create_control_table.sql
 
-sqlcmd -S sql-hydroone-migration-dev.database.windows.net \
+sqlcmd -S sql-hydroone-migration-test.database.windows.net \
     -d MigrationControl \
     -i sql/create_audit_log_table.sql
 ```
 
 ### Step 5: Populate Control Table
 
-```powershell
-# Enumerate SharePoint and populate control table
-.\scripts\Populate-ControlTable.ps1 `
-    -SharePointTenantUrl "https://hydroone.sharepoint.com" `
-    -SqlServerName "sql-hydroone-migration-dev" `
-    -SqlDatabaseName "MigrationControl" `
-    -UseInteractiveAuth
+Insert test data to validate the pipeline. The following example uses the working SQL insert format:
+
+```sql
+INSERT INTO dbo.MigrationControl (SiteUrl, LibraryName, SiteTitle, LibraryTitle, Status, Priority, EnableIncrementalSync, CreatedBy)
+VALUES ('/sites/SalesAndMarketing', 'Shared Documents', 'Sales And Marketing', 'Documents', 'Pending', 1, 1, 'anuragdhuria');
 ```
+
+**Key fields:**
+- `SiteUrl`: The relative site path (e.g., `/sites/SalesAndMarketing`). Combined with the tenant URL (`https://m365x52073746.sharepoint.com`) during pipeline execution.
+- `LibraryName`: The internal library name in SharePoint (e.g., `Shared Documents`).
+- `SiteTitle`: Human-readable site name, used for ADLS folder structure.
+- `LibraryTitle`: Human-readable library name, used for ADLS folder structure.
 
 ### Step 6: Run Pilot Migration
 
 **Start with a single small library to validate:**
 
-1. In Azure Portal, go to ADF > Author > Pipelines
+1. In Azure Portal, go to ADF (`adf-hydroone-migration-test`) > Author > Pipelines
 2. Select `PL_Master_Migration_Orchestrator`
 3. Click "Debug" or "Add Trigger" > "Trigger Now"
 4. Set parameters:
@@ -254,7 +330,7 @@ sqlcmd -S sql-hydroone-migration-dev.database.windows.net \
    - MaxRetries: 3
 
 5. Monitor in ADF Monitor tab
-6. Verify files in ADLS container
+6. Verify files in ADLS container (`sthydroonemigtest`)
 7. Check audit log in SQL database
 
 ### Step 7: Batch Migration
@@ -273,16 +349,16 @@ sqlcmd -S sql-hydroone-migration-dev.database.windows.net \
 1. Enable the evening trigger:
    ```powershell
    Start-AzDataFactoryV2Trigger `
-       -ResourceGroupName "rg-hydroone-migration-dev" `
-       -DataFactoryName "adf-hydroone-migration-dev" `
+       -ResourceGroupName "rg-hydroone-migration-test" `
+       -DataFactoryName "adf-hydroone-migration-test" `
        -Name "TR_Evening_BulkMigration"
    ```
 
 2. Or trigger manually:
    ```powershell
    Invoke-AzDataFactoryV2Pipeline `
-       -ResourceGroupName "rg-hydroone-migration-dev" `
-       -DataFactoryName "adf-hydroone-migration-dev" `
+       -ResourceGroupName "rg-hydroone-migration-test" `
+       -DataFactoryName "adf-hydroone-migration-test" `
        -PipelineName "PL_Master_Migration_Orchestrator" `
        -Parameter @{
            BatchSize = 20
@@ -294,7 +370,7 @@ sqlcmd -S sql-hydroone-migration-dev.database.windows.net \
 ### Monitoring Pipeline Runs
 
 **In Azure Portal:**
-1. Go to Data Factory > Monitor
+1. Go to Data Factory (`adf-hydroone-migration-test`) > Monitor
 2. View Pipeline Runs
 3. Click on run for details
 4. Check Activity Runs for per-file status
@@ -302,9 +378,9 @@ sqlcmd -S sql-hydroone-migration-dev.database.windows.net \
 **Using PowerShell:**
 ```powershell
 .\scripts\Monitor-Migration.ps1 `
-    -ResourceGroupName "rg-hydroone-migration-dev" `
-    -DataFactoryName "adf-hydroone-migration-dev" `
-    -SqlServerName "sql-hydroone-migration-dev" `
+    -ResourceGroupName "rg-hydroone-migration-test" `
+    -DataFactoryName "adf-hydroone-migration-test" `
+    -SqlServerName "sql-hydroone-migration-test" `
     -SqlDatabaseName "MigrationControl" `
     -ContinuousMonitor
 ```
@@ -315,8 +391,8 @@ sqlcmd -S sql-hydroone-migration-dev.database.windows.net \
 1. Stop any running triggers:
    ```powershell
    Stop-AzDataFactoryV2Trigger `
-       -ResourceGroupName "rg-hydroone-migration-dev" `
-       -DataFactoryName "adf-hydroone-migration-dev" `
+       -ResourceGroupName "rg-hydroone-migration-test" `
+       -DataFactoryName "adf-hydroone-migration-test" `
        -Name "TR_Evening_BulkMigration"
    ```
 
@@ -338,7 +414,7 @@ sqlcmd -S sql-hydroone-migration-dev.database.windows.net \
 
 ## Throttling Management
 
-### SharePoint Online Throttling Limits
+### Microsoft Graph API Throttling Limits
 
 | Limit Type | Threshold | Response |
 |------------|-----------|----------|
@@ -401,31 +477,76 @@ Invoke-AzDataFactoryV2Pipeline `
 
 ### Common Errors and Resolutions
 
+#### "Unsupported app only token" from SharePoint REST API
+**Cause:** The pipeline is calling the SharePoint REST API (`_api/web/...`) with an app-only (client credentials) token. SharePoint REST API does not support app-only tokens for most operations.
+**Resolution:**
+1. Switch all SharePoint data access to use the **Microsoft Graph API** instead
+2. Acquire tokens with scope `https://graph.microsoft.com/.default`
+3. Use Graph endpoints: `/v1.0/sites/...`, `/v1.0/drives/...`
+4. Do NOT use SharePoint REST endpoints (`_api/web/GetFolderByServerRelativeUrl`, etc.)
+
+#### Doubled URL in HTTP file downloads
+**Cause:** The ADF HTTP source is constructing a URL like `https://m365x52073746.sharepoint.com/https://m365x52073746.sharepoint.com/...` by concatenating a base URL with a full URL returned from SharePoint.
+**Resolution:**
+1. Use the Graph API `/content` endpoint instead: `GET https://graph.microsoft.com/v1.0/drives/{drive-id}/items/{item-id}/content`
+2. Pass the Bearer token in the Authorization header
+3. Do NOT use the `@microsoft.graph.downloadUrl` directly (it is a pre-authenticated URL that expires and may cause URL doubling in ADF)
+
+#### ADLS Forbidden (403) when writing files
+**Cause:** The storage account (`sthydroonemigtest`) has public network access disabled, or the ADF Managed Identity lacks the required RBAC role.
+**Resolution:**
+1. Enable **public network access** on the storage account (Networking > Firewalls and virtual networks > Allow access from all networks), or configure a private endpoint
+2. Assign the **Storage Blob Data Contributor** role to the ADF Managed Identity on the storage account
+3. Verify the linked service in ADF uses Managed Identity authentication (not account key)
+
+#### SQL Server "Deny Public Network Access" error
+**Cause:** The SQL Server (`sql-hydroone-migration-test`) has public network access disabled.
+**Resolution:**
+1. In Azure Portal, go to SQL Server > Networking
+2. Set **Public network access** to **Selected networks** or **All networks**
+3. Add the ADF outbound IP addresses to the firewall rules, or check "Allow Azure services and resources to access this server"
+
+#### Key Vault access denied (403)
+**Cause:** The Key Vault (`kv-hydroone-test2`) has public network access disabled, or the ADF Managed Identity does not have the Key Vault Secrets User role.
+**Resolution:**
+1. Enable **public network access** on the Key Vault (Networking > Allow public access from all networks), or configure a private endpoint
+2. Assign the **Key Vault Secrets User** role to the ADF Managed Identity
+3. If the Key Vault uses access policies (not RBAC), add an access policy granting Get and List for Secrets to the ADF Managed Identity
+
+#### ADF circular reference error in pipeline
+**Cause:** `PL_Process_Subfolder` was configured to call itself recursively, which ADF does not allow (circular/self-referencing pipeline invocation).
+**Resolution:**
+1. `PL_Process_Subfolder` must NOT call itself via Execute Pipeline
+2. Instead, have `PL_Migrate_Library` handle recursive traversal by calling `PL_Process_Subfolder` for each subfolder discovered
+3. `PL_Process_Subfolder` enumerates items in a single folder and calls back to `PL_Migrate_Library` (or a wrapper) for any sub-subfolders
+
 #### HTTP 401 - Unauthorized
 **Cause:** Token expired or invalid credentials
 **Resolution:**
-1. Check Key Vault secret hasn't expired
+1. Check Key Vault secrets (`SPO-ClientId`, `SPO-ClientSecret`, `SPO-TenantId`) have not expired
 2. Regenerate client secret if needed
 3. Update secret in Key Vault
-4. Re-run failed items
+4. Verify token scope is `https://graph.microsoft.com/.default`
+5. Re-run failed items
 
-#### HTTP 403 - Forbidden
-**Cause:** Insufficient permissions or site-level restrictions
+#### HTTP 403 - Forbidden (Graph API)
+**Cause:** Insufficient Graph API permissions or admin consent not granted
 **Resolution:**
-1. Verify app has Sites.Read.All permission
-2. Check if site has custom permissions blocking app
-3. Request SharePoint admin to grant access
+1. Verify app has `Sites.Read.All` and `Files.Read.All` permissions (Microsoft Graph, Application)
+2. Verify admin consent has been granted (green checkmark in Azure Portal)
+3. Check if the site has conditional access policies blocking app access
 4. Mark library as "Skipped" if access cannot be granted
 
 #### HTTP 404 - Not Found
-**Cause:** File or library deleted after enumeration
+**Cause:** File or library deleted after enumeration, or incorrect site/drive path
 **Resolution:**
-1. Log as expected (file removed at source)
-2. Skip and continue
-3. Re-enumerate library if many 404s
+1. Verify the `SiteUrl` in the control table matches the actual SharePoint site path
+2. Verify the `LibraryName` matches the internal name of the document library
+3. If file was deleted at source, log as expected and skip
+4. Re-enumerate library if many 404s occur
 
 #### HTTP 429 - Throttled
-**Cause:** SharePoint API rate limit exceeded
+**Cause:** Microsoft Graph API rate limit exceeded
 **Resolution:**
 1. Wait activity pauses for configured time
 2. Retry automatically
@@ -433,26 +554,11 @@ Invoke-AzDataFactoryV2Pipeline `
 4. Contact Microsoft for limit increase
 
 #### HTTP 503 - Service Unavailable
-**Cause:** SharePoint service temporarily unavailable
+**Cause:** Microsoft Graph or SharePoint service temporarily unavailable
 **Resolution:**
 1. Automatic retry after delay
-2. Check SharePoint service health
+2. Check Microsoft 365 service health dashboard
 3. Resume later if service is down
-
-#### File Locked / Checked Out
-**Cause:** File is checked out by user
-**Resolution:**
-1. Log error and continue
-2. Retry in next batch
-3. Contact file owner to check in
-4. For persistent locks, escalate to SharePoint admin
-
-#### File Too Large
-**Cause:** File exceeds copy timeout or memory limits
-**Resolution:**
-1. Increase activity timeout
-2. Copy individually with dedicated pipeline
-3. For files >10 GB, consider alternative methods
 
 ### Retry Failed Files
 
@@ -471,12 +577,12 @@ UPDATE dbo.MigrationControl
 SET Status = 'Pending',
     RetryCount = 0,
     ErrorMessage = NULL
-WHERE LibraryName = 'YourLibraryName'
-AND SiteUrl = '/sites/YourSite'
+WHERE LibraryName = 'Shared Documents'
+AND SiteUrl = '/sites/SalesAndMarketing'
 
 -- Clear failed audit entries for re-processing
 DELETE FROM dbo.MigrationAuditLog
-WHERE SourcePath LIKE '%YourLibraryName%'
+WHERE SourcePath LIKE '%Shared Documents%'
 AND MigrationStatus = 'Failed'
 ```
 
@@ -515,10 +621,10 @@ AND MigrationStatus = 'Failed'
 1. **File Count Reconciliation:**
    ```powershell
    .\scripts\Validate-Migration.ps1 `
-       -SharePointTenantUrl "https://hydroone.sharepoint.com" `
-       -StorageAccountName "sthydroonemigdev" `
+       -SharePointTenantUrl "https://m365x52073746.sharepoint.com" `
+       -StorageAccountName "sthydroonemigtest" `
        -ContainerName "sharepoint-migration" `
-       -SqlServerName "sql-hydroone-migration-dev" `
+       -SqlServerName "sql-hydroone-migration-test" `
        -SqlDatabaseName "MigrationControl"
    ```
 
@@ -564,8 +670,8 @@ AND MigrationStatus = 'Failed'
 2. **Start incremental sync trigger:**
    ```powershell
    Start-AzDataFactoryV2Trigger `
-       -ResourceGroupName "rg-hydroone-migration-prod" `
-       -DataFactoryName "adf-hydroone-migration-prod" `
+       -ResourceGroupName "rg-hydroone-migration-test" `
+       -DataFactoryName "adf-hydroone-migration-test" `
        -Name "TR_TumblingWindow_IncrementalSync"
    ```
 
@@ -605,8 +711,8 @@ AND MigrationStatus = 'Failed'
 1. **Stop all migration activities:**
    ```powershell
    # Stop all triggers
-   Get-AzDataFactoryV2Trigger -ResourceGroupName "rg-hydroone-migration-dev" `
-       -DataFactoryName "adf-hydroone-migration-dev" |
+   Get-AzDataFactoryV2Trigger -ResourceGroupName "rg-hydroone-migration-test" `
+       -DataFactoryName "adf-hydroone-migration-test" |
        Stop-AzDataFactoryV2Trigger
 
    # Cancel running pipelines

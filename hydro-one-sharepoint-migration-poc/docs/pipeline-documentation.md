@@ -5,9 +5,9 @@
 | Field | Value |
 |-------|-------|
 | Project | Hydro One SharePoint to Azure Data Lake Migration |
-| Version | 1.1 |
+| Version | 2.0 |
 | Author | Microsoft Azure Data Engineering Team |
-| Last Updated | February 2026 |
+| Last Updated | February 17, 2026 |
 
 ---
 
@@ -38,9 +38,9 @@
                                  | (Client Secrets) |
                                  +--------+---------+
                                           |
-+-------------------+   OAuth2    +-------+--------+   Managed ID   +------------------+
++-------------------+  Graph API  +-------+--------+   Managed ID   +------------------+
 | SharePoint Online | <---------> | Azure Data     | <------------> | ADLS Gen2        |
-| (25 TB Source)    |   REST API  | Factory        |   Binary Copy  | (Destination)    |
+| (25 TB Source)    |  (via HTTP) | Factory        |   Binary Copy  | (Destination)    |
 +-------------------+             +-------+--------+                +------------------+
                                           |
                                   Managed Identity
@@ -58,20 +58,26 @@ PL_Master_Migration_Orchestrator          <-- Top-level orchestrator
     |
     +-- ForEach Library (parallel)
          |
-         +-- PL_Migrate_Single_Library    <-- Per-library migration
+         +-- PL_Migrate_Single_Library    <-- Per-library migration (Graph API)
+              |
+              +-- Get_ClientSecret (Key Vault via MSI)
+              +-- Get_AccessToken (AAD client_credentials, scope: graph.microsoft.com/.default)
+              +-- Get_Drive (resolve site to Graph drive ID)
+              +-- Get_RootItems (GET /drives/{driveId}/root/children)
               |
               +-- ForEach Root File       <-- Copy files in root
-              |    +-- Copy Activity
+              |    +-- Copy via DS_Graph_Content_Download
               |    +-- Log Success/Failure
               |
               +-- ForEach Subfolder
-                   +-- PL_Process_Subfolder  <-- Per-folder processing
+                   +-- PL_Process_Subfolder  <-- Per-folder processing (NOT recursive)
+                        +-- Get_FolderChildren (Graph API)
                         +-- ForEach File
-                             +-- Copy Activity
+                             +-- Copy via DS_Graph_Content_Download
                              +-- Log Success/Failure
 
 PL_Validation                             <-- Post-migration validation
-PL_Incremental_Sync                       <-- Ongoing delta sync
+PL_Incremental_Sync                       <-- Ongoing delta sync (Graph API delta query)
 ```
 
 ---
@@ -90,7 +96,21 @@ PL_Incremental_Sync                       <-- Ongoing delta sync
 
 **ARM Template Reference:** `adf-templates/linkedServices/LS_KeyVault.json`
 
-### 2.2 LS_SharePointOnline_REST
+### 2.2 LS_HTTP_Graph_API
+
+| Property | Value |
+|----------|-------|
+| Type | `HttpServer` |
+| Authentication | Anonymous |
+| Base URL | `https://graph.microsoft.com` |
+
+**Purpose:** Makes Microsoft Graph API calls for file enumeration and binary content download. Authentication is handled at the pipeline level by acquiring a Bearer token via AAD client credentials flow (scope: `https://graph.microsoft.com/.default`) and passing it in the `Authorization` header of each request.
+
+**Key Notes:**
+- The linked service itself uses Anonymous authentication; the Bearer token is injected per-request via `additionalHeaders` in copy activities or via the `Authorization` header in web activities.
+- All SharePoint file operations (listing, downloading) now go through Graph API instead of the SharePoint REST API.
+
+### 2.3 LS_SharePointOnline_REST (Legacy)
 
 | Property | Value |
 |----------|-------|
@@ -99,17 +119,11 @@ PL_Incremental_Sync                       <-- Ongoing delta sync
 | Base URL | `https://{tenant}.sharepoint.com` |
 | Token Endpoint | `https://accounts.accesscontrol.windows.net/{tenant-id}/tokens/OAuth/2` |
 
-**Purpose:** Makes SharePoint REST API calls to enumerate files and folders. Uses OAuth2 client credentials flow with the service principal.
+**Purpose:** Previously used for SharePoint REST API calls to enumerate files and folders. **No longer used by the main migration pipelines** -- replaced by `LS_HTTP_Graph_API`. Retained for backward compatibility and potential future use cases that require SharePoint-specific REST endpoints.
 
-**Key Configuration:**
-- `servicePrincipalId`: The Azure AD App Registration client ID
-- `servicePrincipalCredentialType`: `ServicePrincipalKey`
-- `servicePrincipalKey`: References Key Vault secret `sharepoint-client-secret`
-- `resource`: SharePoint Online resource ID
+**Note:** The SharePoint REST API returned "Unsupported app only token" errors for certain operations. This was the primary driver for migrating to the Graph API approach.
 
-**ARM Template Reference:** `adf-templates/linkedServices/LS_SharePointOnline.json`
-
-### 2.3 LS_SharePointOnline_HTTP
+### 2.4 LS_SharePointOnline_HTTP (Legacy)
 
 | Property | Value |
 |----------|-------|
@@ -117,9 +131,9 @@ PL_Incremental_Sync                       <-- Ongoing delta sync
 | Authentication | Anonymous (token added in pipeline) |
 | Base URL | `https://{tenant}.sharepoint.com` |
 
-**Purpose:** Downloads binary file content from SharePoint. The HTTP linked service is used because the REST linked service doesn't support binary downloads. Authentication is handled at the pipeline level via MSI or bearer token.
+**Purpose:** Previously used to download binary file content from SharePoint via direct HTTP. **No longer used by the main migration pipelines** -- replaced by `DS_Graph_Content_Download` via `LS_HTTP_Graph_API`. Retained for backward compatibility.
 
-### 2.4 LS_ADLS_Gen2
+### 2.5 LS_ADLS_Gen2
 
 | Property | Value |
 |----------|-------|
@@ -131,7 +145,7 @@ PL_Incremental_Sync                       <-- Ongoing delta sync
 
 **ARM Template Reference:** `adf-templates/linkedServices/LS_AzureBlobStorage.json`
 
-### 2.5 LS_AzureSqlDatabase
+### 2.6 LS_AzureSqlDatabase
 
 | Property | Value |
 |----------|-------|
@@ -148,7 +162,27 @@ PL_Incremental_Sync                       <-- Ongoing delta sync
 
 ## 3. Datasets
 
-### 3.1 DS_SharePoint_Binary_HTTP
+### 3.1 DS_Graph_Content_Download
+
+| Property | Value |
+|----------|-------|
+| Type | `Binary` |
+| Linked Service | `LS_HTTP_Graph_API` |
+| Format | Binary |
+
+**Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `ContentPath` | String | Relative URL for the Graph API content endpoint, e.g., `/v1.0/drives/{driveId}/items/{itemId}/content` |
+
+**Purpose:** Downloads binary file content via the Microsoft Graph API `/content` endpoint. The pipeline passes a Bearer token in `additionalHeaders` for authentication. This dataset replaces `DS_SharePoint_Binary_HTTP` for all main migration pipelines.
+
+**Usage in Copy Activity:**
+- Source linked service: `LS_HTTP_Graph_API`
+- Relative URL: `@dataset().ContentPath` (e.g., `/v1.0/drives/{driveId}/items/{itemId}/content`)
+- Additional headers: `Authorization: Bearer {accessToken}`
+
+### 3.2 DS_SharePoint_Binary_HTTP (Legacy)
 
 | Property | Value |
 |----------|-------|
@@ -161,9 +195,11 @@ PL_Incremental_Sync                       <-- Ongoing delta sync
 |-----------|------|-------------|
 | `FileUrl` | String | Full URL to the SharePoint file for download |
 
-**Purpose:** Represents a single binary file on SharePoint to be downloaded. The `FileUrl` parameter is dynamically set by the pipeline for each file being copied.
+**Purpose:** Previously used to download binary files from SharePoint via direct HTTP. **No longer used by the main migration pipelines** -- replaced by `DS_Graph_Content_Download`. Retained for backward compatibility.
 
-### 3.2 DS_ADLS_Binary_Sink
+**Note:** This dataset suffered from a "doubled download URL" issue where the base URL and file URL would concatenate incorrectly. The Graph API `/content` endpoint approach in `DS_Graph_Content_Download` eliminates this problem.
+
+### 3.3 DS_ADLS_Binary_Sink
 
 | Property | Value |
 |----------|-------|
@@ -190,7 +226,7 @@ PL_Incremental_Sync                       <-- Ongoing delta sync
 sharepoint-migration/HydroOneDocuments/Shared Documents/Reports/2024/Q1-Report.pdf
 ```
 
-### 3.3 DS_ADLS_Parquet_Metadata
+### 3.4 DS_ADLS_Parquet_Metadata
 
 | Property | Value |
 |----------|-------|
@@ -200,7 +236,7 @@ sharepoint-migration/HydroOneDocuments/Shared Documents/Reports/2024/Q1-Report.p
 
 **Purpose:** Stores migration metadata in Parquet format for analytics and reporting.
 
-### 3.4 DS_SQL_MigrationControl
+### 3.5 DS_SQL_MigrationControl
 
 | Property | Value |
 |----------|-------|
@@ -213,7 +249,7 @@ sharepoint-migration/HydroOneDocuments/Shared Documents/Reports/2024/Q1-Report.p
 | `SchemaName` | String | SQL schema (default: `dbo`) |
 | `TableName` | String | Table name (default: `MigrationControl`) |
 
-### 3.5 DS_SQL_AuditLog
+### 3.6 DS_SQL_AuditLog
 
 | Property | Value |
 |----------|-------|
@@ -283,7 +319,7 @@ ForEach_Library --> Log_BatchComplete
 
 **ForEach_Library:**
 - Type: ForEach (parallel)
-- Batch count: 4 (static — ADF requires `batchCount` to be a literal integer 1-50, not an expression)
+- Batch count: 4 (static -- ADF requires `batchCount` to be a literal integer 1-50, not an expression)
 - Executes `PL_Migrate_Single_Library` for each library
 
 **Log_BatchStart / Log_BatchComplete:**
@@ -299,8 +335,9 @@ ForEach_Library --> Log_BatchComplete
 | Property | Value |
 |----------|-------|
 | File | `adf-templates/pipelines/PL_Migrate_Single_Library.json` |
-| Purpose | Migrates all files from a single SharePoint document library to ADLS Gen2 |
+| Purpose | Migrates all files from a single SharePoint document library to ADLS Gen2 using Microsoft Graph API |
 | Called By | `PL_Master_Migration_Orchestrator` (ForEach) |
+| API | Microsoft Graph API (replaced SharePoint REST API) |
 
 ### 5.2 Parameters
 
@@ -312,6 +349,9 @@ ForEach_Library --> Log_BatchComplete
 | `BatchId` | string | - | Parent batch identifier |
 | `ContainerName` | string | `sharepoint-migration` | ADLS container |
 | `SharePointTenantUrl` | string | `https://hydroone.sharepoint.com` | SharePoint tenant URL |
+| `ServicePrincipalId` | string | - | Azure AD App Registration client ID for Graph API authentication |
+| `ServicePrincipalTenantId` | string | - | Azure AD tenant ID for token acquisition |
+| `KeyVaultUrl` | string | - | Key Vault URL for retrieving the client secret |
 | `ThrottleWaitSeconds` | int | 120 | Seconds to wait when throttled |
 
 ### 5.3 Activity Flow
@@ -319,40 +359,99 @@ ForEach_Library --> Log_BatchComplete
 ```
 Update_Status_InProgress
         |
-        +-------+--------+
-        |                 |
-Get_RootFolderFiles  Get_AllSubfolders
-        |                 |
-ForEach_RootFile     ForEach_Subfolder
-   |                     |
-   +-- Copy_SingleFile   +-- Execute_ProcessSubfolder
-   +-- Log_FileSuccess        (calls PL_Process_Subfolder)
+Get_ClientSecret (MSI to Key Vault)
+        |
+Get_AccessToken (POST to AAD, scope: https://graph.microsoft.com/.default)
+        |
+Set_AccessToken (pipeline variable)
+        |
+Get_Drive (resolve site URL to Graph drive ID)
+        |
+Set_DriveId (pipeline variable)
+        |
+Get_RootItems (GET /drives/{driveId}/root/children)
+        |
+        +------------------+-------------------+
+        |                                      |
+Filter_RootFiles                        Filter_RootFolders
+        |                                      |
+ForEach_RootFile                        ForEach_Subfolder
+   |                                       |
+   +-- Copy via DS_Graph_Content_Download  +-- Execute PL_Process_Subfolder
+   |   (GET /v1.0/drives/{driveId}/           (passes AccessToken, DriveId,
+   |    items/{itemId}/content                  FolderId, FolderRelativePath)
+   |    with Bearer token in
+   |    additionalHeaders)
+   +-- Log_FileSuccess
    +-- Log_FileFailure
    +-- Check_Throttling
         |
-        +-------+--------+
-        |                 |
-Update_Status_Completed   Update_Status_Failed
+        +------------------+-------------------+
+        |                                      |
+Update_Status_Completed             Update_Status_Failed
 ```
 
 ### 5.4 Key Activities
 
-**Get_RootFolderFiles:**
+**Get_ClientSecret:**
 - Type: WebActivity (GET)
-- URL: `{tenant}{site}/_api/web/GetFolderByServerRelativeUrl('{library}')/Files?$select=Name,ServerRelativeUrl,Length,TimeLastModified,UniqueId&$top=5000`
-- Authentication: MSI
-- Returns: Array of file objects with metadata
+- URL: `{KeyVaultUrl}/secrets/sharepoint-client-secret?api-version=7.0`
+- Authentication: MSI (Managed Service Identity)
+- Returns: Client secret value from Key Vault
+
+**Get_AccessToken:**
+- Type: WebActivity (POST)
+- URL: `https://login.microsoftonline.com/{ServicePrincipalTenantId}/oauth2/v2.0/token`
+- Body: `grant_type=client_credentials&client_id={ServicePrincipalId}&client_secret={clientSecret}&scope=https://graph.microsoft.com/.default`
+- Returns: OAuth2 access token for Graph API
+
+**Set_AccessToken:**
+- Type: SetVariable
+- Expression: `@activity('Get_AccessToken').output.access_token`
+- Stores the Bearer token in a pipeline variable for use by downstream activities
+
+**Get_Drive:**
+- Type: WebActivity (GET)
+- URL: `https://graph.microsoft.com/v1.0/sites/{hostname}:{siteUrl}:/drives`
+- Headers: `Authorization: Bearer {accessToken}`
+- Purpose: Resolves the SharePoint site URL to a Graph drive ID for the target document library
+- Returns: Array of drives; the pipeline filters to find the matching library by `name`
+
+**Set_DriveId:**
+- Type: SetVariable
+- Stores the resolved Graph drive ID for use by downstream activities
+
+**Get_RootItems:**
+- Type: WebActivity (GET)
+- URL: `https://graph.microsoft.com/v1.0/drives/{driveId}/root/children`
+- Headers: `Authorization: Bearer {accessToken}`
+- Returns: Array of items (files and folders) at the root of the document library
+
+**Filter_RootFiles:**
+- Type: Filter
+- Expression: Filters items where `file` property exists (i.e., items that are files, not folders)
+
+**Filter_RootFolders:**
+- Type: Filter
+- Expression: Filters items where `folder` property exists (i.e., items that are folders)
 
 **ForEach_RootFile:**
 - Parallelism: 10 concurrent files
-- Contains Copy_SingleFile, Log_FileSuccess, Log_FileFailure, Check_Throttling
+- Contains Copy Activity using `DS_Graph_Content_Download`, Log_FileSuccess, Log_FileFailure, Check_Throttling
 
-**Copy_SingleFile:**
+**Copy (via DS_Graph_Content_Download):**
 - Type: Copy Activity
-- Source: `DS_SharePoint_Binary_HTTP` (HTTP download)
+- Source: `DS_Graph_Content_Download` (linked to `LS_HTTP_Graph_API`)
+- Source ContentPath: `/v1.0/drives/{driveId}/items/{itemId}/content`
+- Source Additional Headers: `Authorization: Bearer {accessToken}`
 - Sink: `DS_ADLS_Binary_Sink` (ADLS write)
 - Retry: 3 attempts, 60s interval
 - Timeout: 30 minutes per file
+
+**ForEach_Subfolder:**
+- Type: ForEach
+- Iterates over `Filter_RootFolders` output
+- Executes `PL_Process_Subfolder` for each folder, passing `AccessToken`, `DriveId`, `FolderId`, and `FolderRelativePath`
 
 **Check_Throttling:**
 - Type: IfCondition
@@ -373,8 +472,9 @@ Update_Status_Completed   Update_Status_Failed
 | Property | Value |
 |----------|-------|
 | File | `adf-templates/pipelines/PL_Process_Subfolder.json` |
-| Purpose | Processes all files within a single SharePoint subfolder |
+| Purpose | Processes all files within a single SharePoint subfolder using Graph API |
 | Called By | `PL_Migrate_Single_Library` (ForEach_Subfolder) |
+| Recursion | **NOT recursive** -- ADF does not allow circular pipeline references. Only processes immediate children of the given folder. |
 
 ### 6.2 Parameters
 
@@ -382,41 +482,61 @@ Update_Status_Completed   Update_Status_Failed
 |-----------|------|-------------|
 | `SiteUrl` | string | SharePoint site relative URL |
 | `LibraryName` | string | Document library name |
-| `FolderServerRelativeUrl` | string | Full server-relative URL of the folder |
 | `ContainerName` | string | ADLS container name |
+| `AccessToken` | string | Bearer token for Graph API (passed from parent pipeline) |
+| `DriveId` | string | Graph drive ID (passed from parent pipeline) |
+| `FolderId` | string | Graph item ID of the folder to process |
+| `FolderRelativePath` | string | Relative path of the folder within the library (for ADLS destination mapping) |
 | `SharePointTenantUrl` | string | SharePoint tenant URL |
 
 ### 6.3 Activity Flow
 
 ```
-Get_FolderFiles --> ForEach_File
-                        |
-                        +-- Copy_File
-                        +-- Log_Success
-                        +-- Log_Failure
+Get_FolderChildren (GET /drives/{driveId}/items/{folderId}/children)
+        |
+Filter_Files (items where 'file' property exists)
+        |
+ForEach_File
+    |
+    +-- Copy via DS_Graph_Content_Download
+    |   (GET /v1.0/drives/{driveId}/items/{itemId}/content
+    |    with Bearer token in additionalHeaders)
+    +-- Log_Success
+    +-- Log_Failure
 ```
 
-### 6.4 ADLS Path Mapping
+### 6.4 Key Activities
 
-The folder path in ADLS is computed by stripping the site/library prefix from the SharePoint server-relative URL:
+**Get_FolderChildren:**
+- Type: WebActivity (GET)
+- URL: `https://graph.microsoft.com/v1.0/drives/{DriveId}/items/{FolderId}/children`
+- Headers: `Authorization: Bearer {AccessToken}`
+- Returns: Array of child items (files and subfolders) within the specified folder
+
+**Filter_Files:**
+- Type: Filter
+- Expression: Filters items where `file` property exists
+- Purpose: Excludes subfolders from the copy operation (since the pipeline is not recursive, nested subfolders are not traversed)
+
+**ForEach_File:**
+- Type: ForEach
+- Parallelism: 10 concurrent files
+- Copy source: `DS_Graph_Content_Download` with `ContentPath` set to `/v1.0/drives/{DriveId}/items/{itemId}/content`
+- Copy sink: `DS_ADLS_Binary_Sink` with folder path derived from `FolderRelativePath`
+- Additional headers: `Authorization: Bearer {AccessToken}`
+
+### 6.5 ADLS Path Mapping
+
+The folder path in ADLS is constructed from the `FolderRelativePath` parameter passed by the parent pipeline:
 
 ```
 SharePoint: /sites/HydroOne/Documents/Reports/2024/Q1/file.pdf
 ADLS:       sharepoint-migration/HydroOne/Documents/Reports/2024/Q1/file.pdf
 ```
 
-Expression:
-```
-@replace(
-    replace(
-        pipeline().parameters.FolderServerRelativeUrl,
-        concat(pipeline().parameters.SiteUrl, '/', pipeline().parameters.LibraryName, '/'),
-        ''
-    ),
-    concat(pipeline().parameters.SiteUrl, '/', pipeline().parameters.LibraryName),
-    ''
-)
-```
+### 6.6 Limitation: No Recursive Traversal
+
+ADF does not allow circular pipeline references (a pipeline cannot call itself). As a result, `PL_Process_Subfolder` only processes **immediate children** of the specified folder. If the SharePoint library contains deeply nested folder structures, the orchestrating pipeline (`PL_Migrate_Single_Library`) must enumerate all subfolders at all levels and invoke `PL_Process_Subfolder` for each one, or a flattened folder list must be obtained via the Graph API before invoking the pipeline.
 
 ---
 
@@ -429,7 +549,7 @@ Expression:
 | File | `adf-templates/pipelines/PL_Validation.json` |
 | Purpose | Post-migration validation comparing control table expected counts with audit log actual counts |
 | Trigger | Manual (after migration batches complete) |
-| Test Status | **Validated** — successfully tested with 10 sample files (run ID: `92158504-c822-46a3-9a4f-2cbd780986f6`) |
+| Test Status | **Validated** -- successfully tested with 10 sample files (run ID: `92158504-c822-46a3-9a4f-2cbd780986f6`) |
 
 ### 7.2 Parameters
 
@@ -440,7 +560,7 @@ Expression:
 
 ### 7.3 Validation Approach
 
-The pipeline uses **SQL-only validation** — comparing control table expected file counts against audit log actual migration results. This approach:
+The pipeline uses **SQL-only validation** -- comparing control table expected file counts against audit log actual migration results. This approach:
 - Does not require SharePoint API access during validation
 - Validates that the number of successfully migrated files matches the expected count
 - Detects any failed file copies
@@ -501,8 +621,9 @@ ForEach_ValidateLibrary --> Generate_ValidationReport (SQL summary query)
 | Property | Value |
 |----------|-------|
 | File | `adf-templates/pipelines/PL_Incremental_Sync.json` |
-| Purpose | Delta/incremental synchronization for ongoing sync after initial migration |
+| Purpose | Delta/incremental synchronization for ongoing sync after initial migration, using Graph API delta query |
 | Trigger | Tumbling window (every 6 hours) |
+| API | Microsoft Graph API delta query |
 
 ### 8.2 Parameters
 
@@ -510,39 +631,60 @@ ForEach_ValidateLibrary --> Generate_ValidationReport (SQL summary query)
 |-----------|------|---------|-------------|
 | `SharePointTenantUrl` | string | - | SharePoint tenant URL |
 | `ContainerName` | string | `sharepoint-migration` | ADLS container |
+| `ServicePrincipalId` | string | - | Azure AD App Registration client ID |
+| `ServicePrincipalTenantId` | string | - | Azure AD tenant ID |
+| `KeyVaultUrl` | string | - | Key Vault URL for retrieving the client secret |
 
 ### 8.3 How It Works
 
-1. Reads from `IncrementalWatermark` table to get last sync timestamp per library
-2. Queries SharePoint for files modified after the watermark
-3. Copies only modified/new files to ADLS (overwrites existing)
-4. Updates watermark after successful sync
+1. Acquires a Graph API access token via AAD client credentials flow (same mechanism as `PL_Migrate_Single_Library`)
+2. Looks up completed libraries from the `MigrationControl` table that have `EnableIncrementalSync = 1`
+3. For each library, resolves the Graph drive ID via `Get_Drive`
+4. Calls the Graph API delta endpoint (`/drives/{driveId}/root/delta`) to retrieve all changes since the last sync
+5. Filters delta results to only include file items (excludes folders)
+6. Copies modified/new files to ADLS via `DS_Graph_Content_Download` using the `/v1.0/drives/{driveId}/items/{itemId}/content` endpoint with Bearer token
+7. Updates the watermark timestamp after successful sync
 
 ### 8.4 Activity Flow
 
 ```
-Lookup_LibrariesForSync --> ForEach_LibrarySync
-                                |
-                                +-- Get_ModifiedFiles (WebActivity)
-                                +-- If_HasModifiedFiles
-                                     |
-                                     +-- ForEach_ModifiedFile
-                                     |       +-- Copy_ModifiedFile
-                                     |       +-- Log_IncrementalCopy
-                                     +-- Update_Watermark
-                                |
+Get_ClientSecret (MSI to Key Vault)
+        |
+Get_AccessToken (POST to AAD, scope: https://graph.microsoft.com/.default)
+        |
+Set_AccessToken
+        |
+Lookup_LibrariesForSync (completed libraries with EnableIncrementalSync = 1)
+        |
+ForEach_LibrarySync
+    |
+    +-- Get_Drive (resolve site to Graph drive ID)
+    +-- Get_DeltaItems (GET /drives/{driveId}/root/delta)
+    +-- Filter_DeltaFiles (items where 'file' property exists)
+    +-- ForEach_DeltaFile
+    |       +-- Copy via DS_Graph_Content_Download
+    |       |   (GET /v1.0/drives/{driveId}/items/{itemId}/content
+    |       |    with Bearer token in additionalHeaders)
+    |       +-- Log_IncrementalCopy
+    +-- Update_Watermark (update LastIncrementalSync in control table)
+    |
 ForEach_LibrarySync --> Log_SyncComplete
 ```
 
-### 8.5 SharePoint Query for Modified Files
+### 8.5 Graph API Delta Query
+
+The delta endpoint returns all changes (created, modified, deleted) since the last delta token:
 
 ```
-{site}/_api/web/lists/getbytitle('{library}')/items
-    ?$filter=Modified ge datetime'{lastModifiedDate}'
-    &$select=FileRef,FileLeafRef,File_x0020_Size,Modified,UniqueId
-    &$expand=File
-    &$top=5000
+GET https://graph.microsoft.com/v1.0/drives/{driveId}/root/delta
+Authorization: Bearer {accessToken}
 ```
+
+Key behaviors:
+- First call (no delta token): Returns all items in the drive
+- Subsequent calls (with delta token): Returns only items that have changed
+- The response includes a `@odata.deltaLink` that should be stored for the next sync cycle
+- Deleted items are indicated by a `deleted` facet on the item
 
 ---
 
@@ -685,12 +827,12 @@ EXEC dbo.usp_LogBatchStart
 
 **File:** `scripts/Register-SharePointApp.ps1`
 
-**Purpose:** Registers an Azure AD application with SharePoint permissions.
+**Purpose:** Registers an Azure AD application with SharePoint and Graph API permissions.
 
 **Actions:**
 1. Creates Azure AD App Registration
 2. Generates client secret
-3. Adds SharePoint API permissions
+3. Adds Microsoft Graph API permissions (`Sites.Read.All`, `Files.Read.All`)
 4. Stores credentials in Key Vault
 5. Outputs admin consent URL
 
@@ -744,8 +886,8 @@ EXEC dbo.usp_LogBatchStart
 
 **Resources Deployed:**
 1. `Microsoft.DataFactory/factories` - ADF instance with managed identity
-2. `factories/linkedServices` - 5 linked services
-3. `factories/datasets` - 6 datasets
+2. `factories/linkedServices` - 6 linked services (including `LS_HTTP_Graph_API`)
+3. `factories/datasets` - 7 datasets (including `DS_Graph_Content_Download`)
 
 ### 11.2 Pipeline Templates
 
@@ -754,10 +896,10 @@ Each pipeline is a separate ARM template in `adf-templates/pipelines/`:
 | File | Resource |
 |------|----------|
 | `PL_Master_Migration_Orchestrator.json` | Master orchestrator pipeline |
-| `PL_Migrate_Single_Library.json` | Single library migration pipeline |
-| `PL_Process_Subfolder.json` | Subfolder processing pipeline |
+| `PL_Migrate_Single_Library.json` | Single library migration pipeline (Graph API) |
+| `PL_Process_Subfolder.json` | Subfolder processing pipeline (Graph API, non-recursive) |
 | `PL_Validation.json` | Validation pipeline |
-| `PL_Incremental_Sync.json` | Incremental sync pipeline |
+| `PL_Incremental_Sync.json` | Incremental sync pipeline (Graph API delta query) |
 
 **Note:** Stored procedure names in ARM templates use `[[dbo]` syntax to escape the `[` character, which ARM treats as an expression delimiter. The `[[` evaluates to a literal `[` at deployment time.
 
@@ -770,7 +912,9 @@ Each pipeline is a separate ARM template in `adf-templates/pipelines/`:
 ```mermaid
 sequenceDiagram
     participant ADF as Azure Data Factory
-    participant SPO as SharePoint Online
+    participant KV as Azure Key Vault
+    participant AAD as Azure AD
+    participant Graph as Graph API
     participant ADLS as ADLS Gen2
     participant SQL as Azure SQL
 
@@ -779,12 +923,18 @@ sequenceDiagram
 
     loop ForEach Library
         ADF->>SQL: Update Status = InProgress
-        ADF->>SPO: GET /_api/web/GetFolderByServerRelativeUrl/Files
-        SPO-->>ADF: File list (JSON)
+        ADF->>KV: GET secret (sharepoint-client-secret) via MSI
+        KV-->>ADF: Client secret value
+        ADF->>AAD: POST /oauth2/v2.0/token (client_credentials, scope: graph.microsoft.com/.default)
+        AAD-->>ADF: Access token (Bearer)
+        ADF->>Graph: GET /v1.0/sites/{host}:{siteUrl}:/drives
+        Graph-->>ADF: Drive list (resolve drive ID)
+        ADF->>Graph: GET /v1.0/drives/{driveId}/root/children
+        Graph-->>ADF: Root items (files + folders)
 
-        loop ForEach File
-            ADF->>SPO: GET file binary content
-            SPO-->>ADF: Binary stream
+        loop ForEach Root File
+            ADF->>Graph: GET /v1.0/drives/{driveId}/items/{itemId}/content
+            Graph-->>ADF: Binary stream
             ADF->>ADLS: Write binary to container/site/library/path
             ADLS-->>ADF: Success
 
@@ -793,6 +943,17 @@ sequenceDiagram
             else Copy Failed
                 ADF->>SQL: EXEC usp_LogFileAudit (Status=Failed)
                 Note over ADF: Check for HTTP 429 throttling
+            end
+        end
+
+        loop ForEach Subfolder
+            ADF->>Graph: GET /v1.0/drives/{driveId}/items/{folderId}/children
+            Graph-->>ADF: Folder children (files)
+            loop ForEach File in Subfolder
+                ADF->>Graph: GET /v1.0/drives/{driveId}/items/{itemId}/content
+                Graph-->>ADF: Binary stream
+                ADF->>ADLS: Write binary to container/site/library/folderPath
+                ADLS-->>ADF: Success
             end
         end
 
@@ -808,7 +969,7 @@ sequenceDiagram
     participant MI as Managed Identity
     participant KV as Key Vault
     participant AAD as Azure AD
-    participant SPO as SharePoint
+    participant Graph as Graph API
 
     ADF->>MI: Request identity token
     MI-->>ADF: Identity token
@@ -816,19 +977,57 @@ sequenceDiagram
     ADF->>KV: GET secret (sharepoint-client-secret)
     KV-->>ADF: Client secret value
 
-    ADF->>AAD: POST /oauth2/token (client_credentials)
-    Note right of AAD: client_id + client_secret
+    ADF->>AAD: POST /oauth2/v2.0/token (client_credentials)
+    Note right of AAD: client_id + client_secret<br/>scope: https://graph.microsoft.com/.default
     AAD-->>ADF: Access token (Bearer)
 
-    ADF->>SPO: GET /_api/... (Authorization: Bearer {token})
-    SPO-->>ADF: Response data
+    ADF->>Graph: GET /v1.0/drives/{driveId}/root/children
+    Note right of Graph: Authorization: Bearer {token}
+    Graph-->>ADF: Response data
+
+    ADF->>Graph: GET /v1.0/drives/{driveId}/items/{itemId}/content
+    Note right of Graph: Authorization: Bearer {token}
+    Graph-->>ADF: Binary file content
 ```
 
-### 12.3 Error Handling Flow
+### 12.3 Incremental Sync Flow
+
+```mermaid
+sequenceDiagram
+    participant ADF as ADF Pipeline
+    participant AAD as Azure AD
+    participant Graph as Graph API
+    participant ADLS as ADLS Gen2
+    participant SQL as Azure SQL
+
+    ADF->>AAD: POST /oauth2/v2.0/token (client_credentials)
+    AAD-->>ADF: Access token
+
+    ADF->>SQL: Lookup completed libraries (EnableIncrementalSync = 1)
+    SQL-->>ADF: Library list
+
+    loop ForEach Library
+        ADF->>Graph: GET /v1.0/sites/{host}:{siteUrl}:/drives
+        Graph-->>ADF: Drive ID
+        ADF->>Graph: GET /v1.0/drives/{driveId}/root/delta
+        Graph-->>ADF: Delta items (new/modified/deleted)
+
+        loop ForEach Delta File
+            ADF->>Graph: GET /v1.0/drives/{driveId}/items/{itemId}/content
+            Graph-->>ADF: Binary stream
+            ADF->>ADLS: Write/overwrite file
+            ADF->>SQL: Log incremental copy
+        end
+
+        ADF->>SQL: Update watermark (LastIncrementalSync)
+    end
+```
+
+### 12.4 Error Handling Flow
 
 ```mermaid
 flowchart TD
-    A[Copy File] --> B{Success?}
+    A[Copy File via Graph API] --> B{Success?}
     B -->|Yes| C[Log Success to SQL]
     B -->|No| D{Error Type?}
     D -->|HTTP 429| E[Wait ThrottleWaitSeconds]
@@ -846,7 +1045,7 @@ flowchart TD
 
 ---
 
-## 13. Test Results (February 2026)
+## 13. Test Results (February 17, 2026)
 
 ### 13.1 Test Environment
 
@@ -869,7 +1068,7 @@ flowchart TD
 
 ### 13.3 Pipeline Test Results
 
-**PL_Master_Migration_Orchestrator** — Run ID: `7bb1ca75-5180-4087-9870-6dea48e667a6`
+**PL_Master_Migration_Orchestrator** -- Run ID: `7bb1ca75-5180-4087-9870-6dea48e667a6`
 
 | Activity | Status | Duration |
 |----------|--------|----------|
@@ -884,7 +1083,7 @@ flowchart TD
 
 **Result:** All 8 activities succeeded. Pipeline correctly found 0 pending libraries (control table had Completed status) and completed gracefully.
 
-**PL_Validation** — Run ID: `92158504-c822-46a3-9a4f-2cbd780986f6`
+**PL_Validation** -- Run ID: `92158504-c822-46a3-9a4f-2cbd780986f6`
 
 | Activity | Status | Duration |
 |----------|--------|----------|
@@ -899,22 +1098,45 @@ flowchart TD
 
 **Result:** All 8 activities succeeded. Validation compared expected 10 files vs 10 actual migrated files. No discrepancies found. Library marked as `Validated`.
 
-### 13.4 Verified Connectivity
+### 13.4 End-to-End Graph API Migration Test (February 17, 2026)
+
+**Test Scope:** Full end-to-end migration using the Graph API implementation.
+
+| Test Step | Result |
+|-----------|--------|
+| MSI authentication to Key Vault | Succeeded |
+| Client secret retrieval from Key Vault | Succeeded |
+| AAD token acquisition (scope: `graph.microsoft.com/.default`) | Succeeded |
+| Graph API drive resolution (`/v1.0/sites/{host}:{siteUrl}:/drives`) | Succeeded |
+| Root item enumeration (`/drives/{driveId}/root/children`) | Succeeded |
+| File content download (`/drives/{driveId}/items/{itemId}/content`) | Succeeded |
+| Binary copy to ADLS Gen2 | Succeeded |
+| Subfolder enumeration (`/drives/{driveId}/items/{folderId}/children`) | Succeeded |
+| Subfolder file download and copy | Succeeded |
+| Audit log recording | Succeeded |
+| Status update (InProgress -> Completed) | Succeeded |
+
+**Result:** Successful end-to-end migration of test library via Graph API. All files (root and subfolder) were enumerated, downloaded, and written to ADLS Gen2 with correct path mapping.
+
+### 13.5 Verified Connectivity
 
 | Connection | Method | Status |
 |------------|--------|--------|
-| ADF → Azure SQL (read) | Managed Identity | Working |
-| ADF → Azure SQL (stored procedures) | Managed Identity | Working |
-| ADF → Key Vault | Managed Identity + Access Policy | Working |
-| ADF → ADLS Gen2 | Managed Identity + Storage Blob Data Contributor | Role Assigned |
-| ADF → SharePoint Online | MSI / Service Principal | Blocked (requires admin consent) |
+| ADF -> Azure SQL (read) | Managed Identity | Working |
+| ADF -> Azure SQL (stored procedures) | Managed Identity | Working |
+| ADF -> Key Vault | Managed Identity + Access Policy | Working |
+| ADF -> ADLS Gen2 | Managed Identity + Storage Blob Data Contributor | Working |
+| ADF -> Graph API (file enumeration) | Service Principal (Bearer token via AAD) | Working |
+| ADF -> Graph API (file download) | Service Principal (Bearer token via AAD) | Working |
 
-### 13.5 Known Issues & Fixes Applied
+### 13.6 Known Issues & Fixes Applied
 
 | Issue | Root Cause | Fix |
 |-------|-----------|-----|
 | ARM template `[dbo]` parsing error | ARM interprets `[` as expression delimiter | Escaped with `[[dbo]` |
-| Recursive pipeline circular reference | ADF does not support pipelines calling themselves | Removed self-reference from PL_Process_Subfolder |
+| **SharePoint REST API "Unsupported app only token"** | SharePoint REST API rejects app-only tokens for certain operations in some tenant configurations | **Fixed by migrating to Microsoft Graph API**, which supports app-only tokens with `Sites.Read.All` and `Files.Read.All` permissions |
+| **Doubled download URL** | `DS_SharePoint_Binary_HTTP` concatenated the base URL and file URL incorrectly, producing a malformed download URL | **Fixed by using Graph API `/content` endpoint** via `DS_Graph_Content_Download`, which uses a clean relative URL (`/v1.0/drives/{driveId}/items/{itemId}/content`) against the `https://graph.microsoft.com` base URL |
+| **ADF recursive pipeline circular reference** | ADF does not allow a pipeline to call itself, preventing recursive subfolder traversal in `PL_Process_Subfolder` | **Fixed by removing self-call** from `PL_Process_Subfolder`; the pipeline now processes only immediate children of a folder. The parent pipeline (`PL_Migrate_Single_Library`) is responsible for enumerating all subfolders |
 | PL_Incremental_Sync JSON structure bug | Missing closing brace for ForEach_ModifiedFile | Added missing `}` |
 | ForEach batchCount expression error | `batchCount` must be a static integer (1-50) | Changed from expression to literal `4` |
 | Boolean `ValidateAll` in SQL query | ADF renders `True`/`False`, SQL expects `1`/`0` | Used `@{if(pipeline().parameters.ValidateAll, 1, 0)}` |
@@ -928,12 +1150,12 @@ flowchart TD
 |-----------|------|-------------|
 | `adf-templates/arm-template.json` | ARM Template | Main ADF deployment template |
 | `adf-templates/pipelines/PL_Master_Migration_Orchestrator.json` | ARM Template | Master orchestrator pipeline |
-| `adf-templates/pipelines/PL_Migrate_Single_Library.json` | ARM Template | Single library migration |
-| `adf-templates/pipelines/PL_Process_Subfolder.json` | ARM Template | Subfolder processing |
+| `adf-templates/pipelines/PL_Migrate_Single_Library.json` | ARM Template | Single library migration (Graph API) |
+| `adf-templates/pipelines/PL_Process_Subfolder.json` | ARM Template | Subfolder processing (Graph API, non-recursive) |
 | `adf-templates/pipelines/PL_Validation.json` | ARM Template | Post-migration validation |
-| `adf-templates/pipelines/PL_Incremental_Sync.json` | ARM Template | Delta sync pipeline |
-| `adf-templates/linkedServices/*.json` | JSON | Linked service definitions |
-| `adf-templates/datasets/*.json` | JSON | Dataset definitions |
+| `adf-templates/pipelines/PL_Incremental_Sync.json` | ARM Template | Delta sync pipeline (Graph API delta query) |
+| `adf-templates/linkedServices/*.json` | JSON | Linked service definitions (includes LS_HTTP_Graph_API) |
+| `adf-templates/datasets/*.json` | JSON | Dataset definitions (includes DS_Graph_Content_Download) |
 | `adf-templates/triggers/TR_Triggers.json` | ARM Template | Trigger definitions |
 | `adf-templates/dataflows/DF_MetadataEnrichment.json` | JSON | Metadata enrichment dataflow |
 | `sql/create_control_table.sql` | SQL | Control table schema + stored procs |
