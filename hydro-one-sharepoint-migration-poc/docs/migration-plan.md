@@ -13,33 +13,90 @@
 
 ---
 
+## Technical Approach
+
+### API Strategy: Microsoft Graph API
+
+The migration uses **Microsoft Graph API** (not SharePoint REST API) for all SharePoint Online interactions. This decision was validated during the POC phase after discovering that the SharePoint REST API is incompatible with Azure AD v2.0 app-only (client credentials) tokens. The Graph API provides full support for the OAuth 2.0 client credentials flow with AAD v2.0 endpoints.
+
+**Graph API endpoints used:**
+
+| Operation | Graph API Endpoint |
+|-----------|-------------------|
+| Resolve site to drive | `GET /v1.0/sites/{host}:/{sitePath}:/drives` |
+| Enumerate root items | `GET /v1.0/drives/{driveId}/root/children` |
+| Enumerate subfolder items | `GET /v1.0/drives/{driveId}/items/{itemId}/children` |
+| Download file content | `GET /v1.0/drives/{driveId}/items/{itemId}/content` (302 redirect to pre-authenticated download URL) |
+| Pagination | `@odata.nextLink` for large result sets |
+
+**Authentication flow:**
+1. Service Principal client secret retrieved from Azure Key Vault (via Managed Identity)
+2. OAuth 2.0 client credentials token acquired from `https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/token` with scope `https://graph.microsoft.com/.default`
+3. Bearer token used in all Graph API calls
+
+### ADF Pipeline Architecture
+
+The migration is orchestrated through Azure Data Factory with the following pipelines:
+
+| Pipeline | Purpose |
+|----------|---------|
+| `PL_Master_Migration_Orchestrator` | Reads from control table, iterates through libraries in batches |
+| `PL_Migrate_Single_Library` | Migrates all files from a single library using Graph API enumeration and download |
+| `PL_Process_Subfolder` | Processes nested folder structures iteratively (not recursively, due to ADF limitation) |
+| `PL_Validation` | Post-migration validation comparing source file counts vs destination |
+| `PL_Incremental_Sync` | Delta sync for ongoing synchronization |
+
+### Prerequisites
+
+| Requirement | Details |
+|-------------|---------|
+| Azure AD App Registration | Service Principal with client secret stored in Key Vault |
+| **Graph API Permissions (Application)** | **`Sites.Read.All`**, **`Files.Read.All`** (admin-consented) |
+| Azure Data Factory | With System-Assigned Managed Identity enabled |
+| ADLS Gen2 Storage Account | Managed Identity granted Storage Blob Data Contributor |
+| Azure SQL Database | Managed Identity granted db_datareader, db_datawriter; control tables deployed |
+| Azure Key Vault | Managed Identity granted Key Vault Secrets User; client secret stored |
+
+> **Note:** SharePoint-specific permissions (e.g., `Sites.FullControl.All` via SharePoint admin) are **not** required. The Graph API application permissions (`Sites.Read.All`, `Files.Read.All`) granted through Azure AD are sufficient for read-only migration.
+
+---
+
 ## Phased Approach
 
-### Phase 1: POC Validation (Week 1)
+### Phase 1: POC Validation (Week 1) -- COMPLETED
 
 **Objective:** Validate migration approach with 1-2 small libraries
 
-| Task | Owner | Duration | Deliverable |
-|------|-------|----------|-------------|
-| Deploy Azure resources (dev) | Microsoft | 1 day | Resource group deployed |
-| Register SharePoint app | Microsoft | 0.5 day | App with admin consent |
-| Deploy ADF pipelines | Microsoft | 1 day | Pipelines deployed |
-| Initialize control database | Microsoft | 0.5 day | Tables created |
-| Enumerate 2 test libraries | Microsoft | 0.5 day | Control table populated |
-| Run POC migration | Microsoft | 1 day | Files migrated to ADLS |
-| Validate POC results | Microsoft/Hydro One | 1 day | Validation report |
-| POC sign-off | Hydro One | 0.5 day | Approval to proceed |
+**Status:** Successfully completed on **February 17, 2026** using the **SalesAndMarketing** site (`/sites/SalesAndMarketing` / `Shared Documents` library) on the dev/test tenant (`m365x52073746.sharepoint.com`).
+
+**Key POC findings:**
+- Microsoft Graph API validated as the correct approach for app-only (client credentials) access to SharePoint Online content
+- SharePoint REST API was initially attempted but found to be incompatible with AAD v2.0 app-only tokens; Graph API resolved this
+- ADF pipelines successfully enumerate folders, download files via Graph pre-authenticated URLs, and write to ADLS Gen2
+- Folder structure is preserved in the destination container
+- ADF does not support recursive pipeline execution; subfolder processing uses iterative patterns within `PL_Process_Subfolder`
+
+| Task | Owner | Duration | Deliverable | Status |
+|------|-------|----------|-------------|--------|
+| Deploy Azure resources (dev) | Microsoft | 1 day | Resource group deployed | Done |
+| Register Azure AD app | Microsoft | 0.5 day | App with Graph API permissions, admin consent | Done |
+| Deploy ADF pipelines | Microsoft | 1 day | Pipelines deployed (Graph API based) | Done |
+| Initialize control database | Microsoft | 0.5 day | Tables created | Done |
+| Enumerate test library via Graph API | Microsoft | 0.5 day | Control table populated (SalesAndMarketing) | Done |
+| Run POC migration | Microsoft | 1 day | Files migrated to ADLS | Done |
+| Validate POC results | Microsoft/Hydro One | 1 day | Validation report | Done |
+| POC sign-off | Hydro One | 0.5 day | Approval to proceed | Pending |
 
 **Success Criteria:**
-- [ ] All files from test libraries migrated successfully
-- [ ] File count matches 100%
-- [ ] Files are accessible in ADLS
-- [ ] Folder structure preserved
-- [ ] No errors in audit log
+- [x] All files from SalesAndMarketing library migrated successfully
+- [x] File count matches 100%
+- [x] Files are accessible in ADLS
+- [x] Folder structure preserved
+- [x] No errors in audit log
 
 **Exit Criteria:**
 - [ ] POC sign-off obtained
-- [ ] Issues documented and resolved
+- [x] Issues documented and resolved (Graph API pivot documented)
 - [ ] Go/No-Go decision for Phase 2
 
 ---
@@ -158,18 +215,20 @@
 
 ## Risk Register
 
-| ID | Risk | Likelihood | Impact | Mitigation | Owner |
-|----|------|------------|--------|------------|-------|
-| R1 | SharePoint throttling delays migration | High | Medium | Off-peak scheduling, Microsoft engagement | Microsoft |
-| R2 | Large files (>10 GB) fail to migrate | Medium | Low | Individual handling, increased timeout | Microsoft |
-| R3 | API permissions revoked during migration | Low | High | Regular monitoring, backup credentials | Microsoft |
-| R4 | SharePoint service outage | Low | High | Built-in retry, pause capability | N/A |
-| R5 | Data corruption during transfer | Low | High | Checksum validation, source unchanged | Microsoft |
-| R6 | ADLS storage capacity exceeded | Low | Medium | Capacity monitoring, alerts | Microsoft |
-| R7 | Key personnel unavailable | Medium | Medium | Cross-training, documentation | Both |
-| R8 | Business content changes during migration | Medium | Low | Incremental sync, re-migration capability | Microsoft |
-| R9 | Network bandwidth insufficient | Low | Medium | Off-peak scheduling, bandwidth monitoring | Hydro One |
-| R10 | Regulatory/compliance issues | Low | High | Early legal review, audit logging | Hydro One |
+| ID | Risk | Likelihood | Impact | Mitigation | Status | Owner |
+|----|------|------------|--------|------------|--------|-------|
+| R1 | SharePoint throttling delays migration | High | Medium | Off-peak scheduling, Microsoft engagement | Open | Microsoft |
+| R2 | Large files (>10 GB) fail to migrate | Medium | Low | Individual handling, increased timeout | Open | Microsoft |
+| R3 | API permissions revoked during migration | Low | High | Regular monitoring, backup credentials | Open | Microsoft |
+| R4 | SharePoint service outage | Low | High | Built-in retry, pause capability | Open | N/A |
+| R5 | Data corruption during transfer | Low | High | Checksum validation, source unchanged | Open | Microsoft |
+| R6 | ADLS storage capacity exceeded | Low | Medium | Capacity monitoring, alerts | Open | Microsoft |
+| R7 | Key personnel unavailable | Medium | Medium | Cross-training, documentation | Open | Both |
+| R8 | Business content changes during migration | Medium | Low | Incremental sync, re-migration capability | Open | Microsoft |
+| R9 | Network bandwidth insufficient | Low | Medium | Off-peak scheduling, bandwidth monitoring | Open | Hydro One |
+| R10 | Regulatory/compliance issues | Low | High | Early legal review, audit logging | Open | Hydro One |
+| R11 | SharePoint REST API incompatible with AAD v2.0 app-only tokens | High | High | Switched to Microsoft Graph API for all file enumeration and downloads. Graph API fully supports client credentials flow with AAD v2.0 endpoints. | **Resolved** (POC) | Microsoft |
+| R12 | ADF does not support recursive pipeline execution | Medium | Medium | Implemented iterative subfolder processing within `PL_Process_Subfolder` instead of recursive pipeline calls. Folders are processed in a loop rather than via nested Execute Pipeline activities. | **Resolved** (POC) | Microsoft |
 
 ### Risk Response Plan
 
@@ -182,6 +241,16 @@
 - Primary: File count and size validation post-migration
 - Secondary: Checksum validation for sampled files
 - Tertiary: Re-migrate from source (data unchanged)
+
+**R11 - SharePoint REST API Incompatibility (RESOLVED):**
+- **Root Cause:** The SharePoint REST API (`/_api/web/...`) does not accept access tokens acquired via the AAD v2.0 client credentials flow (`/oauth2/v2.0/token` with `client_credentials` grant). SharePoint REST API requires either legacy SharePoint App-Only tokens or AAD v1.0 tokens, which are not compatible with modern app registrations using application permissions.
+- **Resolution:** Switched all file enumeration and download operations to Microsoft Graph API (`https://graph.microsoft.com/v1.0/...`). Graph API natively supports AAD v2.0 app-only tokens and provides equivalent functionality for listing drive items, navigating folder hierarchies, and downloading file content via pre-authenticated URLs.
+- **Impact:** No functional loss. Graph API provides the same capabilities with better alignment to modern authentication patterns. Required application permissions changed from SharePoint-specific to `Sites.Read.All` and `Files.Read.All` (Microsoft Graph).
+
+**R12 - ADF Recursive Pipeline Limitation (RESOLVED):**
+- **Root Cause:** Azure Data Factory does not allow a pipeline to call itself recursively via Execute Pipeline activity.
+- **Resolution:** Implemented iterative folder processing within `PL_Process_Subfolder`. The pipeline uses a loop-based approach to process nested folders rather than recursive pipeline invocation.
+- **Impact:** Subfolder depth handling is managed iteratively. No functional limitation for typical SharePoint folder structures.
 
 ---
 
@@ -233,7 +302,7 @@
 ## Timeline Summary
 
 ```
-Week 1  |████████| Phase 1: POC Validation
+Week 1  |████████| Phase 1: POC Validation          *** COMPLETED 2026-02-17 ***
 Week 2  |████████| Phase 2: Pilot Migration (1 TB)
 Week 3  |████████| Phase 2: Pilot Migration (continued)
 Week 4  |████████| Phase 3: Bulk Migration - Batch 1 (5 TB)
@@ -251,7 +320,7 @@ Week 10 |████████| Phase 4: Cutover & Handoff
 
 | Milestone | Target Date | Status |
 |-----------|-------------|--------|
-| M1: POC Complete | Week 1 | Pending |
+| M1: POC Complete | Week 1 | **Complete (2026-02-17)** |
 | M2: Pilot Complete (1 TB) | Week 3 | Pending |
 | M3: 50% Migration Complete (12.5 TB) | Week 6 | Pending |
 | M4: Bulk Migration Complete (25 TB) | Week 8 | Pending |
@@ -268,11 +337,12 @@ Week 10 |████████| Phase 4: Cutover & Handoff
 4. Business stakeholders available for validation during Week 9
 5. No major changes to source content during migration
 6. Azure subscription has sufficient quota
+7. Microsoft Graph API permissions (`Sites.Read.All`, `Files.Read.All`) remain consented throughout migration
 
 ## Dependencies
 
-1. Azure AD app registration requires Global Administrator
-2. SharePoint admin consent required before migration
+1. Azure AD app registration requires Global Administrator (or Application Administrator with admin consent workflow)
+2. Graph API application permissions (`Sites.Read.All`, `Files.Read.All`) require admin consent before migration
 3. Microsoft TAM engagement for throttling limit increase
 4. Hydro One IT approval for Azure resource deployment
 5. Business owner sign-off required at each phase
@@ -322,19 +392,25 @@ DECISIONS NEEDED:
 
 ## Appendix: Detailed Week-by-Week Plan
 
-### Week 1 - POC Validation
+### Week 1 - POC Validation (COMPLETED 2026-02-17)
 
-| Day | Task | Hours | Owner |
-|-----|------|-------|-------|
-| Mon | Deploy Azure resources | 4 | Microsoft |
-| Mon | Register SharePoint app | 2 | Microsoft |
-| Tue | Deploy ADF pipelines | 6 | Microsoft |
-| Wed | Initialize SQL database | 2 | Microsoft |
-| Wed | Enumerate test libraries | 2 | Microsoft |
-| Wed | Run POC migration | 4 | Microsoft |
-| Thu | Monitor and troubleshoot | 6 | Microsoft |
-| Fri | Validate results | 4 | Microsoft |
-| Fri | POC sign-off meeting | 2 | All |
+| Day | Task | Hours | Owner | Status |
+|-----|------|-------|-------|--------|
+| Mon | Deploy Azure resources | 4 | Microsoft | Done |
+| Mon | Register Azure AD app (Graph API permissions) | 2 | Microsoft | Done |
+| Tue | Deploy ADF pipelines (Graph API based) | 6 | Microsoft | Done |
+| Wed | Initialize SQL database | 2 | Microsoft | Done |
+| Wed | Enumerate SalesAndMarketing library via Graph API | 2 | Microsoft | Done |
+| Wed | Run POC migration | 4 | Microsoft | Done |
+| Thu | Monitor and troubleshoot | 6 | Microsoft | Done |
+| Fri | Validate results | 4 | Microsoft | Done |
+| Fri | POC sign-off meeting | 2 | All | Pending |
+
+**POC Notes:**
+- Target site: `/sites/SalesAndMarketing` (Shared Documents library)
+- Tenant: `m365x52073746.sharepoint.com` (dev/test)
+- Key pivot: Switched from SharePoint REST API to Microsoft Graph API due to AAD v2.0 token incompatibility
+- All file enumeration uses Graph drives/items endpoints; downloads use Graph `/content` endpoint (302 redirect to pre-authenticated URL)
 
 ### Week 2-3 - Pilot Migration
 
