@@ -6,7 +6,7 @@
 |-------|-------|
 | Project | Hydro One SharePoint to Azure Data Lake Migration |
 | Version | 1.0 |
-| Author | PwC Azure Data Engineering Team |
+| Author | Microsoft Azure Data Engineering Team |
 | Last Updated | February 2026 |
 | Classification | Confidential |
 
@@ -158,7 +158,7 @@ az provider show --namespace Microsoft.KeyVault --query "registrationState" -o t
 az group create \
     --name "rg-hydroone-migration-{env}" \
     --location "canadacentral" \
-    --tags "Project=HydroOneMigration" "Environment={env}" "Owner=PwC"
+    --tags "Project=HydroOneMigration" "Environment={env}" "Owner=Microsoft"
 ```
 
 ### 3.4 Create ADLS Gen2 Storage Account

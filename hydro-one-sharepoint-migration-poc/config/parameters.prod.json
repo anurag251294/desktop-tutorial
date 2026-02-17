@@ -40,7 +40,7 @@
         "environment": "prod",
         "description": "Production environment parameters for Hydro One SharePoint Migration",
         "lastUpdated": "2024-01-01",
-        "updatedBy": "PwC Azure Team",
+        "updatedBy": "Microsoft Azure Team",
         "notes": [
             "Ensure all placeholder values are replaced before deployment",
             "servicePrincipalId: Azure AD App Registration Client ID",

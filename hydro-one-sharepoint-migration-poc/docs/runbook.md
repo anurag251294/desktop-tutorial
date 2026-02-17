@@ -175,7 +175,7 @@ We can provide additional details about our migration architecture and approach 
 
 Best regards,
 [Your Name]
-[PwC / Hydro One Contact Information]
+[Microsoft / Hydro One Contact Information]
 ```
 
 ---
@@ -501,10 +501,10 @@ AND MigrationStatus = 'Failed'
 
 | Issue | First Contact | Escalation |
 |-------|--------------|------------|
-| ADF Pipeline Errors | PwC Azure Team | Microsoft Support |
+| ADF Pipeline Errors | Microsoft Azure Team | Microsoft Support |
 | SharePoint Access Issues | Hydro One SharePoint Admin | Microsoft Support |
 | Persistent Throttling | Microsoft Account Team | FastTrack |
-| Data Discrepancies | PwC Data Team | Hydro One Business Owner |
+| Data Discrepancies | Microsoft Data Team | Hydro One Business Owner |
 
 ---
 
@@ -647,7 +647,7 @@ AND MigrationStatus = 'Failed'
 
 | Role | Contact | Responsibility |
 |------|---------|----------------|
-| PwC Lead | [Name/Email] | Technical delivery |
+| Microsoft Lead | [Name/Email] | Technical delivery |
 | Hydro One PM | [Name/Email] | Business decisions |
 | Hydro One SharePoint Admin | [Name/Email] | SharePoint access |
 | Microsoft TAM | [Name/Email] | Throttling escalations |

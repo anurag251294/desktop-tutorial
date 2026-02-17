@@ -21,13 +21,13 @@
 
 | Task | Owner | Duration | Deliverable |
 |------|-------|----------|-------------|
-| Deploy Azure resources (dev) | PwC | 1 day | Resource group deployed |
-| Register SharePoint app | PwC | 0.5 day | App with admin consent |
-| Deploy ADF pipelines | PwC | 1 day | Pipelines deployed |
-| Initialize control database | PwC | 0.5 day | Tables created |
-| Enumerate 2 test libraries | PwC | 0.5 day | Control table populated |
-| Run POC migration | PwC | 1 day | Files migrated to ADLS |
-| Validate POC results | PwC/Hydro One | 1 day | Validation report |
+| Deploy Azure resources (dev) | Microsoft | 1 day | Resource group deployed |
+| Register SharePoint app | Microsoft | 0.5 day | App with admin consent |
+| Deploy ADF pipelines | Microsoft | 1 day | Pipelines deployed |
+| Initialize control database | Microsoft | 0.5 day | Tables created |
+| Enumerate 2 test libraries | Microsoft | 0.5 day | Control table populated |
+| Run POC migration | Microsoft | 1 day | Files migrated to ADLS |
+| Validate POC results | Microsoft/Hydro One | 1 day | Validation report |
 | POC sign-off | Hydro One | 0.5 day | Approval to proceed |
 
 **Success Criteria:**
@@ -50,13 +50,13 @@
 
 | Task | Owner | Duration | Deliverable |
 |------|-------|----------|-------------|
-| Enumerate all pilot libraries | PwC | 1 day | Full inventory |
-| Configure production parameters | PwC | 0.5 day | Optimized settings |
-| Execute pilot migration (batch 1) | PwC | 2 days | 500 GB migrated |
-| Monitor and tune | PwC | Ongoing | Performance metrics |
-| Execute pilot migration (batch 2) | PwC | 2 days | 500 GB migrated |
-| Validate pilot results | PwC/Hydro One | 2 days | Validation report |
-| Document lessons learned | PwC | 1 day | Lessons learned doc |
+| Enumerate all pilot libraries | Microsoft | 1 day | Full inventory |
+| Configure production parameters | Microsoft | 0.5 day | Optimized settings |
+| Execute pilot migration (batch 1) | Microsoft | 2 days | 500 GB migrated |
+| Monitor and tune | Microsoft | Ongoing | Performance metrics |
+| Execute pilot migration (batch 2) | Microsoft | 2 days | 500 GB migrated |
+| Validate pilot results | Microsoft/Hydro One | 2 days | Validation report |
+| Document lessons learned | Microsoft | 1 day | Lessons learned doc |
 | Pilot sign-off | Hydro One | 0.5 day | Approval for bulk |
 
 **Pilot Scope:**
@@ -126,18 +126,18 @@
 #### Week 9: Validation
 | Task | Owner | Duration | Deliverable |
 |------|-------|----------|-------------|
-| Run validation pipeline | PwC | 1 day | Validation results |
-| Address discrepancies | PwC | 2 days | Issues resolved |
-| Generate final report | PwC | 1 day | Migration report |
+| Run validation pipeline | Microsoft | 1 day | Validation results |
+| Address discrepancies | Microsoft | 2 days | Issues resolved |
+| Generate final report | Microsoft | 1 day | Migration report |
 | Business validation | Hydro One | 2 days | Business sign-off |
 
 #### Week 10: Cutover
 | Task | Owner | Duration | Deliverable |
 |------|-------|----------|-------------|
-| Enable incremental sync | PwC | 0.5 day | Sync running |
-| Update documentation | PwC | 1 day | Updated runbook |
-| Knowledge transfer | PwC | 2 days | Training complete |
-| Handoff to sustainment | PwC/Hydro One | 1 day | Handoff complete |
+| Enable incremental sync | Microsoft | 0.5 day | Sync running |
+| Update documentation | Microsoft | 1 day | Updated runbook |
+| Knowledge transfer | Microsoft | 2 days | Training complete |
+| Handoff to sustainment | Microsoft/Hydro One | 1 day | Handoff complete |
 | Final sign-off | Hydro One | 0.5 day | Project closure |
 
 ---
@@ -152,7 +152,7 @@
 | Monitor sync results | Daily | Hydro One |
 | Weekly health check | Weekly | Hydro One |
 | Monthly reporting | Monthly | Hydro One |
-| Quarterly review | Quarterly | PwC/Hydro One |
+| Quarterly review | Quarterly | Microsoft/Hydro One |
 
 ---
 
@@ -160,14 +160,14 @@
 
 | ID | Risk | Likelihood | Impact | Mitigation | Owner |
 |----|------|------------|--------|------------|-------|
-| R1 | SharePoint throttling delays migration | High | Medium | Off-peak scheduling, Microsoft engagement | PwC |
-| R2 | Large files (>10 GB) fail to migrate | Medium | Low | Individual handling, increased timeout | PwC |
-| R3 | API permissions revoked during migration | Low | High | Regular monitoring, backup credentials | PwC |
+| R1 | SharePoint throttling delays migration | High | Medium | Off-peak scheduling, Microsoft engagement | Microsoft |
+| R2 | Large files (>10 GB) fail to migrate | Medium | Low | Individual handling, increased timeout | Microsoft |
+| R3 | API permissions revoked during migration | Low | High | Regular monitoring, backup credentials | Microsoft |
 | R4 | SharePoint service outage | Low | High | Built-in retry, pause capability | N/A |
-| R5 | Data corruption during transfer | Low | High | Checksum validation, source unchanged | PwC |
-| R6 | ADLS storage capacity exceeded | Low | Medium | Capacity monitoring, alerts | PwC |
+| R5 | Data corruption during transfer | Low | High | Checksum validation, source unchanged | Microsoft |
+| R6 | ADLS storage capacity exceeded | Low | Medium | Capacity monitoring, alerts | Microsoft |
 | R7 | Key personnel unavailable | Medium | Medium | Cross-training, documentation | Both |
-| R8 | Business content changes during migration | Medium | Low | Incremental sync, re-migration capability | PwC |
+| R8 | Business content changes during migration | Medium | Low | Incremental sync, re-migration capability | Microsoft |
 | R9 | Network bandwidth insufficient | Low | Medium | Off-peak scheduling, bandwidth monitoring | Hydro One |
 | R10 | Regulatory/compliance issues | Low | High | Early legal review, audit logging | Hydro One |
 
@@ -187,7 +187,7 @@
 
 ## RACI Matrix
 
-| Activity | Hydro One IT | Hydro One Business | PwC | Microsoft |
+| Activity | Hydro One IT | Hydro One Business | Microsoft | Microsoft |
 |----------|-------------|-------------------|-----|-----------|
 | Azure subscription setup | A/R | I | C | - |
 | SharePoint admin consent | A/R | I | C | - |
@@ -205,7 +205,7 @@
 
 ## Resource Requirements
 
-### PwC Team
+### Microsoft Team
 | Role | FTE | Duration |
 |------|-----|----------|
 | Azure Data Engineer (Lead) | 1 | 10 weeks |
@@ -283,8 +283,8 @@ Week 10 |████████| Phase 4: Cutover & Handoff
 
 | Meeting | Frequency | Attendees | Purpose |
 |---------|-----------|-----------|---------|
-| Daily Standup | Daily | PwC Team | Progress updates |
-| Status Meeting | Weekly | PwC, Hydro One IT | Weekly progress |
+| Daily Standup | Daily | Microsoft Team | Progress updates |
+| Status Meeting | Weekly | Microsoft, Hydro One IT | Weekly progress |
 | Steering Committee | Bi-weekly | All stakeholders | Executive updates |
 | Issue Escalation | As needed | Relevant parties | Issue resolution |
 
@@ -326,14 +326,14 @@ DECISIONS NEEDED:
 
 | Day | Task | Hours | Owner |
 |-----|------|-------|-------|
-| Mon | Deploy Azure resources | 4 | PwC |
-| Mon | Register SharePoint app | 2 | PwC |
-| Tue | Deploy ADF pipelines | 6 | PwC |
-| Wed | Initialize SQL database | 2 | PwC |
-| Wed | Enumerate test libraries | 2 | PwC |
-| Wed | Run POC migration | 4 | PwC |
-| Thu | Monitor and troubleshoot | 6 | PwC |
-| Fri | Validate results | 4 | PwC |
+| Mon | Deploy Azure resources | 4 | Microsoft |
+| Mon | Register SharePoint app | 2 | Microsoft |
+| Tue | Deploy ADF pipelines | 6 | Microsoft |
+| Wed | Initialize SQL database | 2 | Microsoft |
+| Wed | Enumerate test libraries | 2 | Microsoft |
+| Wed | Run POC migration | 4 | Microsoft |
+| Thu | Monitor and troubleshoot | 6 | Microsoft |
+| Fri | Validate results | 4 | Microsoft |
 | Fri | POC sign-off meeting | 2 | All |
 
 ### Week 2-3 - Pilot Migration

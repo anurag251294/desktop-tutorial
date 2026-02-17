@@ -6,7 +6,7 @@ Description: Collection of useful queries for monitoring migration progress,
              identifying failed files, tracking size migrated per day, and
              estimating completion time.
 
-Author:      PwC Azure Data Engineering Team
+Author:      Microsoft Azure Data Engineering Team
 Created:     2024
 Project:     Hydro One SharePoint Migration POC
 ================================================================================

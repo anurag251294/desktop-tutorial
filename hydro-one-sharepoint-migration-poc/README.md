@@ -84,7 +84,7 @@ hydro-one-sharepoint-migration-poc/
 
 For issues or questions:
 - Hydro One IT Team: [internal contact]
-- PwC Azure Team: [consultant contact]
+- Microsoft Azure Team: [consultant contact]
 - Microsoft Account Team: [TAM contact]
 
 ## License

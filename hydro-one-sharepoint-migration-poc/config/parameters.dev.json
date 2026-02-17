@@ -40,6 +40,6 @@
         "environment": "dev",
         "description": "Development environment parameters for Hydro One SharePoint Migration POC",
         "lastUpdated": "2024-01-01",
-        "updatedBy": "PwC Azure Team"
+        "updatedBy": "Microsoft Azure Team"
     }
 }

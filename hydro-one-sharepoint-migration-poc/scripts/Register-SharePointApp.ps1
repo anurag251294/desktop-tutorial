@@ -23,7 +23,7 @@
     .\Register-SharePointApp.ps1 -TenantId "your-tenant-id" -KeyVaultName "kv-hydroone-mig-dev"
 
 .NOTES
-    Author: PwC Azure Data Engineering Team
+    Author: Microsoft Azure Data Engineering Team
     Project: Hydro One SharePoint Migration POC
     Requires: Az PowerShell module, Azure AD admin permissions
 #>

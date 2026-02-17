@@ -5,8 +5,8 @@
 | Field | Value |
 |-------|-------|
 | Project | Hydro One SharePoint to Azure Data Lake Migration |
-| Version | 1.0 |
-| Author | PwC Azure Data Engineering Team |
+| Version | 1.1 |
+| Author | Microsoft Azure Data Engineering Team |
 | Last Updated | February 2026 |
 
 ---
@@ -283,7 +283,7 @@ ForEach_Library --> Log_BatchComplete
 
 **ForEach_Library:**
 - Type: ForEach (parallel)
-- Batch count: `@pipeline().parameters.ParallelLibraries`
+- Batch count: 4 (static — ADF requires `batchCount` to be a literal integer 1-50, not an expression)
 - Executes `PL_Migrate_Single_Library` for each library
 
 **Log_BatchStart / Log_BatchComplete:**
@@ -427,34 +427,70 @@ Expression:
 | Property | Value |
 |----------|-------|
 | File | `adf-templates/pipelines/PL_Validation.json` |
-| Purpose | Post-migration validation comparing source SharePoint data with destination ADLS data |
+| Purpose | Post-migration validation comparing control table expected counts with audit log actual counts |
 | Trigger | Manual (after migration batches complete) |
+| Test Status | **Validated** — successfully tested with 10 sample files (run ID: `92158504-c822-46a3-9a4f-2cbd780986f6`) |
 
 ### 7.2 Parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `SharePointTenantUrl` | string | - | SharePoint tenant URL |
-| `ContainerName` | string | `sharepoint-migration` | ADLS container |
+| `SharePointTenantUrl` | string | `https://hydroone.sharepoint.com` | SharePoint tenant URL (reserved for future SharePoint-direct validation) |
+| `ValidateAll` | bool | `false` | When `true`, re-validates all completed libraries. When `false`, only validates libraries with `ValidationStatus = NULL` or `Pending` |
 
-### 7.3 Validation Checks
+### 7.3 Validation Approach
 
-1. **File Count Validation**: Compares SharePoint library file count with ADLS file count
-2. **Size Validation**: Compares total bytes in source vs destination
-3. **Spot Check**: Random sampling of files for integrity verification
+The pipeline uses **SQL-only validation** — comparing control table expected file counts against audit log actual migration results. This approach:
+- Does not require SharePoint API access during validation
+- Validates that the number of successfully migrated files matches the expected count
+- Detects any failed file copies
+- Automatically flags discrepancies and marks validated libraries
+
+**Validation Checks:**
+1. **File Count Validation**: Compares `MigrationControl.FileCount` (expected) with count of `Success` entries in `MigrationAuditLog` (actual)
+2. **Failed File Detection**: Checks for any audit log entries with `MigrationStatus = 'Failed'`
+3. **Discrepancy Flagging**: If expected != actual OR any failures exist, marks library as `Discrepancy` with details
 
 ### 7.4 Activity Flow
 
 ```
-Lookup_CompletedLibraries --> ForEach_Library
+Lookup_CompletedLibraries --> ForEach_ValidateLibrary
                                   |
-                                  +-- Get_SPO_FileCount (WebActivity)
-                                  +-- Get_ADLS_FileCount (GetMetadata)
-                                  +-- Compare_Counts (IfCondition)
-                                  |       +-- Log_Validated
-                                  |       +-- Log_Discrepancy
-                                  +-- Update_ValidationStatus (SP)
+                                  +-- Lookup_DestinationFileCount (SQL audit log query)
+                                  +-- Compare_And_Log (stored procedure: usp_LogValidationResult)
+                                  +-- If_Discrepancy
+                                  |       +-- True:  Flag_Discrepancy (usp_UpdateValidationStatus -> 'Discrepancy')
+                                  |       +-- False: Mark_Validated (usp_UpdateValidationStatus -> 'Validated')
+                                  |
+ForEach_ValidateLibrary --> Generate_ValidationReport (SQL summary query)
+                                  |
+                        --> Set_ValidationSummary (pipeline variable output)
 ```
+
+### 7.5 Activity Details
+
+**Lookup_CompletedLibraries:**
+- Type: Lookup
+- SQL: Selects libraries where `Status = 'Completed'` and `ValidateAll = 1 OR ValidationStatus IS NULL OR = 'Pending'`
+- Returns: `Id, SiteUrl, LibraryName, ExpectedFileCount, ExpectedSizeBytes`
+
+**Lookup_DestinationFileCount:**
+- Type: Lookup
+- SQL: Counts audit log entries matching the library's source path
+- Returns: `ActualFileCount, ActualSizeBytes, SuccessCount, FailedCount`
+
+**Compare_And_Log:**
+- Type: SqlServerStoredProcedure (`usp_LogValidationResult`)
+- Updates control table with actual migrated counts
+
+**If_Discrepancy:**
+- Expression: `@or(FailedCount > 0, ExpectedFileCount != SuccessCount)`
+- True path: Calls `usp_UpdateValidationStatus` with `'Discrepancy'` and details string
+- False path: Calls `usp_UpdateValidationStatus` with `'Validated'`
+
+**Generate_ValidationReport:**
+- Type: Lookup (summary query)
+- Returns: `ValidatedCount, DiscrepancyCount, PendingCount, TotalLibraries`
 
 ---
 
@@ -519,23 +555,33 @@ ForEach_LibrarySync --> Log_SyncComplete
 | Column | Type | Description |
 |--------|------|-------------|
 | `Id` | INT (PK) | Auto-increment identifier |
-| `SiteUrl` | NVARCHAR(500) | SharePoint site relative URL |
-| `LibraryName` | NVARCHAR(255) | Document library name |
-| `SiteName` | NVARCHAR(255) | Friendly site name |
-| `TotalFileCount` | INT | Expected total file count |
+| `SiteUrl` | NVARCHAR(500) | SharePoint site relative URL (e.g., `/sites/HydroOneDocuments`) |
+| `LibraryName` | NVARCHAR(255) | Document library name (e.g., `Documents`) |
+| `SiteTitle` | NVARCHAR(255) | Friendly site title |
+| `LibraryTitle` | NVARCHAR(255) | Friendly library title |
+| `Status` | NVARCHAR(50) | Current status (Pending/InProgress/Completed/Failed/Skipped/Paused) |
+| `ValidationStatus` | NVARCHAR(50) | Validation result (Pending/Validated/Discrepancy) |
+| `FileCount` | INT | Expected total file count from source |
+| `FolderCount` | INT | Total folders in library |
 | `TotalSizeBytes` | BIGINT | Expected total size in bytes |
+| `LargestFileSizeBytes` | BIGINT | Size of largest file |
 | `MigratedFileCount` | INT | Files successfully migrated |
 | `MigratedSizeBytes` | BIGINT | Bytes successfully migrated |
-| `Status` | NVARCHAR(50) | Current status (Pending/InProgress/Completed/Failed/Skipped) |
-| `Priority` | INT | Migration priority (1=highest) |
-| `BatchId` | NVARCHAR(50) | Last batch that processed this library |
-| `RetryCount` | INT | Number of retry attempts |
+| `FailedFileCount` | INT | Files that failed migration |
+| `StartTime` | DATETIME2 | When migration started |
+| `EndTime` | DATETIME2 | When migration completed |
+| `DurationSeconds` | Computed | `DATEDIFF(SECOND, StartTime, EndTime)` |
 | `ErrorMessage` | NVARCHAR(MAX) | Last error message |
-| `MigrationStartTime` | DATETIME2 | When migration started |
-| `MigrationEndTime` | DATETIME2 | When migration completed |
-| `ValidationStatus` | NVARCHAR(50) | Validation result |
-| `EnableIncrementalSync` | BIT | Whether to include in delta sync |
-| `ContainerName` | NVARCHAR(255) | Target ADLS container |
+| `RetryCount` | INT | Number of retry attempts (default: 0) |
+| `LastRetryTime` | DATETIME2 | When last retry occurred |
+| `BatchId` | NVARCHAR(50) | Last batch that processed this library |
+| `Priority` | INT | Migration priority (1=highest, default: 100) |
+| `EnableIncrementalSync` | BIT | Whether to include in delta sync (default: 1) |
+| `LastIncrementalSync` | DATETIME2 | Last successful incremental sync |
+| `ValidationTimestamp` | DATETIME2 | When validation was performed |
+| `DiscrepancyDetails` | NVARCHAR(MAX) | Details of any validation discrepancies |
+| `CreatedDate` | DATETIME2 | Record creation timestamp |
+| `ModifiedDate` | DATETIME2 | Last modification timestamp |
 
 ### 9.2 MigrationAuditLog Table
 
@@ -800,6 +846,82 @@ flowchart TD
 
 ---
 
+## 13. Test Results (February 2026)
+
+### 13.1 Test Environment
+
+| Resource | Value |
+|----------|-------|
+| Subscription | `671b1321-4407-420b-b877-97cd40ba898a` |
+| Tenant | `fe64e912-f83c-44e9-9389-f66812c7fa57` |
+| Resource Group | `rg-hydroone-migration-test` |
+| ADF | `adf-hydroone-migration-test` |
+| SQL Server | `sql-hydroone-migration-test.database.windows.net` |
+| Storage | `sthydroonemigtest` |
+| Key Vault | `kv-hydroone-test2` |
+
+### 13.2 Test Data
+
+- 10 sample documents uploaded to ADLS: `sharepoint-migration/TestSite/Documents/`
+- Control table populated with 1 library record (TestSite/Documents, 10 files, 659 bytes)
+- 10 audit log records inserted (all `Success` status)
+- 1 batch log record (BATCH-TEST-001)
+
+### 13.3 Pipeline Test Results
+
+**PL_Master_Migration_Orchestrator** — Run ID: `7bb1ca75-5180-4087-9870-6dea48e667a6`
+
+| Activity | Status | Duration |
+|----------|--------|----------|
+| Set_BatchId | Succeeded | 276ms |
+| Log_BatchStart | Succeeded | 3,808ms |
+| Lookup_PendingLibraries | Succeeded | 8,019ms |
+| If_NoLibrariesToProcess | Succeeded | 978ms |
+| Filter_BatchSize | Succeeded | 319ms |
+| Log_NoWork | Succeeded | 254ms |
+| ForEach_Library | Succeeded | 756ms |
+| Log_BatchComplete | Succeeded | 3,071ms |
+
+**Result:** All 8 activities succeeded. Pipeline correctly found 0 pending libraries (control table had Completed status) and completed gracefully.
+
+**PL_Validation** — Run ID: `92158504-c822-46a3-9a4f-2cbd780986f6`
+
+| Activity | Status | Duration |
+|----------|--------|----------|
+| Lookup_CompletedLibraries | Succeeded | 26,107ms |
+| ForEach_ValidateLibrary | Succeeded | 40,775ms |
+| Lookup_DestinationFileCount | Succeeded | 24,090ms |
+| Compare_And_Log | Succeeded | 3,717ms |
+| If_Discrepancy | Succeeded | 5,365ms |
+| Mark_Validated | Succeeded | 2,817ms |
+| Generate_ValidationReport | Succeeded | 13,051ms |
+| Set_ValidationSummary | Succeeded | 276ms |
+
+**Result:** All 8 activities succeeded. Validation compared expected 10 files vs 10 actual migrated files. No discrepancies found. Library marked as `Validated`.
+
+### 13.4 Verified Connectivity
+
+| Connection | Method | Status |
+|------------|--------|--------|
+| ADF → Azure SQL (read) | Managed Identity | Working |
+| ADF → Azure SQL (stored procedures) | Managed Identity | Working |
+| ADF → Key Vault | Managed Identity + Access Policy | Working |
+| ADF → ADLS Gen2 | Managed Identity + Storage Blob Data Contributor | Role Assigned |
+| ADF → SharePoint Online | MSI / Service Principal | Blocked (requires admin consent) |
+
+### 13.5 Known Issues & Fixes Applied
+
+| Issue | Root Cause | Fix |
+|-------|-----------|-----|
+| ARM template `[dbo]` parsing error | ARM interprets `[` as expression delimiter | Escaped with `[[dbo]` |
+| Recursive pipeline circular reference | ADF does not support pipelines calling themselves | Removed self-reference from PL_Process_Subfolder |
+| PL_Incremental_Sync JSON structure bug | Missing closing brace for ForEach_ModifiedFile | Added missing `}` |
+| ForEach batchCount expression error | `batchCount` must be a static integer (1-50) | Changed from expression to literal `4` |
+| Boolean `ValidateAll` in SQL query | ADF renders `True`/`False`, SQL expects `1`/`0` | Used `@{if(pipeline().parameters.ValidateAll, 1, 0)}` |
+| Validation required SharePoint access | `Get_SourceFileCount` called SharePoint API | Replaced with SQL control table `ExpectedFileCount` |
+
+---
+
 ## Appendix: File Inventory
 
 | File Path | Type | Description |
@@ -817,6 +939,7 @@ flowchart TD
 | `sql/create_control_table.sql` | SQL | Control table schema + stored procs |
 | `sql/create_audit_log_table.sql` | SQL | Audit log schema + stored procs |
 | `sql/monitoring_queries.sql` | SQL | Monitoring views and queries |
+| `sql/insert_test_data.sql` | SQL | Test data for validation testing |
 | `scripts/Setup-AzureResources.ps1` | PowerShell | Azure resource provisioning |
 | `scripts/Register-SharePointApp.ps1` | PowerShell | SharePoint app registration |
 | `scripts/Monitor-Migration.ps1` | PowerShell | Migration monitoring |

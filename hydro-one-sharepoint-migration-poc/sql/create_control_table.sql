@@ -6,7 +6,7 @@ Description: Creates the MigrationControl table that tracks all SharePoint
              sites and document libraries to be migrated, along with their
              migration status, metrics, and retry information.
 
-Author:      PwC Azure Data Engineering Team
+Author:      Microsoft Azure Data Engineering Team
 Created:     2024
 Project:     Hydro One SharePoint Migration POC
 ================================================================================

@@ -27,7 +27,7 @@
         -SqlServerName "sql-hydroone-migration-dev" -SqlDatabaseName "MigrationControl"
 
 .NOTES
-    Author: PwC Azure Data Engineering Team
+    Author: Microsoft Azure Data Engineering Team
     Project: Hydro One SharePoint Migration POC
     Requires: PnP.PowerShell module, SqlServer module
 #>

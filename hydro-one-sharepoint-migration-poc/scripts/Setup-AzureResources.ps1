@@ -24,7 +24,7 @@
     .\Setup-AzureResources.ps1 -Environment "dev" -Location "canadacentral"
 
 .NOTES
-    Author: PwC Azure Data Engineering Team
+    Author: Microsoft Azure Data Engineering Team
     Project: Hydro One SharePoint Migration POC
     Requires: Az PowerShell module
 #>

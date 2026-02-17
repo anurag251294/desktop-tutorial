@@ -6,7 +6,7 @@ Description: Creates the MigrationAuditLog table that tracks per-file migration
              status, including source/destination paths, checksums, errors,
              and timing information.
 
-Author:      PwC Azure Data Engineering Team
+Author:      Microsoft Azure Data Engineering Team
 Created:     2024
 Project:     Hydro One SharePoint Migration POC
 ================================================================================
