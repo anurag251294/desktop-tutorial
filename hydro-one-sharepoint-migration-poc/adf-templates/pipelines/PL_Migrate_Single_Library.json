@@ -314,7 +314,10 @@
                                                     "value": "@pipeline().parameters.LibraryName",
                                                     "type": "Expression"
                                                 },
-                                                "FolderPath": "",
+                                                "FolderPath": {
+                                                    "value": "@string('')",
+                                                    "type": "Expression"
+                                                },
                                                 "FileName": {
                                                     "value": "@item().Name",
                                                     "type": "Expression"
