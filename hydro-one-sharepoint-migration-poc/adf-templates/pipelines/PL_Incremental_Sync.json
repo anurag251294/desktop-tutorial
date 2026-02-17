@@ -15,24 +15,58 @@
             "type": "Microsoft.DataFactory/factories/pipelines",
             "apiVersion": "2018-06-01",
             "properties": {
-                "description": "Delta/incremental synchronization pipeline for ongoing sync after initial migration. Uses SharePoint modified date filters to identify files changed since last sync. Updates watermark table after successful sync.",
+                "description": "Delta/incremental synchronization pipeline using Microsoft Graph API delta query. Authenticates via Service Principal, uses Graph delta tokens to identify changed files, copies using pre-authenticated download URLs.",
                 "activities": [
+                    {
+                        "name": "Get_ClientSecret",
+                        "description": "Retrieve Service Principal client secret from Key Vault",
+                        "type": "WebActivity",
+                        "dependsOn": [],
+                        "policy": { "timeout": "0.00:05:00", "retry": 2, "retryIntervalInSeconds": 30, "secureOutput": true, "secureInput": false },
+                        "userProperties": [],
+                        "typeProperties": {
+                            "method": "GET",
+                            "url": { "value": "@concat(pipeline().parameters.KeyVaultUrl, '/secrets/sharepoint-client-secret?api-version=7.0')", "type": "Expression" },
+                            "authentication": { "type": "MSI", "resource": "https://vault.azure.net" }
+                        }
+                    },
+                    {
+                        "name": "Get_AccessToken",
+                        "description": "Acquire OAuth2 token for Microsoft Graph API",
+                        "type": "WebActivity",
+                        "dependsOn": [ { "activity": "Get_ClientSecret", "dependencyConditions": ["Succeeded"] } ],
+                        "policy": { "timeout": "0.00:05:00", "retry": 2, "retryIntervalInSeconds": 30, "secureOutput": true, "secureInput": true },
+                        "userProperties": [],
+                        "typeProperties": {
+                            "method": "POST",
+                            "headers": { "Content-Type": "application/x-www-form-urlencoded" },
+                            "url": { "value": "@concat('https://login.microsoftonline.com/', pipeline().parameters.ServicePrincipalTenantId, '/oauth2/v2.0/token')", "type": "Expression" },
+                            "body": { "value": "@concat('grant_type=client_credentials&client_id=', pipeline().parameters.ServicePrincipalId, '&client_secret=', encodeUriComponent(activity('Get_ClientSecret').output.value), '&scope=https%3A%2F%2Fgraph.microsoft.com%2F.default')", "type": "Expression" }
+                        }
+                    },
+                    {
+                        "name": "Set_AccessToken",
+                        "type": "SetVariable",
+                        "dependsOn": [ { "activity": "Get_AccessToken", "dependencyConditions": ["Succeeded"] } ],
+                        "policy": { "secureOutput": true, "secureInput": true },
+                        "userProperties": [],
+                        "typeProperties": {
+                            "variableName": "AccessToken",
+                            "value": { "value": "@activity('Get_AccessToken').output.access_token", "type": "Expression" }
+                        }
+                    },
                     {
                         "name": "Lookup_LibrariesForSync",
                         "type": "Lookup",
-                        "dependsOn": [],
-                        "policy": {
-                            "timeout": "0.00:10:00",
-                            "retry": 3,
-                            "retryIntervalInSeconds": 30,
-                            "secureOutput": false,
-                            "secureInput": false
-                        },
+                        "dependsOn": [
+                            { "activity": "Set_AccessToken", "dependencyConditions": ["Succeeded"] }
+                        ],
+                        "policy": { "timeout": "0.00:10:00", "retry": 3, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
                         "userProperties": [],
                         "typeProperties": {
                             "source": {
                                 "type": "AzureSqlSource",
-                                "sqlReaderQuery": "SELECT \n    mc.Id,\n    mc.SiteUrl,\n    mc.LibraryName,\n    ISNULL(iw.LastModifiedDate, '1900-01-01') AS LastModifiedDate,\n    ISNULL(iw.LastSyncTime, '1900-01-01') AS LastSyncTime\nFROM dbo.MigrationControl mc\nLEFT JOIN dbo.IncrementalWatermark iw \n    ON mc.SiteUrl = iw.SiteUrl AND mc.LibraryName = iw.LibraryName\nWHERE mc.Status = 'Completed' \nAND mc.ValidationStatus = 'Validated'\nAND mc.EnableIncrementalSync = 1",
+                                "sqlReaderQuery": "SELECT mc.Id, mc.SiteUrl, mc.LibraryName, ISNULL(iw.LastModifiedDate, '1900-01-01') AS LastModifiedDate, ISNULL(iw.LastSyncTime, '1900-01-01') AS LastSyncTime FROM dbo.MigrationControl mc LEFT JOIN dbo.IncrementalWatermark iw ON mc.SiteUrl = iw.SiteUrl AND mc.LibraryName = iw.LibraryName WHERE mc.Status = 'Completed' AND mc.EnableIncrementalSync = 1",
                                 "queryTimeout": "00:05:00",
                                 "partitionOption": "None"
                             },
@@ -51,69 +85,62 @@
                         "name": "ForEach_LibrarySync",
                         "type": "ForEach",
                         "dependsOn": [
-                            {
-                                "activity": "Lookup_LibrariesForSync",
-                                "dependencyConditions": [
-                                    "Succeeded"
-                                ]
-                            }
+                            { "activity": "Lookup_LibrariesForSync", "dependencyConditions": ["Succeeded"] }
                         ],
                         "userProperties": [],
                         "typeProperties": {
-                            "items": {
-                                "value": "@activity('Lookup_LibrariesForSync').output.value",
-                                "type": "Expression"
-                            },
+                            "items": { "value": "@activity('Lookup_LibrariesForSync').output.value", "type": "Expression" },
                             "isSequential": false,
                             "batchCount": 4,
                             "activities": [
                                 {
-                                    "name": "Get_ModifiedFiles",
+                                    "name": "Get_Drive",
+                                    "description": "Resolve SharePoint site to Graph drive ID",
                                     "type": "WebActivity",
                                     "dependsOn": [],
-                                    "policy": {
-                                        "timeout": "0.00:10:00",
-                                        "retry": 3,
-                                        "retryIntervalInSeconds": 60,
-                                        "secureOutput": false,
-                                        "secureInput": false
-                                    },
+                                    "policy": { "timeout": "0.00:05:00", "retry": 2, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": true },
                                     "userProperties": [],
                                     "typeProperties": {
                                         "method": "GET",
                                         "headers": {
-                                            "Accept": "application/json;odata=verbose"
+                                            "Authorization": { "value": "@concat('Bearer ', variables('AccessToken'))", "type": "Expression" }
                                         },
-                                        "url": {
-                                            "value": "@concat(pipeline().parameters.SharePointTenantUrl, item().SiteUrl, '/_api/web/lists/getbytitle(''', item().LibraryName, ''')/items?$filter=Modified ge datetime''', item().LastModifiedDate, '''&$select=FileRef,FileLeafRef,File_x0020_Size,Modified,UniqueId&$expand=File&$top=5000')",
-                                            "type": "Expression"
+                                        "url": { "value": "@concat('https://graph.microsoft.com/v1.0/sites/', replace(replace(pipeline().parameters.SharePointTenantUrl, 'https://', ''), '/', ''), ':', item().SiteUrl, ':/drive?$select=id,name')", "type": "Expression" }
+                                    }
+                                },
+                                {
+                                    "name": "Get_DeltaItems",
+                                    "description": "Get all items via Graph delta query (returns full contents on first call)",
+                                    "type": "WebActivity",
+                                    "dependsOn": [ { "activity": "Get_Drive", "dependencyConditions": ["Succeeded"] } ],
+                                    "policy": { "timeout": "0.00:10:00", "retry": 3, "retryIntervalInSeconds": 60, "secureOutput": false, "secureInput": true },
+                                    "userProperties": [],
+                                    "typeProperties": {
+                                        "method": "GET",
+                                        "headers": {
+                                            "Authorization": { "value": "@concat('Bearer ', variables('AccessToken'))", "type": "Expression" }
                                         },
-                                        "authentication": {
-                                            "type": "MSI",
-                                            "resource": {
-                                                "value": "@concat(pipeline().parameters.SharePointTenantUrl, '/')",
-                                                "type": "Expression"
-                                            }
-                                        }
+                                        "url": { "value": "@concat('https://graph.microsoft.com/v1.0/drives/', activity('Get_Drive').output.id, '/root/delta?$top=999')", "type": "Expression" }
+                                    }
+                                },
+                                {
+                                    "name": "Filter_DeltaFiles",
+                                    "description": "Filter delta response to only file items with download URLs",
+                                    "type": "Filter",
+                                    "dependsOn": [ { "activity": "Get_DeltaItems", "dependencyConditions": ["Succeeded"] } ],
+                                    "userProperties": [],
+                                    "typeProperties": {
+                                        "items": { "value": "@activity('Get_DeltaItems').output.value", "type": "Expression" },
+                                        "condition": { "value": "@contains(string(item()), '\"@microsoft.graph.downloadUrl\"')", "type": "Expression" }
                                     }
                                 },
                                 {
                                     "name": "If_HasModifiedFiles",
                                     "type": "IfCondition",
-                                    "dependsOn": [
-                                        {
-                                            "activity": "Get_ModifiedFiles",
-                                            "dependencyConditions": [
-                                                "Succeeded"
-                                            ]
-                                        }
-                                    ],
+                                    "dependsOn": [ { "activity": "Filter_DeltaFiles", "dependencyConditions": ["Succeeded"] } ],
                                     "userProperties": [],
                                     "typeProperties": {
-                                        "expression": {
-                                            "value": "@greater(length(activity('Get_ModifiedFiles').output.d.results), 0)",
-                                            "type": "Expression"
-                                        },
+                                        "expression": { "value": "@greater(activity('Filter_DeltaFiles').output.FilteredItemsCount, 0)", "type": "Expression" },
                                         "ifTrueActivities": [
                                             {
                                                 "name": "ForEach_ModifiedFile",
@@ -121,10 +148,7 @@
                                                 "dependsOn": [],
                                                 "userProperties": [],
                                                 "typeProperties": {
-                                                    "items": {
-                                                        "value": "@activity('Get_ModifiedFiles').output.d.results",
-                                                        "type": "Expression"
-                                                    },
+                                                    "items": { "value": "@activity('Filter_DeltaFiles').output.value", "type": "Expression" },
                                                     "isSequential": false,
                                                     "batchCount": 10,
                                                     "activities": [
@@ -132,41 +156,27 @@
                                                             "name": "Copy_ModifiedFile",
                                                             "type": "Copy",
                                                             "dependsOn": [],
-                                                            "policy": {
-                                                                "timeout": "0.00:30:00",
-                                                                "retry": 3,
-                                                                "retryIntervalInSeconds": 60,
-                                                                "secureOutput": false,
-                                                                "secureInput": false
-                                                            },
+                                                            "policy": { "timeout": "0.00:30:00", "retry": 3, "retryIntervalInSeconds": 60, "secureOutput": false, "secureInput": false },
                                                             "userProperties": [],
                                                             "typeProperties": {
                                                                 "source": {
                                                                     "type": "BinarySource",
-                                                                    "storeSettings": {
-                                                                        "type": "HttpReadSettings",
-                                                                        "requestMethod": "GET",
-                                                                        "requestTimeout": "00:10:00"
-                                                                    },
-                                                                    "formatSettings": {
-                                                                        "type": "BinaryReadSettings"
-                                                                    }
+                                                                    "storeSettings": { "type": "HttpReadSettings", "requestMethod": "GET", "requestTimeout": "00:10:00" },
+                                                                    "formatSettings": { "type": "BinaryReadSettings" }
                                                                 },
                                                                 "sink": {
                                                                     "type": "BinarySink",
-                                                                    "storeSettings": {
-                                                                        "type": "AzureBlobFSWriteSettings"
-                                                                    }
+                                                                    "storeSettings": { "type": "AzureBlobFSWriteSettings" }
                                                                 },
                                                                 "enableStaging": false
                                                             },
                                                             "inputs": [
                                                                 {
-                                                                    "referenceName": "DS_SharePoint_Binary_HTTP",
+                                                                    "referenceName": "DS_Graph_Binary_Download",
                                                                     "type": "DatasetReference",
                                                                     "parameters": {
-                                                                        "FileUrl": {
-                                                                            "value": "@concat(pipeline().parameters.SharePointTenantUrl, item().FileRef)",
+                                                                        "DownloadUrl": {
+                                                                            "value": "@item()['@microsoft.graph.downloadUrl']",
                                                                             "type": "Expression"
                                                                         }
                                                                     }
@@ -177,26 +187,11 @@
                                                                     "referenceName": "DS_ADLS_Binary_Sink",
                                                                     "type": "DatasetReference",
                                                                     "parameters": {
-                                                                        "ContainerName": {
-                                                                            "value": "@pipeline().parameters.ContainerName",
-                                                                            "type": "Expression"
-                                                                        },
-                                                                        "SiteName": {
-                                                                            "value": "@replace(item().SiteUrl, '/sites/', '')",
-                                                                            "type": "Expression"
-                                                                        },
-                                                                        "LibraryName": {
-                                                                            "value": "@item().LibraryName",
-                                                                            "type": "Expression"
-                                                                        },
-                                                                        "FolderPath": {
-                                                                            "value": "@replace(replace(item().FileRef, concat(item().SiteUrl, '/', item().LibraryName, '/'), ''), item().FileLeafRef, '')",
-                                                                            "type": "Expression"
-                                                                        },
-                                                                        "FileName": {
-                                                                            "value": "@item().FileLeafRef",
-                                                                            "type": "Expression"
-                                                                        }
+                                                                        "ContainerName": { "value": "@pipeline().parameters.ContainerName", "type": "Expression" },
+                                                                        "SiteName": { "value": "@replace(item().SiteUrl, '/sites/', '')", "type": "Expression" },
+                                                                        "LibraryName": { "value": "@item().LibraryName", "type": "Expression" },
+                                                                        "FolderPath": { "value": "@if(contains(item(), 'parentReference'), replace(replace(item().parentReference.path, concat('/drives/', activity('Get_Drive').output.id, '/root:'), ''), concat('/drives/', activity('Get_Drive').output.id, '/root'), ''), '')", "type": "Expression" },
+                                                                        "FileName": { "value": "@item().name", "type": "Expression" }
                                                                     }
                                                                 }
                                                             ]
@@ -204,211 +199,97 @@
                                                         {
                                                             "name": "Log_IncrementalCopy",
                                                             "type": "SqlServerStoredProcedure",
-                                                            "dependsOn": [
-                                                                {
-                                                                    "activity": "Copy_ModifiedFile",
-                                                                    "dependencyConditions": [
-                                                                        "Succeeded"
-                                                                    ]
-                                                                }
-                                                            ],
-                                                            "policy": {
-                                                                "timeout": "0.00:05:00",
-                                                                "retry": 2,
-                                                                "retryIntervalInSeconds": 30,
-                                                                "secureOutput": false,
-                                                                "secureInput": false
-                                                            },
+                                                            "dependsOn": [ { "activity": "Copy_ModifiedFile", "dependencyConditions": ["Succeeded"] } ],
+                                                            "policy": { "timeout": "0.00:05:00", "retry": 2, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
                                                             "userProperties": [],
                                                             "typeProperties": {
                                                                 "storedProcedureName": "[[dbo].[usp_LogFileAudit]",
                                                                 "storedProcedureParameters": {
-                                                                    "FileName": {
-                                                                        "value": {
-                                                                            "value": "@item().FileLeafRef",
-                                                                            "type": "Expression"
-                                                                        },
-                                                                        "type": "String"
-                                                                    },
-                                                                    "SourcePath": {
-                                                                        "value": {
-                                                                            "value": "@item().FileRef",
-                                                                            "type": "Expression"
-                                                                        },
-                                                                        "type": "String"
-                                                                    },
-                                                                    "DestinationPath": {
-                                                                        "value": {
-                                                                            "value": "@concat(pipeline().parameters.ContainerName, '/', replace(item().SiteUrl, '/sites/', ''), '/', item().LibraryName, '/', item().FileLeafRef)",
-                                                                            "type": "Expression"
-                                                                        },
-                                                                        "type": "String"
-                                                                    },
-                                                                    "FileSizeBytes": {
-                                                                        "value": {
-                                                                            "value": "@item().File_x0020_Size",
-                                                                            "type": "Expression"
-                                                                        },
-                                                                        "type": "Int64"
-                                                                    },
-                                                                    "MigrationStatus": {
-                                                                        "value": "IncrementalSync",
-                                                                        "type": "String"
-                                                                    },
-                                                                    "PipelineRunId": {
-                                                                        "value": {
-                                                                            "value": "@pipeline().RunId",
-                                                                            "type": "Expression"
-                                                                        },
-                                                                        "type": "String"
-                                                                    },
-                                                                    "ErrorDetails": {
-                                                                        "value": null,
-                                                                        "type": "String"
-                                                                    }
+                                                                    "FileName": { "value": { "value": "@item().name", "type": "Expression" }, "type": "String" },
+                                                                    "SourcePath": { "value": { "value": "@concat(item().SiteUrl, '/', item().LibraryName, '/', item().name)", "type": "Expression" }, "type": "String" },
+                                                                    "DestinationPath": { "value": { "value": "@concat(pipeline().parameters.ContainerName, '/', replace(item().SiteUrl, '/sites/', ''), '/', item().LibraryName, '/', item().name)", "type": "Expression" }, "type": "String" },
+                                                                    "FileSizeBytes": { "value": { "value": "@item().size", "type": "Expression" }, "type": "Int64" },
+                                                                    "MigrationStatus": { "value": "IncrementalSync", "type": "String" },
+                                                                    "PipelineRunId": { "value": { "value": "@pipeline().RunId", "type": "Expression" }, "type": "String" },
+                                                                    "ErrorDetails": { "value": null, "type": "String" }
                                                                 }
                                                             },
-                                                            "linkedServiceName": {
-                                                                "referenceName": "LS_AzureSqlDatabase",
-                                                                "type": "LinkedServiceReference"
-                                                            }
+                                                            "linkedServiceName": { "referenceName": "LS_AzureSqlDatabase", "type": "LinkedServiceReference" }
                                                         }
                                                     ]
                                                 }
                                             },
                                             {
-                                                    "name": "Update_Watermark",
-                                                    "type": "SqlServerStoredProcedure",
-                                                    "dependsOn": [
-                                                        {
-                                                            "activity": "ForEach_ModifiedFile",
-                                                            "dependencyConditions": [
-                                                                "Succeeded"
-                                                            ]
-                                                        }
-                                                    ],
-                                                    "policy": {
-                                                        "timeout": "0.00:05:00",
-                                                        "retry": 2,
-                                                        "retryIntervalInSeconds": 30,
-                                                        "secureOutput": false,
-                                                        "secureInput": false
-                                                    },
-                                                    "userProperties": [],
-                                                    "typeProperties": {
-                                                        "storedProcedureName": "[[dbo].[usp_UpdateWatermark]",
-                                                        "storedProcedureParameters": {
-                                                            "SiteUrl": {
-                                                                "value": {
-                                                                    "value": "@item().SiteUrl",
-                                                                    "type": "Expression"
-                                                                },
-                                                                "type": "String"
-                                                            },
-                                                            "LibraryName": {
-                                                                "value": {
-                                                                    "value": "@item().LibraryName",
-                                                                    "type": "Expression"
-                                                                },
-                                                                "type": "String"
-                                                            },
-                                                            "LastModifiedDate": {
-                                                                "value": {
-                                                                    "value": "@utcNow()",
-                                                                    "type": "Expression"
-                                                                },
-                                                                "type": "DateTime"
-                                                            },
-                                                            "LastSyncTime": {
-                                                                "value": {
-                                                                    "value": "@utcNow()",
-                                                                    "type": "Expression"
-                                                                },
-                                                                "type": "DateTime"
-                                                            }
-                                                        }
-                                                    },
-                                                    "linkedServiceName": {
-                                                        "referenceName": "LS_AzureSqlDatabase",
-                                                        "type": "LinkedServiceReference"
+                                                "name": "Update_Watermark",
+                                                "type": "SqlServerStoredProcedure",
+                                                "dependsOn": [ { "activity": "ForEach_ModifiedFile", "dependencyConditions": ["Succeeded"] } ],
+                                                "policy": { "timeout": "0.00:05:00", "retry": 2, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+                                                "userProperties": [],
+                                                "typeProperties": {
+                                                    "storedProcedureName": "[[dbo].[usp_UpdateWatermark]",
+                                                    "storedProcedureParameters": {
+                                                        "SiteUrl": { "value": { "value": "@item().SiteUrl", "type": "Expression" }, "type": "String" },
+                                                        "LibraryName": { "value": { "value": "@item().LibraryName", "type": "Expression" }, "type": "String" },
+                                                        "LastModifiedDate": { "value": { "value": "@utcNow()", "type": "Expression" }, "type": "DateTime" },
+                                                        "LastSyncTime": { "value": { "value": "@utcNow()", "type": "Expression" }, "type": "DateTime" }
                                                     }
-                                                }
-                                            ]
-                                        }
+                                                },
+                                                "linkedServiceName": { "referenceName": "LS_AzureSqlDatabase", "type": "LinkedServiceReference" }
+                                            }
+                                        ]
                                     }
+                                }
                             ]
                         }
                     },
                     {
                         "name": "Log_SyncComplete",
                         "type": "SqlServerStoredProcedure",
-                        "dependsOn": [
-                            {
-                                "activity": "ForEach_LibrarySync",
-                                "dependencyConditions": [
-                                    "Succeeded"
-                                ]
-                            }
-                        ],
-                        "policy": {
-                            "timeout": "0.00:05:00",
-                            "retry": 2,
-                            "retryIntervalInSeconds": 30,
-                            "secureOutput": false,
-                            "secureInput": false
-                        },
+                        "dependsOn": [ { "activity": "ForEach_LibrarySync", "dependencyConditions": ["Succeeded"] } ],
+                        "policy": { "timeout": "0.00:05:00", "retry": 2, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
                         "userProperties": [],
                         "typeProperties": {
                             "storedProcedureName": "[[dbo].[usp_LogSyncRun]",
                             "storedProcedureParameters": {
-                                "PipelineRunId": {
-                                    "value": {
-                                        "value": "@pipeline().RunId",
-                                        "type": "Expression"
-                                    },
-                                    "type": "String"
-                                },
-                                "SyncType": {
-                                    "value": "Incremental",
-                                    "type": "String"
-                                },
-                                "LibrariesProcessed": {
-                                    "value": {
-                                        "value": "@activity('Lookup_LibrariesForSync').output.count",
-                                        "type": "Expression"
-                                    },
-                                    "type": "Int32"
-                                },
-                                "CompletionTime": {
-                                    "value": {
-                                        "value": "@utcNow()",
-                                        "type": "Expression"
-                                    },
-                                    "type": "DateTime"
-                                }
+                                "PipelineRunId": { "value": { "value": "@pipeline().RunId", "type": "Expression" }, "type": "String" },
+                                "SyncType": { "value": "Incremental", "type": "String" },
+                                "LibrariesProcessed": { "value": { "value": "@activity('Lookup_LibrariesForSync').output.count", "type": "Expression" }, "type": "Int32" },
+                                "CompletionTime": { "value": { "value": "@utcNow()", "type": "Expression" }, "type": "DateTime" }
                             }
                         },
-                        "linkedServiceName": {
-                            "referenceName": "LS_AzureSqlDatabase",
-                            "type": "LinkedServiceReference"
-                        }
+                        "linkedServiceName": { "referenceName": "LS_AzureSqlDatabase", "type": "LinkedServiceReference" }
                     }
                 ],
                 "parameters": {
                     "SharePointTenantUrl": {
                         "type": "string",
-                        "defaultValue": "https://hydroone.sharepoint.com"
+                        "defaultValue": "https://m365x52073746.sharepoint.com"
                     },
                     "ContainerName": {
                         "type": "string",
                         "defaultValue": "sharepoint-migration"
+                    },
+                    "ServicePrincipalId": {
+                        "type": "string",
+                        "defaultValue": "bca94bda-c22c-4cd6-a065-72b12ae88c91"
+                    },
+                    "ServicePrincipalTenantId": {
+                        "type": "string",
+                        "defaultValue": "5447cfcd-3af1-439a-8157-760bd52b12df"
+                    },
+                    "KeyVaultUrl": {
+                        "type": "string",
+                        "defaultValue": "https://kv-hydroone-test2.vault.azure.net"
                     }
+                },
+                "variables": {
+                    "AccessToken": { "type": "String", "defaultValue": "" }
                 },
                 "annotations": [
                     "incremental-sync",
                     "delta-migration",
                     "hydro-one-migration",
-                    "ongoing-sync"
+                    "graph-api"
                 ],
                 "folder": {
                     "name": "SharePoint Migration"
