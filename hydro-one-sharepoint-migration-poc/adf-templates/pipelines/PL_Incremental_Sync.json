@@ -274,8 +274,9 @@
                                                             }
                                                         }
                                                     ]
-                                                },
-                                                {
+                                                }
+                                            },
+                                            {
                                                     "name": "Update_Watermark",
                                                     "type": "SqlServerStoredProcedure",
                                                     "dependsOn": [
@@ -335,7 +336,6 @@
                                             ]
                                         }
                                     }
-                                }
                             ]
                         }
                     },
