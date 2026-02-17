@@ -159,7 +159,7 @@
                                     },
                                     "userProperties": [],
                                     "typeProperties": {
-                                        "storedProcedureName": "[dbo].[usp_LogValidationResult]",
+                                        "storedProcedureName": "[[dbo].[usp_LogValidationResult]",
                                         "storedProcedureParameters": {
                                             "ControlTableId": {
                                                 "value": {
@@ -248,7 +248,7 @@
                                                 },
                                                 "userProperties": [],
                                                 "typeProperties": {
-                                                    "storedProcedureName": "[dbo].[usp_UpdateValidationStatus]",
+                                                    "storedProcedureName": "[[dbo].[usp_UpdateValidationStatus]",
                                                     "storedProcedureParameters": {
                                                         "Id": {
                                                             "value": {
@@ -290,7 +290,7 @@
                                                 },
                                                 "userProperties": [],
                                                 "typeProperties": {
-                                                    "storedProcedureName": "[dbo].[usp_UpdateValidationStatus]",
+                                                    "storedProcedureName": "[[dbo].[usp_UpdateValidationStatus]",
                                                     "storedProcedureParameters": {
                                                         "Id": {
                                                             "value": {

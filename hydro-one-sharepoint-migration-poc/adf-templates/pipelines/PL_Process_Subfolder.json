@@ -48,36 +48,6 @@
                         }
                     },
                     {
-                        "name": "Get_Subfolders",
-                        "type": "WebActivity",
-                        "dependsOn": [],
-                        "policy": {
-                            "timeout": "0.00:10:00",
-                            "retry": 3,
-                            "retryIntervalInSeconds": 60,
-                            "secureOutput": false,
-                            "secureInput": false
-                        },
-                        "userProperties": [],
-                        "typeProperties": {
-                            "method": "GET",
-                            "headers": {
-                                "Accept": "application/json;odata=verbose"
-                            },
-                            "url": {
-                                "value": "@concat(pipeline().parameters.SharePointTenantUrl, pipeline().parameters.SiteUrl, '/_api/web/GetFolderByServerRelativeUrl(''', pipeline().parameters.FolderServerRelativeUrl, ''')/Folders?$select=Name,ServerRelativeUrl,ItemCount')",
-                                "type": "Expression"
-                            },
-                            "authentication": {
-                                "type": "MSI",
-                                "resource": {
-                                    "value": "@concat(pipeline().parameters.SharePointTenantUrl, '/')",
-                                    "type": "Expression"
-                                }
-                            }
-                        }
-                    },
-                    {
                         "name": "ForEach_File",
                         "type": "ForEach",
                         "dependsOn": [
@@ -194,7 +164,7 @@
                                     },
                                     "userProperties": [],
                                     "typeProperties": {
-                                        "storedProcedureName": "[dbo].[usp_LogFileAudit]",
+                                        "storedProcedureName": "[[dbo].[usp_LogFileAudit]",
                                         "storedProcedureParameters": {
                                             "FileName": {
                                                 "value": {
@@ -266,7 +236,7 @@
                                     },
                                     "userProperties": [],
                                     "typeProperties": {
-                                        "storedProcedureName": "[dbo].[usp_LogFileAudit]",
+                                        "storedProcedureName": "[[dbo].[usp_LogFileAudit]",
                                         "storedProcedureParameters": {
                                             "FileName": {
                                                 "value": {
@@ -319,66 +289,6 @@
                                     "linkedServiceName": {
                                         "referenceName": "LS_AzureSqlDatabase",
                                         "type": "LinkedServiceReference"
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    {
-                        "name": "ForEach_Subfolder",
-                        "type": "ForEach",
-                        "dependsOn": [
-                            {
-                                "activity": "Get_Subfolders",
-                                "dependencyConditions": [
-                                    "Succeeded"
-                                ]
-                            }
-                        ],
-                        "userProperties": [],
-                        "typeProperties": {
-                            "items": {
-                                "value": "@activity('Get_Subfolders').output.d.results",
-                                "type": "Expression"
-                            },
-                            "isSequential": true,
-                            "activities": [
-                                {
-                                    "name": "Execute_RecursiveSubfolder",
-                                    "type": "ExecutePipeline",
-                                    "dependsOn": [],
-                                    "policy": {
-                                        "secureInput": false
-                                    },
-                                    "userProperties": [],
-                                    "typeProperties": {
-                                        "pipeline": {
-                                            "referenceName": "PL_Process_Subfolder",
-                                            "type": "PipelineReference"
-                                        },
-                                        "waitOnCompletion": true,
-                                        "parameters": {
-                                            "SiteUrl": {
-                                                "value": "@pipeline().parameters.SiteUrl",
-                                                "type": "Expression"
-                                            },
-                                            "LibraryName": {
-                                                "value": "@pipeline().parameters.LibraryName",
-                                                "type": "Expression"
-                                            },
-                                            "FolderServerRelativeUrl": {
-                                                "value": "@item().ServerRelativeUrl",
-                                                "type": "Expression"
-                                            },
-                                            "ContainerName": {
-                                                "value": "@pipeline().parameters.ContainerName",
-                                                "type": "Expression"
-                                            },
-                                            "SharePointTenantUrl": {
-                                                "value": "@pipeline().parameters.SharePointTenantUrl",
-                                                "type": "Expression"
-                                            }
-                                        }
                                     }
                                 }
                             ]

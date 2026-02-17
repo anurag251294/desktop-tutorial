@@ -19,3 +19,4 @@ Thumbs.db
 *.log
 .claude/settings.local.json
 .claude/*
+.claude/settings.local.json

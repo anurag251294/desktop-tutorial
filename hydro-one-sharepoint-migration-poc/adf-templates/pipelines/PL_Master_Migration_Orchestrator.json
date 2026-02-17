@@ -181,7 +181,7 @@
                         },
                         "userProperties": [],
                         "typeProperties": {
-                            "storedProcedureName": "[dbo].[usp_LogBatchStart]",
+                            "storedProcedureName": "[[dbo].[usp_LogBatchStart]",
                             "storedProcedureParameters": {
                                 "BatchId": {
                                     "value": {
@@ -231,7 +231,7 @@
                         },
                         "userProperties": [],
                         "typeProperties": {
-                            "storedProcedureName": "[dbo].[usp_LogBatchComplete]",
+                            "storedProcedureName": "[[dbo].[usp_LogBatchComplete]",
                             "storedProcedureParameters": {
                                 "BatchId": {
                                     "value": {

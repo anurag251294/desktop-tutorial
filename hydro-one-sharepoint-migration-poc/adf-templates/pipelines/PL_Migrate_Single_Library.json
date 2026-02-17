@@ -30,7 +30,7 @@
                         },
                         "userProperties": [],
                         "typeProperties": {
-                            "storedProcedureName": "[dbo].[usp_UpdateMigrationStatus]",
+                            "storedProcedureName": "[[dbo].[usp_UpdateMigrationStatus]",
                             "storedProcedureParameters": {
                                 "Id": {
                                     "value": {
@@ -252,7 +252,7 @@
                                     },
                                     "userProperties": [],
                                     "typeProperties": {
-                                        "storedProcedureName": "[dbo].[usp_LogFileAudit]",
+                                        "storedProcedureName": "[[dbo].[usp_LogFileAudit]",
                                         "storedProcedureParameters": {
                                             "FileName": {
                                                 "value": {
@@ -324,7 +324,7 @@
                                     },
                                     "userProperties": [],
                                     "typeProperties": {
-                                        "storedProcedureName": "[dbo].[usp_LogFileAudit]",
+                                        "storedProcedureName": "[[dbo].[usp_LogFileAudit]",
                                         "storedProcedureParameters": {
                                             "FileName": {
                                                 "value": {
@@ -501,7 +501,7 @@
                         },
                         "userProperties": [],
                         "typeProperties": {
-                            "storedProcedureName": "[dbo].[usp_UpdateMigrationStatus]",
+                            "storedProcedureName": "[[dbo].[usp_UpdateMigrationStatus]",
                             "storedProcedureParameters": {
                                 "Id": {
                                     "value": {
@@ -552,7 +552,7 @@
                         },
                         "userProperties": [],
                         "typeProperties": {
-                            "storedProcedureName": "[dbo].[usp_UpdateMigrationStatus]",
+                            "storedProcedureName": "[[dbo].[usp_UpdateMigrationStatus]",
                             "storedProcedureParameters": {
                                 "Id": {
                                     "value": {
