@@ -111,6 +111,10 @@
                                             "ContainerName": {
                                                 "value": "@pipeline().parameters.TargetContainerName",
                                                 "type": "Expression"
+                                            },
+                                            "SharePointTenantUrl": {
+                                                "value": "@pipeline().parameters.SharePointTenantUrl",
+                                                "type": "Expression"
                                             }
                                         }
                                     }
@@ -307,6 +311,10 @@
                     "TargetContainerName": {
                         "type": "string",
                         "defaultValue": "sharepoint-migration"
+                    },
+                    "SharePointTenantUrl": {
+                        "type": "string",
+                        "defaultValue": "https://m365x52073746.sharepoint.com"
                     }
                 },
                 "variables": {

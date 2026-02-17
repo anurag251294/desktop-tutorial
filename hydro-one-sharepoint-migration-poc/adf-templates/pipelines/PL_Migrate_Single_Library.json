@@ -15,7 +15,7 @@
             "type": "Microsoft.DataFactory/factories/pipelines",
             "apiVersion": "2018-06-01",
             "properties": {
-                "description": "Child pipeline to migrate a single SharePoint document library to ADLS Gen2. Enumerates all files via REST API, copies each file preserving folder structure, logs success/failure per file, implements retry logic with exponential backoff, and handles SharePoint API throttling (429 responses).",
+                "description": "Child pipeline to migrate a single SharePoint document library to ADLS Gen2. Authenticates via Service Principal OAuth2, enumerates all files via REST API, copies each file preserving folder structure, logs success/failure per file, implements retry logic with exponential backoff, and handles SharePoint API throttling (429 responses).",
                 "activities": [
                     {
                         "name": "Update_Status_InProgress",
@@ -65,11 +65,102 @@
                         }
                     },
                     {
+                        "name": "Get_ClientSecret",
+                        "description": "Retrieve the SharePoint Service Principal client secret from Azure Key Vault",
+                        "type": "WebActivity",
+                        "dependsOn": [],
+                        "policy": {
+                            "timeout": "0.00:05:00",
+                            "retry": 2,
+                            "retryIntervalInSeconds": 30,
+                            "secureOutput": true,
+                            "secureInput": false
+                        },
+                        "userProperties": [],
+                        "typeProperties": {
+                            "method": "GET",
+                            "url": {
+                                "value": "@concat(pipeline().parameters.KeyVaultUrl, '/secrets/sharepoint-client-secret?api-version=7.0')",
+                                "type": "Expression"
+                            },
+                            "authentication": {
+                                "type": "MSI",
+                                "resource": "https://vault.azure.net"
+                            }
+                        }
+                    },
+                    {
+                        "name": "Get_AccessToken",
+                        "description": "Acquire OAuth2 access token for SharePoint Online using client credentials flow",
+                        "type": "WebActivity",
+                        "dependsOn": [
+                            {
+                                "activity": "Get_ClientSecret",
+                                "dependencyConditions": [
+                                    "Succeeded"
+                                ]
+                            }
+                        ],
+                        "policy": {
+                            "timeout": "0.00:05:00",
+                            "retry": 2,
+                            "retryIntervalInSeconds": 30,
+                            "secureOutput": true,
+                            "secureInput": true
+                        },
+                        "userProperties": [],
+                        "typeProperties": {
+                            "method": "POST",
+                            "headers": {
+                                "Content-Type": "application/x-www-form-urlencoded"
+                            },
+                            "url": {
+                                "value": "@concat('https://login.microsoftonline.com/', pipeline().parameters.ServicePrincipalTenantId, '/oauth2/v2.0/token')",
+                                "type": "Expression"
+                            },
+                            "body": {
+                                "value": "@concat('grant_type=client_credentials&client_id=', pipeline().parameters.ServicePrincipalId, '&client_secret=', encodeUriComponent(activity('Get_ClientSecret').output.value), '&scope=', encodeUriComponent(concat(pipeline().parameters.SharePointTenantUrl, '/.default')))",
+                                "type": "Expression"
+                            }
+                        }
+                    },
+                    {
+                        "name": "Set_AccessToken",
+                        "description": "Store the OAuth2 access token in a pipeline variable for use in subsequent activities",
+                        "type": "SetVariable",
+                        "dependsOn": [
+                            {
+                                "activity": "Get_AccessToken",
+                                "dependencyConditions": [
+                                    "Succeeded"
+                                ]
+                            }
+                        ],
+                        "policy": {
+                            "secureOutput": true,
+                            "secureInput": true
+                        },
+                        "userProperties": [],
+                        "typeProperties": {
+                            "variableName": "AccessToken",
+                            "value": {
+                                "value": "@activity('Get_AccessToken').output.access_token",
+                                "type": "Expression"
+                            }
+                        }
+                    },
+                    {
                         "name": "Get_RootFolderFiles",
                         "type": "WebActivity",
                         "dependsOn": [
                             {
                                 "activity": "Update_Status_InProgress",
+                                "dependencyConditions": [
+                                    "Succeeded"
+                                ]
+                            },
+                            {
+                                "activity": "Set_AccessToken",
                                 "dependencyConditions": [
                                     "Succeeded"
                                 ]
@@ -80,24 +171,21 @@
                             "retry": 3,
                             "retryIntervalInSeconds": 60,
                             "secureOutput": false,
-                            "secureInput": false
+                            "secureInput": true
                         },
                         "userProperties": [],
                         "typeProperties": {
                             "method": "GET",
                             "headers": {
-                                "Accept": "application/json;odata=verbose"
+                                "Accept": "application/json;odata=verbose",
+                                "Authorization": {
+                                    "value": "@concat('Bearer ', variables('AccessToken'))",
+                                    "type": "Expression"
+                                }
                             },
                             "url": {
                                 "value": "@concat(pipeline().parameters.SharePointTenantUrl, pipeline().parameters.SiteUrl, '/_api/web/GetFolderByServerRelativeUrl(''', pipeline().parameters.LibraryName, ''')/Files?$select=Name,ServerRelativeUrl,Length,TimeLastModified,UniqueId&$top=5000')",
                                 "type": "Expression"
-                            },
-                            "authentication": {
-                                "type": "MSI",
-                                "resource": {
-                                    "value": "@concat(pipeline().parameters.SharePointTenantUrl, '/')",
-                                    "type": "Expression"
-                                }
                             }
                         }
                     },
@@ -110,6 +198,12 @@
                                 "dependencyConditions": [
                                     "Succeeded"
                                 ]
+                            },
+                            {
+                                "activity": "Set_AccessToken",
+                                "dependencyConditions": [
+                                    "Succeeded"
+                                ]
                             }
                         ],
                         "policy": {
@@ -117,24 +211,21 @@
                             "retry": 3,
                             "retryIntervalInSeconds": 60,
                             "secureOutput": false,
-                            "secureInput": false
+                            "secureInput": true
                         },
                         "userProperties": [],
                         "typeProperties": {
                             "method": "GET",
                             "headers": {
-                                "Accept": "application/json;odata=verbose"
+                                "Accept": "application/json;odata=verbose",
+                                "Authorization": {
+                                    "value": "@concat('Bearer ', variables('AccessToken'))",
+                                    "type": "Expression"
+                                }
                             },
                             "url": {
                                 "value": "@concat(pipeline().parameters.SharePointTenantUrl, pipeline().parameters.SiteUrl, '/_api/web/GetFolderByServerRelativeUrl(''', pipeline().parameters.LibraryName, ''')/Folders?$select=Name,ServerRelativeUrl,ItemCount')",
                                 "type": "Expression"
-                            },
-                            "authentication": {
-                                "type": "MSI",
-                                "resource": {
-                                    "value": "@concat(pipeline().parameters.SharePointTenantUrl, '/')",
-                                    "type": "Expression"
-                                }
                             }
                         }
                     },
@@ -177,7 +268,7 @@
                                                 "type": "HttpReadSettings",
                                                 "requestMethod": "GET",
                                                 "additionalHeaders": {
-                                                    "value": "Accept: application/octet-stream",
+                                                    "value": "@concat('Authorization: Bearer ', variables('AccessToken'))",
                                                     "type": "Expression"
                                                 },
                                                 "requestTimeout": "00:10:00"
@@ -468,6 +559,10 @@
                                             "SharePointTenantUrl": {
                                                 "value": "@pipeline().parameters.SharePointTenantUrl",
                                                 "type": "Expression"
+                                            },
+                                            "AccessToken": {
+                                                "value": "@variables('AccessToken')",
+                                                "type": "Expression"
                                             }
                                         }
                                     }
@@ -594,11 +689,11 @@
                 "parameters": {
                     "SiteUrl": {
                         "type": "string",
-                        "defaultValue": "/sites/HydroOneDocuments"
+                        "defaultValue": "/sites/SalesAndMarketing"
                     },
                     "LibraryName": {
                         "type": "string",
-                        "defaultValue": "Documents"
+                        "defaultValue": "Shared Documents"
                     },
                     "ControlTableId": {
                         "type": "int"
@@ -612,11 +707,23 @@
                     },
                     "SharePointTenantUrl": {
                         "type": "string",
-                        "defaultValue": "https://hydroone.sharepoint.com"
+                        "defaultValue": "https://m365x52073746.sharepoint.com"
                     },
                     "ThrottleWaitSeconds": {
                         "type": "int",
                         "defaultValue": 120
+                    },
+                    "ServicePrincipalId": {
+                        "type": "string",
+                        "defaultValue": "bca94bda-c22c-4cd6-a065-72b12ae88c91"
+                    },
+                    "ServicePrincipalTenantId": {
+                        "type": "string",
+                        "defaultValue": "5447cfcd-3af1-439a-8157-760bd52b12df"
+                    },
+                    "KeyVaultUrl": {
+                        "type": "string",
+                        "defaultValue": "https://kv-hydroone-test2.vault.azure.net"
                     }
                 },
                 "variables": {
@@ -631,6 +738,10 @@
                     "FailureCount": {
                         "type": "Integer",
                         "defaultValue": 0
+                    },
+                    "AccessToken": {
+                        "type": "String",
+                        "defaultValue": ""
                     }
                 },
                 "annotations": [

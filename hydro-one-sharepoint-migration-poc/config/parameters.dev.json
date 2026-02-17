@@ -3,28 +3,28 @@
     "contentVersion": "1.0.0.0",
     "parameters": {
         "factoryName": {
-            "value": "adf-hydroone-migration-dev"
+            "value": "adf-hydroone-migration-test"
         },
         "location": {
             "value": "canadacentral"
         },
         "sharePointTenantUrl": {
-            "value": "https://hydroone.sharepoint.com"
+            "value": "https://m365x52073746.sharepoint.com"
         },
         "servicePrincipalId": {
-            "value": "<INSERT-APP-CLIENT-ID>"
+            "value": "bca94bda-c22c-4cd6-a065-72b12ae88c91"
         },
         "tenantId": {
-            "value": "<INSERT-TENANT-ID>"
+            "value": "5447cfcd-3af1-439a-8157-760bd52b12df"
         },
         "keyVaultName": {
-            "value": "kv-hydroone-mig-dev"
+            "value": "kv-hydroone-test2"
         },
         "storageAccountName": {
-            "value": "sthydroonemigdev"
+            "value": "sthydroonemigtest"
         },
         "sqlServerName": {
-            "value": "sql-hydroone-migration-dev"
+            "value": "sql-hydroone-migration-test"
         },
         "sqlDatabaseName": {
             "value": "MigrationControl"

@@ -26,24 +26,21 @@
                             "retry": 3,
                             "retryIntervalInSeconds": 60,
                             "secureOutput": false,
-                            "secureInput": false
+                            "secureInput": true
                         },
                         "userProperties": [],
                         "typeProperties": {
                             "method": "GET",
                             "headers": {
-                                "Accept": "application/json;odata=verbose"
+                                "Accept": "application/json;odata=verbose",
+                                "Authorization": {
+                                    "value": "@concat('Bearer ', pipeline().parameters.AccessToken)",
+                                    "type": "Expression"
+                                }
                             },
                             "url": {
                                 "value": "@concat(pipeline().parameters.SharePointTenantUrl, pipeline().parameters.SiteUrl, '/_api/web/GetFolderByServerRelativeUrl(''', pipeline().parameters.FolderServerRelativeUrl, ''')/Files?$select=Name,ServerRelativeUrl,Length,TimeLastModified,UniqueId&$top=5000')",
                                 "type": "Expression"
-                            },
-                            "authentication": {
-                                "type": "MSI",
-                                "resource": {
-                                    "value": "@concat(pipeline().parameters.SharePointTenantUrl, '/')",
-                                    "type": "Expression"
-                                }
                             }
                         }
                     },
@@ -86,7 +83,7 @@
                                                 "type": "HttpReadSettings",
                                                 "requestMethod": "GET",
                                                 "additionalHeaders": {
-                                                    "value": "Accept: application/octet-stream",
+                                                    "value": "@concat('Authorization: Bearer ', pipeline().parameters.AccessToken)",
                                                     "type": "Expression"
                                                 },
                                                 "requestTimeout": "00:10:00"
@@ -311,7 +308,10 @@
                     },
                     "SharePointTenantUrl": {
                         "type": "string",
-                        "defaultValue": "https://hydroone.sharepoint.com"
+                        "defaultValue": "https://m365x52073746.sharepoint.com"
+                    },
+                    "AccessToken": {
+                        "type": "string"
                     }
                 },
                 "annotations": [
