@@ -15,7 +15,7 @@
             "type": "Microsoft.DataFactory/factories/pipelines",
             "apiVersion": "2018-06-01",
             "properties": {
-                "description": "Delta/incremental synchronization pipeline using Microsoft Graph API delta query. Authenticates via Service Principal, uses Graph delta tokens to identify changed files, copies using pre-authenticated download URLs.",
+                "description": "Production delta/incremental synchronization pipeline using Microsoft Graph API delta query. Handles pagination via Until loop with @odata.nextLink, refreshes OAuth2 token every 45 minutes, persists deltaLink for true incremental sync, and processes libraries sequentially to avoid variable scoping conflicts.",
                 "activities": [
                     {
                         "name": "Get_ClientSecret",
@@ -56,17 +56,26 @@
                         }
                     },
                     {
+                        "name": "Set_TokenAcquiredTime",
+                        "type": "SetVariable",
+                        "dependsOn": [ { "activity": "Set_AccessToken", "dependencyConditions": ["Succeeded"] } ],
+                        "policy": { "secureOutput": false, "secureInput": false },
+                        "userProperties": [],
+                        "typeProperties": {
+                            "variableName": "TokenAcquiredTime",
+                            "value": { "value": "@utcNow()", "type": "Expression" }
+                        }
+                    },
+                    {
                         "name": "Lookup_LibrariesForSync",
                         "type": "Lookup",
-                        "dependsOn": [
-                            { "activity": "Set_AccessToken", "dependencyConditions": ["Succeeded"] }
-                        ],
+                        "dependsOn": [ { "activity": "Set_TokenAcquiredTime", "dependencyConditions": ["Succeeded"] } ],
                         "policy": { "timeout": "0.00:10:00", "retry": 3, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
                         "userProperties": [],
                         "typeProperties": {
                             "source": {
                                 "type": "AzureSqlSource",
-                                "sqlReaderQuery": "SELECT mc.Id, mc.SiteUrl, mc.LibraryName, ISNULL(iw.LastModifiedDate, '1900-01-01') AS LastModifiedDate, ISNULL(iw.LastSyncTime, '1900-01-01') AS LastSyncTime FROM dbo.MigrationControl mc LEFT JOIN dbo.IncrementalWatermark iw ON mc.SiteUrl = iw.SiteUrl AND mc.LibraryName = iw.LibraryName WHERE mc.Status = 'Completed' AND mc.EnableIncrementalSync = 1",
+                                "sqlReaderQuery": "SELECT mc.Id, mc.SiteUrl, mc.LibraryName, ISNULL(iw.LastModifiedDate, '1900-01-01') AS LastModifiedDate, ISNULL(iw.LastSyncTime, '1900-01-01') AS LastSyncTime, iw.DeltaLink, iw.DriveId FROM dbo.MigrationControl mc LEFT JOIN dbo.IncrementalWatermark iw ON mc.SiteUrl = iw.SiteUrl AND mc.LibraryName = iw.LibraryName WHERE mc.Status = 'Completed' AND mc.EnableIncrementalSync = 1",
                                 "queryTimeout": "00:05:00",
                                 "partitionOption": "None"
                             },
@@ -84,21 +93,18 @@
                     {
                         "name": "ForEach_LibrarySync",
                         "type": "ForEach",
-                        "dependsOn": [
-                            { "activity": "Lookup_LibrariesForSync", "dependencyConditions": ["Succeeded"] }
-                        ],
+                        "dependsOn": [ { "activity": "Lookup_LibrariesForSync", "dependencyConditions": ["Succeeded"] } ],
                         "userProperties": [],
                         "typeProperties": {
                             "items": { "value": "@activity('Lookup_LibrariesForSync').output.value", "type": "Expression" },
-                            "isSequential": false,
-                            "batchCount": 4,
+                            "isSequential": true,
                             "activities": [
                                 {
                                     "name": "Get_Drive",
-                                    "description": "Resolve SharePoint site to Graph drive ID",
+                                    "description": "Resolve SharePoint site to Graph drive ID (skip if DriveId already stored)",
                                     "type": "WebActivity",
                                     "dependsOn": [],
-                                    "policy": { "timeout": "0.00:05:00", "retry": 2, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": true },
+                                    "policy": { "timeout": "0.00:05:00", "retry": 5, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": true },
                                     "userProperties": [],
                                     "typeProperties": {
                                         "method": "GET",
@@ -109,140 +115,292 @@
                                     }
                                 },
                                 {
-                                    "name": "Get_DeltaItems",
-                                    "description": "Get all items via Graph delta query (returns full contents on first call)",
-                                    "type": "WebActivity",
+                                    "name": "Set_InitialDeltaUrl",
+                                    "description": "Use stored deltaLink if available, otherwise start fresh delta query",
+                                    "type": "SetVariable",
                                     "dependsOn": [ { "activity": "Get_Drive", "dependencyConditions": ["Succeeded"] } ],
-                                    "policy": { "timeout": "0.00:10:00", "retry": 3, "retryIntervalInSeconds": 60, "secureOutput": false, "secureInput": true },
+                                    "policy": { "secureOutput": false, "secureInput": false },
                                     "userProperties": [],
                                     "typeProperties": {
-                                        "method": "GET",
-                                        "headers": {
-                                            "Authorization": { "value": "@concat('Bearer ', variables('AccessToken'))", "type": "Expression" }
-                                        },
-                                        "url": { "value": "@concat('https://graph.microsoft.com/v1.0/drives/', activity('Get_Drive').output.id, '/root/delta?$top=999')", "type": "Expression" }
+                                        "variableName": "CurrentPageUrl",
+                                        "value": { "value": "@if(and(not(equals(coalesce(item().DeltaLink, ''), '')), greater(length(coalesce(item().DeltaLink, '')), 0)), item().DeltaLink, concat('https://graph.microsoft.com/v1.0/drives/', activity('Get_Drive').output.id, '/root/delta?$top=', string(pipeline().parameters.PageSize)))", "type": "Expression" }
                                     }
                                 },
                                 {
-                                    "name": "Filter_DeltaFiles",
-                                    "description": "Filter delta response to only file items with download URLs",
-                                    "type": "Filter",
-                                    "dependsOn": [ { "activity": "Get_DeltaItems", "dependencyConditions": ["Succeeded"] } ],
+                                    "name": "Set_HasMorePages_True",
+                                    "description": "Reset pagination flag for this library",
+                                    "type": "SetVariable",
+                                    "dependsOn": [ { "activity": "Set_InitialDeltaUrl", "dependencyConditions": ["Succeeded"] } ],
+                                    "policy": { "secureOutput": false, "secureInput": false },
                                     "userProperties": [],
                                     "typeProperties": {
-                                        "items": { "value": "@activity('Get_DeltaItems').output.value", "type": "Expression" },
-                                        "condition": { "value": "@contains(string(item()), '\"@microsoft.graph.downloadUrl\"')", "type": "Expression" }
+                                        "variableName": "HasMorePages",
+                                        "value": { "value": "@bool(true)", "type": "Expression" }
                                     }
                                 },
                                 {
-                                    "name": "If_HasModifiedFiles",
-                                    "type": "IfCondition",
-                                    "dependsOn": [ { "activity": "Filter_DeltaFiles", "dependencyConditions": ["Succeeded"] } ],
+                                    "name": "Until_AllDeltaPagesProcessed",
+                                    "description": "Paginate through all delta pages for this library",
+                                    "type": "Until",
+                                    "dependsOn": [ { "activity": "Set_HasMorePages_True", "dependencyConditions": ["Succeeded"] } ],
                                     "userProperties": [],
                                     "typeProperties": {
-                                        "expression": { "value": "@greater(activity('Filter_DeltaFiles').output.FilteredItemsCount, 0)", "type": "Expression" },
-                                        "ifTrueActivities": [
+                                        "expression": { "value": "@equals(variables('HasMorePages'), false)", "type": "Expression" },
+                                        "activities": [
                                             {
-                                                "name": "ForEach_ModifiedFile",
-                                                "type": "ForEach",
+                                                "name": "If_TokenExpiring",
+                                                "description": "Check if token is older than 45 minutes and refresh if needed",
+                                                "type": "IfCondition",
                                                 "dependsOn": [],
                                                 "userProperties": [],
                                                 "typeProperties": {
-                                                    "items": { "value": "@activity('Filter_DeltaFiles').output.value", "type": "Expression" },
-                                                    "isSequential": false,
-                                                    "batchCount": 10,
-                                                    "activities": [
+                                                    "expression": { "value": "@greater(div(sub(ticks(utcNow()), ticks(variables('TokenAcquiredTime'))), 10000000), 2700)", "type": "Expression" },
+                                                    "ifTrueActivities": [
                                                         {
-                                                            "name": "Copy_ModifiedFile",
-                                                            "type": "Copy",
+                                                            "name": "Refresh_ClientSecret",
+                                                            "type": "WebActivity",
                                                             "dependsOn": [],
-                                                            "policy": { "timeout": "0.00:30:00", "retry": 3, "retryIntervalInSeconds": 60, "secureOutput": false, "secureInput": false },
+                                                            "policy": { "timeout": "0.00:05:00", "retry": 2, "retryIntervalInSeconds": 30, "secureOutput": true, "secureInput": false },
                                                             "userProperties": [],
                                                             "typeProperties": {
-                                                                "source": {
-                                                                    "type": "BinarySource",
-                                                                    "storeSettings": {
-                                                                        "type": "HttpReadSettings",
-                                                                        "requestMethod": "GET",
-                                                                        "additionalHeaders": { "value": "@concat('Authorization: Bearer ', variables('AccessToken'))", "type": "Expression" },
-                                                                        "requestTimeout": "00:10:00"
-                                                                    },
-                                                                    "formatSettings": { "type": "BinaryReadSettings" }
-                                                                },
-                                                                "sink": {
-                                                                    "type": "BinarySink",
-                                                                    "storeSettings": { "type": "AzureBlobFSWriteSettings" }
-                                                                },
-                                                                "enableStaging": false
-                                                            },
-                                                            "inputs": [
-                                                                {
-                                                                    "referenceName": "DS_Graph_Content_Download",
-                                                                    "type": "DatasetReference",
-                                                                    "parameters": {
-                                                                        "ContentPath": {
-                                                                            "value": "@concat('/v1.0/drives/', activity('Get_Drive').output.id, '/items/', item().id, '/content')",
-                                                                            "type": "Expression"
-                                                                        }
-                                                                    }
-                                                                }
-                                                            ],
-                                                            "outputs": [
-                                                                {
-                                                                    "referenceName": "DS_ADLS_Binary_Sink",
-                                                                    "type": "DatasetReference",
-                                                                    "parameters": {
-                                                                        "ContainerName": { "value": "@pipeline().parameters.ContainerName", "type": "Expression" },
-                                                                        "SiteName": { "value": "@replace(item().SiteUrl, '/sites/', '')", "type": "Expression" },
-                                                                        "LibraryName": { "value": "@item().LibraryName", "type": "Expression" },
-                                                                        "FolderPath": { "value": "@if(contains(item(), 'parentReference'), replace(replace(item().parentReference.path, concat('/drives/', activity('Get_Drive').output.id, '/root:'), ''), concat('/drives/', activity('Get_Drive').output.id, '/root'), ''), '')", "type": "Expression" },
-                                                                        "FileName": { "value": "@item().name", "type": "Expression" }
-                                                                    }
-                                                                }
-                                                            ]
+                                                                "method": "GET",
+                                                                "url": { "value": "@concat(pipeline().parameters.KeyVaultUrl, '/secrets/sharepoint-client-secret?api-version=7.0')", "type": "Expression" },
+                                                                "authentication": { "type": "MSI", "resource": "https://vault.azure.net" }
+                                                            }
                                                         },
                                                         {
-                                                            "name": "Log_IncrementalCopy",
-                                                            "type": "SqlServerStoredProcedure",
-                                                            "dependsOn": [ { "activity": "Copy_ModifiedFile", "dependencyConditions": ["Succeeded"] } ],
-                                                            "policy": { "timeout": "0.00:05:00", "retry": 2, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+                                                            "name": "Refresh_AccessToken",
+                                                            "type": "WebActivity",
+                                                            "dependsOn": [ { "activity": "Refresh_ClientSecret", "dependencyConditions": ["Succeeded"] } ],
+                                                            "policy": { "timeout": "0.00:05:00", "retry": 2, "retryIntervalInSeconds": 30, "secureOutput": true, "secureInput": true },
                                                             "userProperties": [],
                                                             "typeProperties": {
-                                                                "storedProcedureName": "[[dbo].[usp_LogFileAudit]",
-                                                                "storedProcedureParameters": {
-                                                                    "FileName": { "value": { "value": "@item().name", "type": "Expression" }, "type": "String" },
-                                                                    "SourcePath": { "value": { "value": "@concat(item().SiteUrl, '/', item().LibraryName, '/', item().name)", "type": "Expression" }, "type": "String" },
-                                                                    "DestinationPath": { "value": { "value": "@concat(pipeline().parameters.ContainerName, '/', replace(item().SiteUrl, '/sites/', ''), '/', item().LibraryName, '/', item().name)", "type": "Expression" }, "type": "String" },
-                                                                    "FileSizeBytes": { "value": { "value": "@item().size", "type": "Expression" }, "type": "Int64" },
-                                                                    "MigrationStatus": { "value": "IncrementalSync", "type": "String" },
-                                                                    "PipelineRunId": { "value": { "value": "@pipeline().RunId", "type": "Expression" }, "type": "String" },
-                                                                    "ErrorDetails": { "value": null, "type": "String" }
-                                                                }
-                                                            },
-                                                            "linkedServiceName": { "referenceName": "LS_AzureSqlDatabase", "type": "LinkedServiceReference" }
+                                                                "method": "POST",
+                                                                "headers": { "Content-Type": "application/x-www-form-urlencoded" },
+                                                                "url": { "value": "@concat('https://login.microsoftonline.com/', pipeline().parameters.ServicePrincipalTenantId, '/oauth2/v2.0/token')", "type": "Expression" },
+                                                                "body": { "value": "@concat('grant_type=client_credentials&client_id=', pipeline().parameters.ServicePrincipalId, '&client_secret=', encodeUriComponent(activity('Refresh_ClientSecret').output.value), '&scope=https%3A%2F%2Fgraph.microsoft.com%2F.default')", "type": "Expression" }
+                                                            }
+                                                        },
+                                                        {
+                                                            "name": "Set_RefreshedToken",
+                                                            "type": "SetVariable",
+                                                            "dependsOn": [ { "activity": "Refresh_AccessToken", "dependencyConditions": ["Succeeded"] } ],
+                                                            "policy": { "secureOutput": true, "secureInput": true },
+                                                            "userProperties": [],
+                                                            "typeProperties": {
+                                                                "variableName": "AccessToken",
+                                                                "value": { "value": "@activity('Refresh_AccessToken').output.access_token", "type": "Expression" }
+                                                            }
+                                                        },
+                                                        {
+                                                            "name": "Set_RefreshedTokenTime",
+                                                            "type": "SetVariable",
+                                                            "dependsOn": [ { "activity": "Set_RefreshedToken", "dependencyConditions": ["Succeeded"] } ],
+                                                            "policy": { "secureOutput": false, "secureInput": false },
+                                                            "userProperties": [],
+                                                            "typeProperties": {
+                                                                "variableName": "TokenAcquiredTime",
+                                                                "value": { "value": "@utcNow()", "type": "Expression" }
+                                                            }
                                                         }
                                                     ]
                                                 }
                                             },
                                             {
-                                                "name": "Update_Watermark",
-                                                "type": "SqlServerStoredProcedure",
-                                                "dependsOn": [ { "activity": "ForEach_ModifiedFile", "dependencyConditions": ["Succeeded"] } ],
-                                                "policy": { "timeout": "0.00:05:00", "retry": 2, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+                                                "name": "Get_DeltaPage",
+                                                "description": "Fetch current page of delta results from Graph API",
+                                                "type": "WebActivity",
+                                                "dependsOn": [ { "activity": "If_TokenExpiring", "dependencyConditions": ["Succeeded"] } ],
+                                                "policy": { "timeout": "0.00:10:00", "retry": 5, "retryIntervalInSeconds": 60, "secureOutput": false, "secureInput": true },
                                                 "userProperties": [],
                                                 "typeProperties": {
-                                                    "storedProcedureName": "[[dbo].[usp_UpdateWatermark]",
-                                                    "storedProcedureParameters": {
-                                                        "SiteUrl": { "value": { "value": "@item().SiteUrl", "type": "Expression" }, "type": "String" },
-                                                        "LibraryName": { "value": { "value": "@item().LibraryName", "type": "Expression" }, "type": "String" },
-                                                        "LastModifiedDate": { "value": { "value": "@utcNow()", "type": "Expression" }, "type": "DateTime" },
-                                                        "LastSyncTime": { "value": { "value": "@utcNow()", "type": "Expression" }, "type": "DateTime" }
-                                                    }
-                                                },
-                                                "linkedServiceName": { "referenceName": "LS_AzureSqlDatabase", "type": "LinkedServiceReference" }
+                                                    "method": "GET",
+                                                    "headers": {
+                                                        "Authorization": { "value": "@concat('Bearer ', variables('AccessToken'))", "type": "Expression" }
+                                                    },
+                                                    "url": { "value": "@variables('CurrentPageUrl')", "type": "Expression" }
+                                                }
+                                            },
+                                            {
+                                                "name": "Filter_DeltaFiles",
+                                                "description": "Filter delta page to only file items (exclude folders and deleted items)",
+                                                "type": "Filter",
+                                                "dependsOn": [ { "activity": "Get_DeltaPage", "dependencyConditions": ["Succeeded"] } ],
+                                                "userProperties": [],
+                                                "typeProperties": {
+                                                    "items": { "value": "@activity('Get_DeltaPage').output.value", "type": "Expression" },
+                                                    "condition": { "value": "@and(contains(string(item()), '\"file\"'), not(contains(string(item()), '\"deleted\"')))", "type": "Expression" }
+                                                }
+                                            },
+                                            {
+                                                "name": "If_HasDeltaFiles",
+                                                "type": "IfCondition",
+                                                "dependsOn": [ { "activity": "Filter_DeltaFiles", "dependencyConditions": ["Succeeded"] } ],
+                                                "userProperties": [],
+                                                "typeProperties": {
+                                                    "expression": { "value": "@greater(activity('Filter_DeltaFiles').output.FilteredItemsCount, 0)", "type": "Expression" },
+                                                    "ifTrueActivities": [
+                                                        {
+                                                            "name": "ForEach_ModifiedFile",
+                                                            "type": "ForEach",
+                                                            "dependsOn": [],
+                                                            "userProperties": [],
+                                                            "typeProperties": {
+                                                                "items": { "value": "@activity('Filter_DeltaFiles').output.value", "type": "Expression" },
+                                                                "isSequential": false,
+                                                                "batchCount": 10,
+                                                                "activities": [
+                                                                    {
+                                                                        "name": "Copy_ModifiedFile",
+                                                                        "type": "Copy",
+                                                                        "dependsOn": [],
+                                                                        "policy": { "timeout": "0.01:00:00", "retry": 5, "retryIntervalInSeconds": 60, "secureOutput": false, "secureInput": false },
+                                                                        "userProperties": [],
+                                                                        "typeProperties": {
+                                                                            "source": {
+                                                                                "type": "BinarySource",
+                                                                                "storeSettings": {
+                                                                                    "type": "HttpReadSettings",
+                                                                                    "requestMethod": "GET",
+                                                                                    "additionalHeaders": { "value": "@concat('Authorization: Bearer ', variables('AccessToken'))", "type": "Expression" },
+                                                                                    "requestTimeout": "00:30:00"
+                                                                                },
+                                                                                "formatSettings": { "type": "BinaryReadSettings" }
+                                                                            },
+                                                                            "sink": {
+                                                                                "type": "BinarySink",
+                                                                                "storeSettings": { "type": "AzureBlobFSWriteSettings" }
+                                                                            },
+                                                                            "enableStaging": false
+                                                                        },
+                                                                        "inputs": [
+                                                                            {
+                                                                                "referenceName": "DS_Graph_Content_Download",
+                                                                                "type": "DatasetReference",
+                                                                                "parameters": {
+                                                                                    "ContentPath": { "value": "@concat('/v1.0/drives/', activity('Get_Drive').output.id, '/items/', item().id, '/content')", "type": "Expression" }
+                                                                                }
+                                                                            }
+                                                                        ],
+                                                                        "outputs": [
+                                                                            {
+                                                                                "referenceName": "DS_ADLS_Binary_Sink",
+                                                                                "type": "DatasetReference",
+                                                                                "parameters": {
+                                                                                    "ContainerName": { "value": "@pipeline().parameters.ContainerName", "type": "Expression" },
+                                                                                    "SiteName": { "value": "@replace(item().SiteUrl, '/sites/', '')", "type": "Expression" },
+                                                                                    "LibraryName": { "value": "@item().LibraryName", "type": "Expression" },
+                                                                                    "FolderPath": { "value": "@if(contains(item(), 'parentReference'), replace(replace(item().parentReference.path, concat('/drives/', activity('Get_Drive').output.id, '/root:'), ''), concat('/drives/', activity('Get_Drive').output.id, '/root'), ''), '')", "type": "Expression" },
+                                                                                    "FileName": { "value": "@item().name", "type": "Expression" }
+                                                                                }
+                                                                            }
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        "name": "Log_IncrementalCopy",
+                                                                        "type": "SqlServerStoredProcedure",
+                                                                        "dependsOn": [ { "activity": "Copy_ModifiedFile", "dependencyConditions": ["Succeeded"] } ],
+                                                                        "policy": { "timeout": "0.00:05:00", "retry": 2, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+                                                                        "userProperties": [],
+                                                                        "typeProperties": {
+                                                                            "storedProcedureName": "[[dbo].[usp_LogFileAudit]",
+                                                                            "storedProcedureParameters": {
+                                                                                "FileName": { "value": { "value": "@item().name", "type": "Expression" }, "type": "String" },
+                                                                                "SourcePath": { "value": { "value": "@concat(item().SiteUrl, '/', item().LibraryName, '/', item().name)", "type": "Expression" }, "type": "String" },
+                                                                                "DestinationPath": { "value": { "value": "@concat(pipeline().parameters.ContainerName, '/', replace(item().SiteUrl, '/sites/', ''), '/', item().LibraryName, '/', item().name)", "type": "Expression" }, "type": "String" },
+                                                                                "FileSizeBytes": { "value": { "value": "@item().size", "type": "Expression" }, "type": "Int64" },
+                                                                                "MigrationStatus": { "value": "IncrementalSync", "type": "String" },
+                                                                                "PipelineRunId": { "value": { "value": "@pipeline().RunId", "type": "Expression" }, "type": "String" },
+                                                                                "ErrorDetails": { "value": null, "type": "String" }
+                                                                            }
+                                                                        },
+                                                                        "linkedServiceName": { "referenceName": "LS_AzureSqlDatabase", "type": "LinkedServiceReference" }
+                                                                    }
+                                                                ]
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "name": "If_HasNextDeltaPage",
+                                                "description": "Check if the delta response contains @odata.nextLink for more pages",
+                                                "type": "IfCondition",
+                                                "dependsOn": [ { "activity": "If_HasDeltaFiles", "dependencyConditions": ["Succeeded"] } ],
+                                                "userProperties": [],
+                                                "typeProperties": {
+                                                    "expression": { "value": "@contains(string(activity('Get_DeltaPage').output), '@odata.nextLink')", "type": "Expression" },
+                                                    "ifTrueActivities": [
+                                                        {
+                                                            "name": "Set_NextDeltaPageUrl",
+                                                            "type": "SetVariable",
+                                                            "dependsOn": [],
+                                                            "policy": { "secureOutput": false, "secureInput": false },
+                                                            "userProperties": [],
+                                                            "typeProperties": {
+                                                                "variableName": "CurrentPageUrl",
+                                                                "value": { "value": "@activity('Get_DeltaPage').output['@odata.nextLink']", "type": "Expression" }
+                                                            }
+                                                        },
+                                                        {
+                                                            "name": "Wait_ThrottleDelay",
+                                                            "type": "Wait",
+                                                            "dependsOn": [ { "activity": "Set_NextDeltaPageUrl", "dependencyConditions": ["Succeeded"] } ],
+                                                            "userProperties": [],
+                                                            "typeProperties": {
+                                                                "waitTimeInSeconds": { "value": "@pipeline().parameters.ThrottleDelaySeconds", "type": "Expression" }
+                                                            }
+                                                        }
+                                                    ],
+                                                    "ifFalseActivities": [
+                                                        {
+                                                            "name": "Set_HasMorePages_False",
+                                                            "type": "SetVariable",
+                                                            "dependsOn": [],
+                                                            "policy": { "secureOutput": false, "secureInput": false },
+                                                            "userProperties": [],
+                                                            "typeProperties": {
+                                                                "variableName": "HasMorePages",
+                                                                "value": { "value": "@bool(false)", "type": "Expression" }
+                                                            }
+                                                        },
+                                                        {
+                                                            "name": "Set_DeltaLink",
+                                                            "description": "Store the deltaLink for next incremental sync",
+                                                            "type": "SetVariable",
+                                                            "dependsOn": [ { "activity": "Set_HasMorePages_False", "dependencyConditions": ["Succeeded"] } ],
+                                                            "policy": { "secureOutput": false, "secureInput": false },
+                                                            "userProperties": [],
+                                                            "typeProperties": {
+                                                                "variableName": "DeltaLink",
+                                                                "value": { "value": "@if(contains(string(activity('Get_DeltaPage').output), '@odata.deltaLink'), activity('Get_DeltaPage').output['@odata.deltaLink'], '')", "type": "Expression" }
+                                                            }
+                                                        }
+                                                    ]
+                                                }
                                             }
-                                        ]
+                                        ],
+                                        "timeout": "1.00:00:00"
                                     }
+                                },
+                                {
+                                    "name": "Update_Watermark",
+                                    "type": "SqlServerStoredProcedure",
+                                    "dependsOn": [ { "activity": "Until_AllDeltaPagesProcessed", "dependencyConditions": ["Succeeded"] } ],
+                                    "policy": { "timeout": "0.00:05:00", "retry": 2, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+                                    "userProperties": [],
+                                    "typeProperties": {
+                                        "storedProcedureName": "[[dbo].[usp_UpdateWatermark]",
+                                        "storedProcedureParameters": {
+                                            "SiteUrl": { "value": { "value": "@item().SiteUrl", "type": "Expression" }, "type": "String" },
+                                            "LibraryName": { "value": { "value": "@item().LibraryName", "type": "Expression" }, "type": "String" },
+                                            "LastModifiedDate": { "value": { "value": "@utcNow()", "type": "Expression" }, "type": "DateTime" },
+                                            "LastSyncTime": { "value": { "value": "@utcNow()", "type": "Expression" }, "type": "DateTime" },
+                                            "DeltaLink": { "value": { "value": "@variables('DeltaLink')", "type": "Expression" }, "type": "String" },
+                                            "DriveId": { "value": { "value": "@activity('Get_Drive').output.id", "type": "Expression" }, "type": "String" }
+                                        }
+                                    },
+                                    "linkedServiceName": { "referenceName": "LS_AzureSqlDatabase", "type": "LinkedServiceReference" }
                                 }
                             ]
                         }
@@ -266,39 +424,24 @@
                     }
                 ],
                 "parameters": {
-                    "SharePointTenantUrl": {
-                        "type": "string",
-                        "defaultValue": "https://m365x52073746.sharepoint.com"
-                    },
-                    "ContainerName": {
-                        "type": "string",
-                        "defaultValue": "sharepoint-migration"
-                    },
-                    "ServicePrincipalId": {
-                        "type": "string",
-                        "defaultValue": "bca94bda-c22c-4cd6-a065-72b12ae88c91"
-                    },
-                    "ServicePrincipalTenantId": {
-                        "type": "string",
-                        "defaultValue": "5447cfcd-3af1-439a-8157-760bd52b12df"
-                    },
-                    "KeyVaultUrl": {
-                        "type": "string",
-                        "defaultValue": "https://kv-hydroone-test2.vault.azure.net"
-                    }
+                    "SharePointTenantUrl": { "type": "string", "defaultValue": "https://m365x52073746.sharepoint.com" },
+                    "ContainerName": { "type": "string", "defaultValue": "sharepoint-migration" },
+                    "ServicePrincipalId": { "type": "string", "defaultValue": "bca94bda-c22c-4cd6-a065-72b12ae88c91" },
+                    "ServicePrincipalTenantId": { "type": "string", "defaultValue": "5447cfcd-3af1-439a-8157-760bd52b12df" },
+                    "KeyVaultUrl": { "type": "string", "defaultValue": "https://kv-hydroone-test2.vault.azure.net" },
+                    "PageSize": { "type": "int", "defaultValue": 200 },
+                    "ThrottleDelaySeconds": { "type": "int", "defaultValue": 2 },
+                    "CopyBatchCount": { "type": "int", "defaultValue": 10 }
                 },
                 "variables": {
-                    "AccessToken": { "type": "String", "defaultValue": "" }
+                    "AccessToken": { "type": "String", "defaultValue": "" },
+                    "TokenAcquiredTime": { "type": "String", "defaultValue": "" },
+                    "HasMorePages": { "type": "Boolean", "defaultValue": true },
+                    "CurrentPageUrl": { "type": "String", "defaultValue": "" },
+                    "DeltaLink": { "type": "String", "defaultValue": "" }
                 },
-                "annotations": [
-                    "incremental-sync",
-                    "delta-migration",
-                    "hydro-one-migration",
-                    "graph-api"
-                ],
-                "folder": {
-                    "name": "SharePoint Migration"
-                }
+                "annotations": [ "incremental-sync", "delta-migration", "hydro-one-migration", "graph-api", "paginated", "production" ],
+                "folder": { "name": "SharePoint Migration" }
             }
         }
     ]

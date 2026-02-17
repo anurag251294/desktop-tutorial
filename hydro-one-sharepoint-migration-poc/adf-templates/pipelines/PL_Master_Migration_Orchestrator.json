@@ -15,7 +15,7 @@
             "type": "Microsoft.DataFactory/factories/pipelines",
             "apiVersion": "2018-06-01",
             "properties": {
-                "description": "Master orchestration pipeline for Hydro One SharePoint to ADLS migration. Reads from control table and iterates through SharePoint sites/libraries, invoking the child migration pipeline for each. Implements batch processing with configurable parallelism to manage SharePoint throttling.",
+                "description": "Master orchestration pipeline for Hydro One SharePoint to ADLS migration. Reads from control table and iterates through SharePoint sites/libraries, invoking the child migration pipeline for each. Implements batch processing with configurable parallelism to manage SharePoint throttling. Passes production parameters (PageSize, CopyBatchCount, ThrottleDelaySeconds) to child pipelines.",
                 "activities": [
                     {
                         "name": "Lookup_PendingLibraries",
@@ -114,6 +114,18 @@
                                             },
                                             "SharePointTenantUrl": {
                                                 "value": "@pipeline().parameters.SharePointTenantUrl",
+                                                "type": "Expression"
+                                            },
+                                            "PageSize": {
+                                                "value": "@pipeline().parameters.PageSize",
+                                                "type": "Expression"
+                                            },
+                                            "CopyBatchCount": {
+                                                "value": "@pipeline().parameters.CopyBatchCount",
+                                                "type": "Expression"
+                                            },
+                                            "ThrottleDelaySeconds": {
+                                                "value": "@pipeline().parameters.ThrottleDelaySeconds",
                                                 "type": "Expression"
                                             }
                                         }
@@ -292,6 +304,18 @@
                     "SharePointTenantUrl": {
                         "type": "string",
                         "defaultValue": "https://m365x52073746.sharepoint.com"
+                    },
+                    "PageSize": {
+                        "type": "int",
+                        "defaultValue": 200
+                    },
+                    "CopyBatchCount": {
+                        "type": "int",
+                        "defaultValue": 10
+                    },
+                    "ThrottleDelaySeconds": {
+                        "type": "int",
+                        "defaultValue": 2
                     }
                 },
                 "variables": {
@@ -306,7 +330,8 @@
                     "master-pipeline",
                     "orchestrator",
                     "hydro-one-migration",
-                    "sharepoint-to-adls"
+                    "sharepoint-to-adls",
+                    "production"
                 ],
                 "folder": {
                     "name": "SharePoint Migration"

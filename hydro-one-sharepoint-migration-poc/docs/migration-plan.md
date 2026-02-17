@@ -28,6 +28,8 @@ The migration uses **Microsoft Graph API** (not SharePoint REST API) for all Sha
 | Enumerate subfolder items | `GET /v1.0/drives/{driveId}/items/{itemId}/children` |
 | Download file content | `GET /v1.0/drives/{driveId}/items/{itemId}/content` (302 redirect to pre-authenticated download URL) |
 | Pagination | `@odata.nextLink` for large result sets |
+| Delta query (all files, all depths) | `GET /v1.0/drives/{driveId}/root/delta?$top=200` |
+| Delta link (incremental) | `@odata.deltaLink` stored in SQL for true incremental sync |
 
 **Authentication flow:**
 1. Service Principal client secret retrieved from Azure Key Vault (via Managed Identity)
@@ -41,8 +43,8 @@ The migration is orchestrated through Azure Data Factory with the following pipe
 | Pipeline | Purpose |
 |----------|---------|
 | `PL_Master_Migration_Orchestrator` | Reads from control table, iterates through libraries in batches |
-| `PL_Migrate_Single_Library` | Migrates all files from a single library using Graph API enumeration and download |
-| `PL_Process_Subfolder` | Processes nested folder structures iteratively (not recursively, due to ADF limitation) |
+| `PL_Migrate_Single_Library` | Migrates all files from a single library using Graph API delta query with pagination, token refresh, and unlimited folder depth |
+| `PL_Process_Subfolder` | Standalone utility for subfolder processing with pagination and token refresh (no longer called from delta-based migration) |
 | `PL_Validation` | Post-migration validation comparing source file counts vs destination |
 | `PL_Incremental_Sync` | Delta sync for ongoing synchronization |
 
@@ -75,6 +77,7 @@ The migration is orchestrated through Azure Data Factory with the following pipe
 - ADF pipelines successfully enumerate folders, download files via Graph pre-authenticated URLs, and write to ADLS Gen2
 - Folder structure is preserved in the destination container
 - ADF does not support recursive pipeline execution; subfolder processing uses iterative patterns within `PL_Process_Subfolder`
+- Production readiness improvements implemented: delta-based file enumeration (unlimited depth), pagination via Until loops, automatic token refresh (45-min threshold), configurable throttle delays, and deltaLink persistence for true incremental sync
 
 | Task | Owner | Duration | Deliverable | Status |
 |------|-------|----------|-------------|--------|
@@ -228,7 +231,8 @@ The migration is orchestrated through Azure Data Factory with the following pipe
 | R9 | Network bandwidth insufficient | Low | Medium | Off-peak scheduling, bandwidth monitoring | Open | Hydro One |
 | R10 | Regulatory/compliance issues | Low | High | Early legal review, audit logging | Open | Hydro One |
 | R11 | SharePoint REST API incompatible with AAD v2.0 app-only tokens | High | High | Switched to Microsoft Graph API for all file enumeration and downloads. Graph API fully supports client credentials flow with AAD v2.0 endpoints. | **Resolved** (POC) | Microsoft |
-| R12 | ADF does not support recursive pipeline execution | Medium | Medium | Implemented iterative subfolder processing within `PL_Process_Subfolder` instead of recursive pipeline calls. Folders are processed in a loop rather than via nested Execute Pipeline activities. | **Resolved** (POC) | Microsoft |
+| R12 | ADF does not support recursive pipeline execution | Medium | Medium | Replaced subfolder-based enumeration with Graph API delta query (`/root/delta`), which returns ALL files at ALL folder depths in a flat list. No recursive traversal needed. `PL_Process_Subfolder` retained as standalone utility with pagination support. | **Resolved** (Production) | Microsoft |
+| R13 | Token expiration during long-running migrations | Medium | High | Implemented automatic token refresh every 45 minutes in all pipelines. AAD tokens have ~60-min lifetime; 15-minute safety margin ensures uninterrupted processing of large libraries. | **Resolved** (Production) | Microsoft |
 
 ### Risk Response Plan
 
@@ -249,8 +253,13 @@ The migration is orchestrated through Azure Data Factory with the following pipe
 
 **R12 - ADF Recursive Pipeline Limitation (RESOLVED):**
 - **Root Cause:** Azure Data Factory does not allow a pipeline to call itself recursively via Execute Pipeline activity.
-- **Resolution:** Implemented iterative folder processing within `PL_Process_Subfolder`. The pipeline uses a loop-based approach to process nested folders rather than recursive pipeline invocation.
-- **Impact:** Subfolder depth handling is managed iteratively. No functional limitation for typical SharePoint folder structures.
+- **Resolution:** Replaced subfolder-based enumeration with Graph API delta query (`/root/delta`), which returns ALL files at ALL folder depths in a flat list. No recursive traversal needed. `PL_Process_Subfolder` retained as standalone utility with pagination support.
+- **Impact:** No folder depth limitation. Delta query eliminates the need for recursive or iterative folder traversal entirely.
+
+**R13 - Token Expiration During Long-Running Migrations (RESOLVED):**
+- **Root Cause:** AAD OAuth2 access tokens have an approximate 60-minute lifetime. Long-running migrations processing large libraries can exceed this duration.
+- **Resolution:** Implemented automatic token refresh every 45 minutes in all pipelines. A 15-minute safety margin before token expiry ensures uninterrupted processing.
+- **Impact:** Large libraries with thousands of files can be processed without token-related failures.
 
 ---
 

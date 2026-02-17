@@ -243,15 +243,20 @@ The migration pipelines follow this flow:
    - `GET https://graph.microsoft.com/v1.0/sites/{host}:{site-path}` to get the Site ID
    - `GET https://graph.microsoft.com/v1.0/sites/{site-id}/drives` to get the Drive ID for the library
 
-3. **File Enumeration:** ADF enumerates files using the Graph children endpoint:
-   - `GET https://graph.microsoft.com/v1.0/drives/{drive-id}/root/children` for root-level items
-   - `GET https://graph.microsoft.com/v1.0/drives/{drive-id}/items/{item-id}/children` for subfolder items
+3. **File Enumeration:** ADF uses the Graph delta query to enumerate ALL files at ALL folder depths in a single paginated call:
+   - `GET https://graph.microsoft.com/v1.0/drives/{drive-id}/root/delta?$top=200` returns files from all levels
+   - Pagination follows `@odata.nextLink` in an Until loop with configurable throttle delay
+   - `parentReference.path` on each item is used to reconstruct ADLS folder paths
 
 4. **File Copy:** ADF downloads each file using the Graph `/content` endpoint with a Bearer token in the Authorization header:
    - `GET https://graph.microsoft.com/v1.0/drives/{drive-id}/items/{item-id}/content`
    - The file is streamed directly to ADLS Gen2 (`sthydroonemigtest`) via a Copy activity
 
-5. **Subfolder Processing:** `PL_Process_Subfolder` is called by `PL_Migrate_Library` for each subfolder. It does NOT self-recurse; instead, `PL_Migrate_Library` handles recursive traversal to avoid ADF circular reference errors.
+5. **Subfolder Processing:** With the delta-based approach, `PL_Process_Subfolder` is no longer called from `PL_Migrate_Single_Library`. The delta query returns all files at all depths, eliminating the need for separate subfolder processing. `PL_Process_Subfolder` remains available as a standalone utility.
+
+6. **Token Refresh:** If the pipeline runs for more than 45 minutes, the OAuth2 token is automatically refreshed to prevent 401 errors on long-running libraries.
+
+7. **DeltaLink Storage:** After processing all delta pages, the `@odata.deltaLink` URL is stored in the IncrementalWatermark SQL table for use by subsequent incremental sync runs.
 
 ### Step 1: Deploy Azure Resources
 
@@ -300,6 +305,11 @@ sqlcmd -S sql-hydroone-migration-test.database.windows.net \
 sqlcmd -S sql-hydroone-migration-test.database.windows.net \
     -d MigrationControl \
     -i sql/create_audit_log_table.sql
+
+# Run production schema updates (adds DeltaLink and DriveId columns)
+sqlcmd -S sql-hydroone-migration-test.database.windows.net \
+    -d MigrationControl \
+    -i sql/03_production_schema_updates.sql
 ```
 
 ### Step 5: Populate Control Table
@@ -421,6 +431,7 @@ VALUES ('/sites/SalesAndMarketing', 'Shared Documents', 'Sales And Marketing', '
 | Requests/minute | ~600 | HTTP 429 |
 | Concurrent connections | ~10-15 | Connection refused |
 | Large file downloads | Variable | Slower throughput |
+| Inter-page delay | Configurable (default 2s) | Prevents burst throttling during pagination |
 
 ### Identifying Throttling
 
@@ -452,6 +463,19 @@ Invoke-AzDataFactoryV2Pipeline `
     -Parameter @{
         BatchSize = 5          # Reduce from 20
         ParallelLibraries = 2  # Reduce from 4
+    }
+```
+
+**Adjust pagination settings:**
+```powershell
+# Reduce page size and increase throttle delay
+Invoke-AzDataFactoryV2Pipeline `
+    -PipelineName "PL_Master_Migration_Orchestrator" `
+    -Parameter @{
+        BatchSize = 5
+        ParallelLibraries = 2
+        PageSize = 100           # Reduce from 200
+        ThrottleDelaySeconds = 5 # Increase from 2
     }
 ```
 
@@ -528,6 +552,13 @@ Invoke-AzDataFactoryV2Pipeline `
 3. Update secret in Key Vault
 4. Verify token scope is `https://graph.microsoft.com/.default`
 5. Re-run failed items
+
+#### Token Expiration During Long-Running Migration
+**Cause:** Libraries with thousands of files take >60 minutes to process, causing the OAuth2 token to expire mid-run.
+**Resolution:** The production pipelines include automatic token refresh every 45 minutes. If you still see 401 errors:
+1. Verify the `If_TokenExpiring` activity is present in the pipeline
+2. Check that Key Vault access is still working (the refresh flow re-reads the client secret)
+3. Verify the client secret has not expired on the Azure AD app registration
 
 #### HTTP 403 - Forbidden (Graph API)
 **Cause:** Insufficient Graph API permissions or admin consent not granted
@@ -678,6 +709,16 @@ AND MigrationStatus = 'Failed'
 3. **Monitor incremental syncs:**
    ```sql
    SELECT * FROM dbo.SyncLog ORDER BY StartTime DESC
+   ```
+
+4. **Verify deltaLink persistence:**
+   ```sql
+   -- After first incremental sync run, verify deltaLinks are stored
+   SELECT SiteUrl, LibraryName, DriveId,
+       CASE WHEN DeltaLink IS NOT NULL THEN 'Stored' ELSE 'Not yet' END AS DeltaLinkStatus,
+       LastSyncTime
+   FROM dbo.IncrementalWatermark
+   ORDER BY LastSyncTime DESC
    ```
 
 ### Decommission Source Content

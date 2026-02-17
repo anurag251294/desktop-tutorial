@@ -58,26 +58,28 @@ PL_Master_Migration_Orchestrator          <-- Top-level orchestrator
     |
     +-- ForEach Library (parallel)
          |
-         +-- PL_Migrate_Single_Library    <-- Per-library migration (Graph API)
+         +-- PL_Migrate_Single_Library    <-- Per-library migration (Graph API delta query)
               |
               +-- Get_ClientSecret (Key Vault via MSI)
               +-- Get_AccessToken (AAD client_credentials, scope: graph.microsoft.com/.default)
+              +-- Set_TokenAcquiredTime
               +-- Get_Drive (resolve site to Graph drive ID)
-              +-- Get_RootItems (GET /drives/{driveId}/root/children)
+              +-- Set_InitialDeltaUrl (/root/delta?$top=PageSize)
               |
-              +-- ForEach Root File       <-- Copy files in root
-              |    +-- Copy via DS_Graph_Content_Download
-              |    +-- Log Success/Failure
-              |
-              +-- ForEach Subfolder
-                   +-- PL_Process_Subfolder  <-- Per-folder processing (NOT recursive)
-                        +-- Get_FolderChildren (Graph API)
-                        +-- ForEach File
-                             +-- Copy via DS_Graph_Content_Download
-                             +-- Log Success/Failure
+              +-- Until_AllPagesProcessed  <-- Paginated delta loop
+                   +-- If_TokenExpiring (>45 min? refresh)
+                   +-- Get_DeltaPage (current page URL)
+                   +-- Filter_PageFiles (files only, exclude deleted)
+                   +-- ForEach_CopyFile
+                   |    +-- Copy via DS_Graph_Content_Download
+                   |    +-- Log_FileSuccess / Log_FileFailure
+                   +-- If_HasNextPage
+                        +-- Yes: Set_NextPageUrl + Wait_ThrottleDelay
+                        +-- No: Set_HasMorePages=false + Set_DeltaLink
 
+PL_Process_Subfolder                      <-- Standalone utility (paginated, with token refresh)
 PL_Validation                             <-- Post-migration validation
-PL_Incremental_Sync                       <-- Ongoing delta sync (Graph API delta query)
+PL_Incremental_Sync                       <-- Ongoing delta sync (paginated, with deltaLink persistence)
 ```
 
 ---
@@ -277,6 +279,9 @@ sharepoint-migration/HydroOneDocuments/Shared Documents/Reports/2024/Q1-Report.p
 | `ParallelLibraries` | int | 4 | Concurrent library migrations |
 | `MaxRetries` | int | 3 | Max retry attempts per library |
 | `TargetContainerName` | string | `sharepoint-migration` | ADLS destination container |
+| `PageSize` | int | 200 | Graph API page size for delta queries |
+| `CopyBatchCount` | int | 10 | Concurrent file copies per page |
+| `ThrottleDelaySeconds` | int | 2 | Wait between pagination pages |
 
 ### 4.3 Variables
 
@@ -352,7 +357,9 @@ ForEach_Library --> Log_BatchComplete
 | `ServicePrincipalId` | string | - | Azure AD App Registration client ID for Graph API authentication |
 | `ServicePrincipalTenantId` | string | - | Azure AD tenant ID for token acquisition |
 | `KeyVaultUrl` | string | - | Key Vault URL for retrieving the client secret |
-| `ThrottleWaitSeconds` | int | 120 | Seconds to wait when throttled |
+| `ThrottleDelaySeconds` | int | 2 | Wait between pagination pages |
+| `PageSize` | int | 200 | Graph API page size for delta query |
+| `CopyBatchCount` | int | 10 | Concurrent file copies per delta page |
 
 ### 5.3 Activity Flow
 
@@ -363,32 +370,27 @@ Get_ClientSecret (MSI to Key Vault)
         |
 Get_AccessToken (POST to AAD, scope: https://graph.microsoft.com/.default)
         |
-Set_AccessToken (pipeline variable)
+Set_AccessToken + Set_TokenAcquiredTime
         |
 Get_Drive (resolve site URL to Graph drive ID)
         |
-Set_DriveId (pipeline variable)
+Set_DriveId → Set_InitialDeltaUrl
         |
-Get_RootItems (GET /drives/{driveId}/root/children)
+Until_AllPagesProcessed (24h timeout):
+  ├── If_TokenExpiring (>45 min elapsed?)
+  │   └── true: Refresh_ClientSecret → Refresh_AccessToken → Set vars
+  ├── Get_DeltaPage (GET CurrentPageUrl, retry:5, interval:60s)
+  ├── Filter_PageFiles (has 'file' property, not deleted)
+  ├── If_HasPageFiles
+  │   └── true: ForEach_CopyFile (batchCount: 10)
+  │       ├── Copy_SingleFile (1hr timeout, retry:5)
+  │       ├── Log_FileSuccess
+  │       └── Log_FileFailure
+  └── If_HasNextPage (@odata.nextLink?)
+      ├── true:  Set_NextPageUrl + Wait_ThrottleDelay
+      └── false: Set_HasMorePages=false + Set_DeltaLink
         |
-        +------------------+-------------------+
-        |                                      |
-Filter_RootFiles                        Filter_RootFolders
-        |                                      |
-ForEach_RootFile                        ForEach_Subfolder
-   |                                       |
-   +-- Copy via DS_Graph_Content_Download  +-- Execute PL_Process_Subfolder
-   |   (GET /v1.0/drives/{driveId}/           (passes AccessToken, DriveId,
-   |    items/{itemId}/content                  FolderId, FolderRelativePath)
-   |    with Bearer token in
-   |    additionalHeaders)
-   +-- Log_FileSuccess
-   +-- Log_FileFailure
-   +-- Check_Throttling
-        |
-        +------------------+-------------------+
-        |                                      |
-Update_Status_Completed             Update_Status_Failed
+Update_Status_Completed / Update_Status_Failed
 ```
 
 ### 5.4 Key Activities
@@ -421,23 +423,33 @@ Update_Status_Completed             Update_Status_Failed
 - Type: SetVariable
 - Stores the resolved Graph drive ID for use by downstream activities
 
-**Get_RootItems:**
+**Set_InitialDeltaUrl:**
+- Type: SetVariable
+- Expression: `@concat('https://graph.microsoft.com/v1.0/drives/', variables('DriveId'), '/root/delta?$top=', string(pipeline().parameters.PageSize))`
+- Sets the initial URL for the delta query pagination loop
+
+**Until_AllPagesProcessed:**
+- Type: Until (timeout: 24 hours)
+- Expression: `@equals(variables('HasMorePages'), false)`
+- Contains: If_TokenExpiring, Get_DeltaPage, Filter_PageFiles, If_HasPageFiles, If_HasNextPage
+- Loops through all delta pages, processing files on each page
+
+**If_TokenExpiring:**
+- Type: IfCondition
+- Expression: `@greater(div(sub(ticks(utcNow()), ticks(variables('TokenAcquiredTime'))), 10000000), 2700)`
+- Checks if >45 minutes (2700 seconds) since last token acquisition
+- If true: Re-acquires token from Key Vault + AAD
+
+**Get_DeltaPage:**
 - Type: WebActivity (GET)
-- URL: `https://graph.microsoft.com/v1.0/drives/{driveId}/root/children`
-- Headers: `Authorization: Bearer {accessToken}`
-- Returns: Array of items (files and folders) at the root of the document library
+- URL: `@variables('CurrentPageUrl')` (initially the delta URL, then @odata.nextLink)
+- Retry: 5 attempts, 60s interval
+- Returns: Page of delta items (files + folders at all depths)
 
-**Filter_RootFiles:**
+**Filter_PageFiles:**
 - Type: Filter
-- Expression: Filters items where `file` property exists (i.e., items that are files, not folders)
-
-**Filter_RootFolders:**
-- Type: Filter
-- Expression: Filters items where `folder` property exists (i.e., items that are folders)
-
-**ForEach_RootFile:**
-- Parallelism: 10 concurrent files
-- Contains Copy Activity using `DS_Graph_Content_Download`, Log_FileSuccess, Log_FileFailure, Check_Throttling
+- Expression: `@and(contains(string(item()), '"file"'), not(contains(string(item()), '"deleted"')))`
+- Keeps only file items, excludes folders and deleted items
 
 **Copy (via DS_Graph_Content_Download):**
 - Type: Copy Activity
@@ -445,18 +457,10 @@ Update_Status_Completed             Update_Status_Failed
 - Source ContentPath: `/v1.0/drives/{driveId}/items/{itemId}/content`
 - Source Additional Headers: `Authorization: Bearer {accessToken}`
 - Sink: `DS_ADLS_Binary_Sink` (ADLS write)
-- Retry: 3 attempts, 60s interval
-- Timeout: 30 minutes per file
-
-**ForEach_Subfolder:**
-- Type: ForEach
-- Iterates over `Filter_RootFolders` output
-- Executes `PL_Process_Subfolder` for each folder, passing `AccessToken`, `DriveId`, `FolderId`, and `FolderRelativePath`
-
-**Check_Throttling:**
-- Type: IfCondition
-- Expression: `@contains(string(activity('Copy_SingleFile').output), '429')`
-- If true: Wait activity pauses for `ThrottleWaitSeconds`
+- Retry: 5 attempts, 60s interval
+- Timeout: 1 hour per file
+- Request timeout: 30 minutes
+- FolderPath: Derived from `item().parentReference.path` (supports unlimited depth)
 
 **Log_FileSuccess / Log_FileFailure:**
 - Type: SqlServerStoredProcedure
@@ -472,9 +476,9 @@ Update_Status_Completed             Update_Status_Failed
 | Property | Value |
 |----------|-------|
 | File | `adf-templates/pipelines/PL_Process_Subfolder.json` |
-| Purpose | Processes all files within a single SharePoint subfolder using Graph API |
-| Called By | `PL_Migrate_Single_Library` (ForEach_Subfolder) |
-| Recursion | **NOT recursive** -- ADF does not allow circular pipeline references. Only processes immediate children of the given folder. |
+| Purpose | Standalone utility pipeline that processes all files within a single SharePoint subfolder using Graph API with pagination support, token refresh, and configurable throttle delay |
+| Called By | Ad-hoc invocation (no longer called from main migration flow; `PL_Migrate_Single_Library` now uses delta query for unlimited depth) |
+| Pagination | Supports `@odata.nextLink` pagination via Until loop for folders with >200 items |
 
 ### 6.2 Parameters
 
@@ -488,21 +492,25 @@ Update_Status_Completed             Update_Status_Failed
 | `FolderId` | string | Graph item ID of the folder to process |
 | `FolderRelativePath` | string | Relative path of the folder within the library (for ADLS destination mapping) |
 | `SharePointTenantUrl` | string | SharePoint tenant URL |
+| `PageSize` | int | 200 | Graph API page size |
+| `ThrottleDelaySeconds` | int | 2 | Wait between pages |
+| `CopyBatchCount` | int | 10 | Concurrent copies |
+| `KeyVaultUrl` | string | Key Vault URL |
+| `ServicePrincipalId` | string | App registration client ID |
+| `ServicePrincipalTenantId` | string | SharePoint tenant ID |
+| `TokenAcquiredTime` | string | When token was last acquired |
 
 ### 6.3 Activity Flow
 
 ```
-Get_FolderChildren (GET /drives/{driveId}/items/{folderId}/children)
-        |
-Filter_Files (items where 'file' property exists)
-        |
-ForEach_File
-    |
-    +-- Copy via DS_Graph_Content_Download
-    |   (GET /v1.0/drives/{driveId}/items/{itemId}/content
-    |    with Bearer token in additionalHeaders)
-    +-- Log_Success
-    +-- Log_Failure
+Set_InternalAccessToken + Set_InternalTokenAcquiredTime + Set_InitialPageUrl
+
+Until_AllPagesProcessed (24h timeout):
+  ├── If_TokenExpiring → Refresh token
+  ├── Get_FolderPage (retry:5)
+  ├── Filter_Files
+  ├── If_HasFiles → ForEach_CopyFile (Copy + Log_Success + Log_Failure)
+  └── If_HasNextPage → Set_NextPageUrl + Wait or Set_HasMorePages=false
 ```
 
 ### 6.4 Key Activities
@@ -534,9 +542,16 @@ SharePoint: /sites/HydroOne/Documents/Reports/2024/Q1/file.pdf
 ADLS:       sharepoint-migration/HydroOne/Documents/Reports/2024/Q1/file.pdf
 ```
 
-### 6.6 Limitation: No Recursive Traversal
+### 6.6 Production Updates
 
-ADF does not allow circular pipeline references (a pipeline cannot call itself). As a result, `PL_Process_Subfolder` only processes **immediate children** of the specified folder. If the SharePoint library contains deeply nested folder structures, the orchestrating pipeline (`PL_Migrate_Single_Library`) must enumerate all subfolders at all levels and invoke `PL_Process_Subfolder` for each one, or a flattened folder list must be obtained via the Graph API before invoking the pipeline.
+The production version of `PL_Process_Subfolder` adds:
+- **Pagination**: Until loop with `@odata.nextLink` for folders with >200 items
+- **Token Refresh**: Automatic token refresh every 45 minutes for long-running folders
+- **Configurable Throttle Delay**: Wait between pagination pages (default: 2 seconds)
+- **Production Retry Policy**: 5 retries with 60-second intervals for Graph API calls
+- **Extended Timeouts**: 1-hour copy timeout, 30-minute request timeout
+
+Note: `PL_Migrate_Single_Library` now uses delta query for file enumeration (unlimited depth), so `PL_Process_Subfolder` is no longer called from the main migration flow. It is retained as a standalone utility for ad-hoc subfolder processing.
 
 ---
 
@@ -634,41 +649,49 @@ ForEach_ValidateLibrary --> Generate_ValidationReport (SQL summary query)
 | `ServicePrincipalId` | string | - | Azure AD App Registration client ID |
 | `ServicePrincipalTenantId` | string | - | Azure AD tenant ID |
 | `KeyVaultUrl` | string | - | Key Vault URL for retrieving the client secret |
+| `PageSize` | int | 200 | Graph API page size for delta queries |
+| `ThrottleDelaySeconds` | int | 2 | Wait between pagination pages |
+| `CopyBatchCount` | int | 10 | Concurrent file copies per page |
 
 ### 8.3 How It Works
 
 1. Acquires a Graph API access token via AAD client credentials flow (same mechanism as `PL_Migrate_Single_Library`)
-2. Looks up completed libraries from the `MigrationControl` table that have `EnableIncrementalSync = 1`
-3. For each library, resolves the Graph drive ID via `Get_Drive`
-4. Calls the Graph API delta endpoint (`/drives/{driveId}/root/delta`) to retrieve all changes since the last sync
-5. Filters delta results to only include file items (excludes folders)
-6. Copies modified/new files to ADLS via `DS_Graph_Content_Download` using the `/v1.0/drives/{driveId}/items/{itemId}/content` endpoint with Bearer token
-7. Updates the watermark timestamp after successful sync
+2. Looks up completed libraries from the `MigrationControl` table that have `EnableIncrementalSync = 1`, including stored `DeltaLink` and `DriveId` from `IncrementalWatermark`
+3. Processes libraries **sequentially** (`isSequential: true`) to avoid variable scoping conflicts between iterations
+4. For each library, resolves the Graph drive ID via `Get_Drive`
+5. Uses **pagination via Until loop** with `@odata.nextLink` to handle large delta result sets
+6. If a stored `DeltaLink` exists, uses it as the starting URL so Graph API only returns items changed since the last sync; otherwise performs a fresh delta query
+7. Filters delta results to only include file items (excludes folders and deleted items)
+8. Copies modified/new files to ADLS via `DS_Graph_Content_Download` using the `/v1.0/drives/{driveId}/items/{itemId}/content` endpoint with Bearer token
+9. **Token refresh** every 45 minutes for long-running sync operations
+10. Persists the final `@odata.deltaLink` to SQL for true incremental sync on subsequent runs
+11. Updates the watermark with `DeltaLink` and `DriveId` after successful sync
 
 ### 8.4 Activity Flow
 
 ```
 Get_ClientSecret (MSI to Key Vault)
         |
-Get_AccessToken (POST to AAD, scope: https://graph.microsoft.com/.default)
+Get_AccessToken + Set_AccessToken + Set_TokenAcquiredTime
         |
-Set_AccessToken
+Lookup_LibrariesForSync (includes DeltaLink and DriveId from IncrementalWatermark)
         |
-Lookup_LibrariesForSync (completed libraries with EnableIncrementalSync = 1)
-        |
-ForEach_LibrarySync
+ForEach_LibrarySync (SEQUENTIAL - isSequential: true)
     |
     +-- Get_Drive (resolve site to Graph drive ID)
-    +-- Get_DeltaItems (GET /drives/{driveId}/root/delta)
-    +-- Filter_DeltaFiles (items where 'file' property exists)
-    +-- ForEach_DeltaFile
-    |       +-- Copy via DS_Graph_Content_Download
-    |       |   (GET /v1.0/drives/{driveId}/items/{itemId}/content
-    |       |    with Bearer token in additionalHeaders)
-    |       +-- Log_IncrementalCopy
-    +-- Update_Watermark (update LastIncrementalSync in control table)
+    +-- Set_InitialDeltaUrl (use stored DeltaLink or fresh /root/delta)
+    +-- Set_HasMorePages_True (reset for this library)
+    +-- Until_AllDeltaPagesProcessed
+    |       +-- If_TokenExpiring → Refresh token
+    |       +-- Get_DeltaPage (retry:5)
+    |       +-- Filter_DeltaFiles (files only, exclude deleted)
+    |       +-- If_HasDeltaFiles → ForEach_ModifiedFile → Copy + Log
+    |       +-- If_HasNextDeltaPage
+    |           +-- Yes: Set_NextDeltaPageUrl + Wait_ThrottleDelay
+    |           +-- No: Set_HasMorePages=false + Set_DeltaLink
+    +-- Update_Watermark (with DeltaLink and DriveId)
     |
-ForEach_LibrarySync --> Log_SyncComplete
+ForEach_LibrarySync → Log_SyncComplete
 ```
 
 ### 8.5 Graph API Delta Query
@@ -685,6 +708,11 @@ Key behaviors:
 - Subsequent calls (with delta token): Returns only items that have changed
 - The response includes a `@odata.deltaLink` that should be stored for the next sync cycle
 - Deleted items are indicated by a `deleted` facet on the item
+
+**DeltaLink Persistence:**
+- The final `@odata.deltaLink` from the last page is stored in `IncrementalWatermark.DeltaLink`
+- On subsequent runs, the stored deltaLink is used as the starting URL, so Graph API only returns items changed since the last sync
+- This eliminates the need to process all items on every run
 
 ---
 
@@ -798,6 +826,17 @@ EXEC dbo.usp_LogBatchStart
 | `IX_AuditLog_Timestamp` | MigrationAuditLog | Timestamp DESC | Recent activity |
 | `IX_AuditLog_BatchId` | MigrationAuditLog | BatchId | Batch-level reporting |
 | `IX_AuditLog_SiteLibrary` | MigrationAuditLog | SiteName, LibraryName | Per-library queries |
+
+### 9.5 IncrementalWatermark Production Columns
+
+**File:** `sql/03_production_schema_updates.sql`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `DeltaLink` | NVARCHAR(2000) | Graph API `@odata.deltaLink` URL for true incremental queries |
+| `DriveId` | NVARCHAR(100) | Cached Graph drive ID to avoid redundant resolution calls |
+
+The `usp_UpdateWatermark` stored procedure is updated to accept `@DeltaLink` and `@DriveId` parameters using the same MERGE pattern.
 
 ---
 
@@ -1162,6 +1201,7 @@ flowchart TD
 | `sql/create_audit_log_table.sql` | SQL | Audit log schema + stored procs |
 | `sql/monitoring_queries.sql` | SQL | Monitoring views and queries |
 | `sql/insert_test_data.sql` | SQL | Test data for validation testing |
+| `sql/03_production_schema_updates.sql` | SQL | Production schema updates (DeltaLink, DriveId) |
 | `scripts/Setup-AzureResources.ps1` | PowerShell | Azure resource provisioning |
 | `scripts/Register-SharePointApp.ps1` | PowerShell | SharePoint app registration |
 | `scripts/Monitor-Migration.ps1` | PowerShell | Migration monitoring |

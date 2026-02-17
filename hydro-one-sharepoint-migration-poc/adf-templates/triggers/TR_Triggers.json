@@ -39,7 +39,10 @@
                             "BatchSize": 10,
                             "ParallelLibraries": 4,
                             "MaxRetries": 3,
-                            "TargetContainerName": "sharepoint-migration"
+                            "TargetContainerName": "sharepoint-migration",
+                            "PageSize": 200,
+                            "CopyBatchCount": 10,
+                            "ThrottleDelaySeconds": 2
                         }
                     }
                 ],
@@ -74,7 +77,10 @@
                     },
                     "parameters": {
                         "SharePointTenantUrl": "https://hydroone.sharepoint.com",
-                        "ContainerName": "sharepoint-migration"
+                        "ContainerName": "sharepoint-migration",
+                        "PageSize": 200,
+                        "ThrottleDelaySeconds": 2,
+                        "CopyBatchCount": 10
                     }
                 },
                 "type": "TumblingWindowTrigger",
@@ -161,7 +167,10 @@
                             "BatchSize": 20,
                             "ParallelLibraries": 8,
                             "MaxRetries": 3,
-                            "TargetContainerName": "sharepoint-migration"
+                            "TargetContainerName": "sharepoint-migration",
+                            "PageSize": 200,
+                            "CopyBatchCount": 10,
+                            "ThrottleDelaySeconds": 2
                         }
                     }
                 ],

@@ -526,6 +526,13 @@ az deployment group create \
     --template-file "adf-templates/pipelines/PL_Incremental_Sync.json" \
     --parameters factoryName="adf-hydroone-migration-{env}" \
     --name "pipeline-incremental"
+
+# 6. Deploy triggers
+az deployment group create \
+    --resource-group "rg-hydroone-migration-{env}" \
+    --template-file "adf-templates/triggers/TR_Triggers.json" \
+    --parameters factoryName="adf-hydroone-migration-{env}" \
+    --name "triggers"
 ```
 
 ### 5.5 Verify Deployment
@@ -586,11 +593,21 @@ Execute the contents of `sql/create_audit_log_table.sql`. This creates:
 | `dbo.usp_LogFileAudit` | Stored Procedure | Log individual file migration |
 | `dbo.usp_BulkLogFileAudit` | Stored Procedure | Bulk insert file audit records |
 
-### 6.4 Run Monitoring Queries Script
+### 6.4 Run Production Schema Updates
+
+Execute `sql/03_production_schema_updates.sql`. This adds:
+
+| Object | Type | Purpose |
+|--------|------|---------|
+| `IncrementalWatermark.DeltaLink` | Column (NVARCHAR 2000) | Stores Graph API deltaLink for true incremental sync |
+| `IncrementalWatermark.DriveId` | Column (NVARCHAR 100) | Caches Graph drive ID to avoid redundant resolution |
+| `dbo.usp_UpdateWatermark` | Updated Stored Proc | Now accepts @DeltaLink and @DriveId parameters |
+
+### 6.5 Run Monitoring Queries Script
 
 Execute the contents of `sql/monitoring_queries.sql`. This creates monitoring views and stored procedures used by the PowerShell monitoring script.
 
-### 6.5 Verify Tables
+### 6.6 Verify Tables
 
 ```sql
 SELECT TABLE_NAME
@@ -605,6 +622,14 @@ Expected tables:
 - `MigrationAuditLog`
 - `MigrationControl`
 - `ValidationLog`
+
+After running production updates, verify the IncrementalWatermark table has `DeltaLink` and `DriveId` columns:
+```sql
+SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME = 'IncrementalWatermark'
+ORDER BY ORDINAL_POSITION;
+```
 
 ---
 
@@ -821,7 +846,9 @@ ORDER BY TotalSizeBytes ASC;
 | BatchId | `PILOT-001` | |
 | ContainerName | `sharepoint-migration` | |
 | SharePointTenantUrl | `https://{tenant}.sharepoint.com` | |
-| ThrottleWaitSeconds | `120` | |
+| PageSize | `200` | Items per delta page |
+| ThrottleDelaySeconds | `2` | Wait between pages |
+| CopyBatchCount | `10` | Concurrent file copies |
 | ServicePrincipalId | `3a412ede-620a-4f21-8501-ef62a5161dc2` | App registration client ID (defaults to test env value) |
 | ServicePrincipalTenantId | `5447cfcd-3af1-439a-8157-760bd52b12df` | SharePoint tenant ID for token acquisition (defaults to test env value) |
 | KeyVaultUrl | `https://kv-hydroone-test2.vault.azure.net/` | Key Vault URL for secret retrieval (defaults to test env value) |

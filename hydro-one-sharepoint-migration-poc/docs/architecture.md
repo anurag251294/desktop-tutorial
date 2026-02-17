@@ -97,12 +97,12 @@ graph TB
 | Pipeline | Purpose |
 |----------|---------|
 | `PL_Master_Migration_Orchestrator` | Master pipeline reading from control table, iterating through libraries |
-| `PL_Migrate_Single_Library` | Migrates all files from a single library, handles errors/retries |
-| `PL_Process_Subfolder` | Processes one level of subfolders (ADF does not support recursive/circular pipeline references) |
+| `PL_Migrate_Single_Library` | Migrates all files from a single library using Graph API delta query with pagination, token refresh, and throttle management |
+| `PL_Process_Subfolder` | Standalone utility for subfolder processing with pagination and token refresh (no longer called from delta-based PL_Migrate_Single_Library) |
 | `PL_Validation` | Post-migration validation comparing source vs destination |
-| `PL_Incremental_Sync` | Delta sync for ongoing synchronization |
+| `PL_Incremental_Sync` | Delta sync with pagination, deltaLink persistence, and token refresh for ongoing synchronization |
 
-> **Note:** ADF does not allow recursive pipeline invocations (circular references are not permitted). `PL_Process_Subfolder` handles one level of nested subfolders. For deeper nesting, additional pipeline stages or flattened enumeration via Graph API is required.
+> **Note:** `PL_Migrate_Single_Library` now uses Graph API delta query (`/root/delta`) which returns ALL files at ALL folder depths in a flat list, eliminating the need for recursive subfolder traversal. `PL_Process_Subfolder` is retained as a standalone utility.
 
 ### Linked Services
 
@@ -212,29 +212,32 @@ flowchart LR
     A[Control Table] --> B[Acquire Token<br/>KV Secret → AAD]
     B --> C{ForEach Library}
     C --> D[Resolve Drive ID<br/>GET /v1.0/sites/host:path:/drive]
-    D --> E[List Children<br/>GET /v1.0/drives/driveId/root/children]
-    E --> F{Filter: Files vs Folders}
-    F -->|Files| G[Copy via Graph /content<br/>GET /v1.0/drives/driveId/items/itemId/content]
-    G --> H[Write to ADLS Gen2]
-    H --> I[Log to SQL Audit Table]
-    F -->|Folders| J[PL_Process_Subfolder<br/>one level deep]
-    J --> K[List Subfolder Children<br/>Graph API]
-    K --> L[Copy Subfolder Files<br/>via Graph /content]
-    L --> H
-    I --> M{More Libraries?}
-    M -->|Yes| C
-    M -->|No| N[Update Control Table<br/>Complete]
+    D --> E[Delta Query<br/>GET /v1.0/drives/driveId/root/delta]
+    E --> F{Until: All Pages}
+    F --> G[Filter: Files only<br/>exclude deleted]
+    G --> H[Copy via Graph /content<br/>GET /v1.0/drives/driveId/items/itemId/content]
+    H --> I[Write to ADLS Gen2]
+    I --> J[Log to SQL Audit Table]
+    J --> K{@odata.nextLink?}
+    K -->|Yes| L[Wait ThrottleDelay]
+    L --> F
+    K -->|No| M[Store @odata.deltaLink]
+    M --> N{More Libraries?}
+    N -->|Yes| C
+    N -->|No| O[Update Control Table<br/>Complete]
 ```
 
 ### Detailed Pipeline Data Flow
 
 1. **Token Acquisition**: Web Activity retrieves client secret from Key Vault (via MSI), then POSTs to AAD token endpoint (`https://login.microsoftonline.com/{sharepoint-tenant-id}/oauth2/v2.0/token`) with `scope=https://graph.microsoft.com/.default`
 2. **Drive Resolution**: Web Activity calls `GET /v1.0/sites/{hostname}:{siteRelativeUrl}:/drive` to resolve the SharePoint site's default document library to a Graph drive ID
-3. **List Children**: Web Activity calls `GET /v1.0/drives/{driveId}/root/children` (or `/items/{folderId}/children` for subfolders) to enumerate files and folders
-4. **Filter Files/Folders**: ForEach activity iterates results; items are filtered by `folder` vs `file` facets
-5. **Copy Files via Graph /content**: Copy Activity uses `DS_Graph_Content_Download` dataset to GET `/v1.0/drives/{driveId}/items/{itemId}/content` with Bearer token authentication, streaming binary content directly to `DS_ADLS_Binary_Sink`
-6. **Process Subfolders**: Folders are passed to `PL_Process_Subfolder` which repeats steps 3-5 for one level of nesting
-7. **Log to SQL**: Each file copy result (success/failure, file size, duration) is logged to `MigrationAuditLog` via the SQL linked service
+3. **Delta Query**: Web Activity calls `GET /v1.0/drives/{driveId}/root/delta?$top=200` to enumerate ALL files at ALL depths in a flat list
+4. **Pagination**: Until loop follows `@odata.nextLink` to fetch all pages, with configurable throttle delay between pages
+5. **Filter Files**: Filter activity excludes folders and deleted items, keeping only file items
+6. **Copy Files via Graph /content**: Copy Activity uses `DS_Graph_Content_Download` dataset to GET `/v1.0/drives/{driveId}/items/{itemId}/content` with Bearer token authentication
+7. **Folder Path Reconstruction**: Each delta item's `parentReference.path` is parsed to reconstruct the ADLS folder structure
+8. **Token Refresh**: If >45 minutes elapsed since token acquisition, a fresh token is obtained before the next page
+9. **DeltaLink Storage**: The final `@odata.deltaLink` is stored in SQL for use by incremental sync
 
 ### Incremental Sync Flow
 
@@ -308,7 +311,7 @@ If SharePoint is behind Conditional Access policies:
 
 | Error Code | Meaning | Handling |
 |------------|---------|----------|
-| 401 | Unauthorized | Check token expiry, re-acquire token from AAD |
+| 401 | Unauthorized | Check token expiry; pipeline auto-refreshes every 45 min |
 | 403 | Forbidden | Check Graph API permissions, cross-tenant consent |
 | 404 | Not Found | Log and skip, file/drive may have been deleted |
 | 429 | Throttled | Wait per Retry-After header, retry with backoff |
@@ -317,8 +320,10 @@ If SharePoint is behind Conditional Access policies:
 | File Locked | Checked out file | Log and retry later |
 
 ### Retry Logic
-- **Max Retries**: 3 per file, 3 per library
-- **Retry Interval**: Exponential backoff (30s, 60s, 120s)
+- **Max Retries**: 5 per Graph API call, 3 per library
+- **Inter-page Delay**: Configurable (default 2 seconds) between pagination pages
+- **Token Refresh**: Automatic refresh every 45 minutes (15-minute safety margin before 60-min expiry)
+- **Retry Interval**: Exponential backoff (60s between retries)
 - **Circuit Breaker**: Pause batch if >50% failures
 
 ## Security Considerations
@@ -356,6 +361,29 @@ If SharePoint is behind Conditional Access policies:
 - Storage account: Firewall enabled, Azure services allowed
 - SQL Server: Firewall enabled, Azure services allowed
 - Key Vault: RBAC authorization enabled
+
+## Production Configuration
+
+| Setting | POC | Production |
+|---------|-----|------------|
+| File enumeration | `/root/children` (root + 1 level) | **`/root/delta`** (all depths) |
+| Page size ($top) | 999 | **200** |
+| Graph API retries | 3 | **5** |
+| Copy timeout | 30 min | **1 hour** |
+| Token refresh | Never | **Every 45 min** |
+| Inter-page delay | None | **2 seconds** |
+| Subfolder depth | Root + 1 | **Unlimited** (delta) |
+| ForEach_LibrarySync (incremental) | Parallel (4) | **Sequential** |
+| DeltaLink persistence | No | **Yes** (SQL) |
+| Until loop timeout | N/A | **24 hours** |
+
+### New Pipeline Parameters
+
+| Parameter | Type | Default | Purpose |
+|-----------|------|---------|---------|
+| `PageSize` | int | 200 | `$top` value for Graph API delta/children calls |
+| `CopyBatchCount` | int | 10 | ForEach batchCount for parallel file copy |
+| `ThrottleDelaySeconds` | int | 2 | Wait time between pagination pages |
 
 ## Monitoring & Alerting
 
