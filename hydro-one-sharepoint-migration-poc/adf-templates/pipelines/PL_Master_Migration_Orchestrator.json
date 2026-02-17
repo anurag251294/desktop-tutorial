@@ -40,7 +40,7 @@
                             "source": {
                                 "type": "AzureSqlSource",
                                 "sqlReaderQuery": {
-                                    "value": "SELECT Id, SiteUrl, LibraryName, FileCount, TotalSizeBytes, RetryCount \nFROM dbo.MigrationControl \nWHERE Status IN ('Pending', 'Failed') \nAND (RetryCount < @{pipeline().parameters.MaxRetries} OR RetryCount IS NULL)\nORDER BY TotalSizeBytes ASC",
+                                    "value": "SELECT TOP (@{pipeline().parameters.BatchSize}) Id, SiteUrl, LibraryName, FileCount, TotalSizeBytes, RetryCount \nFROM dbo.MigrationControl \nWHERE Status IN ('Pending', 'Failed') \nAND (RetryCount < @{pipeline().parameters.MaxRetries} OR RetryCount IS NULL)\nORDER BY TotalSizeBytes ASC",
                                     "type": "Expression"
                                 },
                                 "queryTimeout": "00:05:00",
@@ -62,7 +62,7 @@
                         "type": "ForEach",
                         "dependsOn": [
                             {
-                                "activity": "Filter_BatchSize",
+                                "activity": "Lookup_PendingLibraries",
                                 "dependencyConditions": [
                                     "Succeeded"
                                 ]
@@ -71,7 +71,7 @@
                         "userProperties": [],
                         "typeProperties": {
                             "items": {
-                                "value": "@activity('Filter_BatchSize').output.value",
+                                "value": "@activity('Lookup_PendingLibraries').output.value",
                                 "type": "Expression"
                             },
                             "isSequential": false,
@@ -135,29 +135,6 @@
                             "variableName": "BatchId",
                             "value": {
                                 "value": "@concat('BATCH-', formatDateTime(utcNow(), 'yyyyMMdd-HHmmss'))",
-                                "type": "Expression"
-                            }
-                        }
-                    },
-                    {
-                        "name": "Filter_BatchSize",
-                        "type": "Filter",
-                        "dependsOn": [
-                            {
-                                "activity": "Lookup_PendingLibraries",
-                                "dependencyConditions": [
-                                    "Succeeded"
-                                ]
-                            }
-                        ],
-                        "userProperties": [],
-                        "typeProperties": {
-                            "items": {
-                                "value": "@activity('Lookup_PendingLibraries').output.value",
-                                "type": "Expression"
-                            },
-                            "condition": {
-                                "value": "@lessOrEquals(indexOf(activity('Lookup_PendingLibraries').output.value, item()), sub(pipeline().parameters.BatchSize, 1))",
                                 "type": "Expression"
                             }
                         }
