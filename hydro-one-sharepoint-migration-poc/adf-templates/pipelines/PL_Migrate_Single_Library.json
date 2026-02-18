@@ -242,7 +242,7 @@
                                     "userProperties": [],
                                     "typeProperties": {
                                         "variableName": "CurrentPageUrl",
-                                        "value": { "value": "@if(contains(string(activity('Get_DeltaPage').output), '@odata.nextLink'), activity('Get_DeltaPage').output['@odata.nextLink'], variables('CurrentPageUrl'))", "type": "Expression" }
+                                        "value": { "value": "@if(contains(string(activity('Get_DeltaPage').output), '@odata.nextLink'), activity('Get_DeltaPage').output['@odata.nextLink'], '')", "type": "Expression" }
                                     }
                                 },
                                 {
@@ -254,7 +254,7 @@
                                     "userProperties": [],
                                     "typeProperties": {
                                         "variableName": "DeltaLink",
-                                        "value": { "value": "@if(contains(string(activity('Get_DeltaPage').output), '@odata.deltaLink'), activity('Get_DeltaPage').output['@odata.deltaLink'], variables('DeltaLink'))", "type": "Expression" }
+                                        "value": { "value": "@if(contains(string(activity('Get_DeltaPage').output), '@odata.deltaLink'), activity('Get_DeltaPage').output['@odata.deltaLink'], '')", "type": "Expression" }
                                     }
                                 },
                                 {
