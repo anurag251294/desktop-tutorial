@@ -66,69 +66,48 @@
                             "expression": { "value": "@equals(variables('HasMorePages'), false)", "type": "Expression" },
                             "activities": [
                                 {
-                                    "name": "If_TokenExpiring",
-                                    "description": "Check if token is older than 45 minutes (2700 seconds) and refresh if needed",
-                                    "type": "IfCondition",
+                                    "name": "Refresh_ClientSecret",
+                                    "description": "Retrieve fresh client secret from Key Vault each iteration",
+                                    "type": "WebActivity",
                                     "dependsOn": [],
+                                    "policy": { "timeout": "0.00:05:00", "retry": 2, "retryIntervalInSeconds": 30, "secureOutput": true, "secureInput": false },
                                     "userProperties": [],
                                     "typeProperties": {
-                                        "expression": { "value": "@greater(div(sub(ticks(utcNow()), ticks(variables('InternalTokenAcquiredTime'))), 10000000), 2700)", "type": "Expression" },
-                                        "ifTrueActivities": [
-                                            {
-                                                "name": "Refresh_ClientSecret",
-                                                "type": "WebActivity",
-                                                "dependsOn": [],
-                                                "policy": { "timeout": "0.00:05:00", "retry": 2, "retryIntervalInSeconds": 30, "secureOutput": true, "secureInput": false },
-                                                "userProperties": [],
-                                                "typeProperties": {
-                                                    "method": "GET",
-                                                    "url": { "value": "@concat(pipeline().parameters.KeyVaultUrl, '/secrets/sharepoint-client-secret?api-version=7.0')", "type": "Expression" },
-                                                    "authentication": { "type": "MSI", "resource": "https://vault.azure.net" }
-                                                }
-                                            },
-                                            {
-                                                "name": "Refresh_AccessToken",
-                                                "type": "WebActivity",
-                                                "dependsOn": [ { "activity": "Refresh_ClientSecret", "dependencyConditions": ["Succeeded"] } ],
-                                                "policy": { "timeout": "0.00:05:00", "retry": 2, "retryIntervalInSeconds": 30, "secureOutput": true, "secureInput": true },
-                                                "userProperties": [],
-                                                "typeProperties": {
-                                                    "method": "POST",
-                                                    "headers": { "Content-Type": "application/x-www-form-urlencoded" },
-                                                    "url": { "value": "@concat('https://login.microsoftonline.com/', pipeline().parameters.ServicePrincipalTenantId, '/oauth2/v2.0/token')", "type": "Expression" },
-                                                    "body": { "value": "@concat('grant_type=client_credentials&client_id=', pipeline().parameters.ServicePrincipalId, '&client_secret=', encodeUriComponent(activity('Refresh_ClientSecret').output.value), '&scope=https%3A%2F%2Fgraph.microsoft.com%2F.default')", "type": "Expression" }
-                                                }
-                                            },
-                                            {
-                                                "name": "Set_RefreshedToken",
-                                                "type": "SetVariable",
-                                                "dependsOn": [ { "activity": "Refresh_AccessToken", "dependencyConditions": ["Succeeded"] } ],
-                                                "policy": { "secureOutput": true, "secureInput": true },
-                                                "userProperties": [],
-                                                "typeProperties": {
-                                                    "variableName": "InternalAccessToken",
-                                                    "value": { "value": "@activity('Refresh_AccessToken').output.access_token", "type": "Expression" }
-                                                }
-                                            },
-                                            {
-                                                "name": "Set_RefreshedTokenTime",
-                                                "type": "SetVariable",
-                                                "dependsOn": [ { "activity": "Set_RefreshedToken", "dependencyConditions": ["Succeeded"] } ],
-                                                "policy": { "secureOutput": false, "secureInput": false },
-                                                "userProperties": [],
-                                                "typeProperties": {
-                                                    "variableName": "InternalTokenAcquiredTime",
-                                                    "value": { "value": "@utcNow()", "type": "Expression" }
-                                                }
-                                            }
-                                        ]
+                                        "method": "GET",
+                                        "url": { "value": "@concat(pipeline().parameters.KeyVaultUrl, '/secrets/sharepoint-client-secret?api-version=7.0')", "type": "Expression" },
+                                        "authentication": { "type": "MSI", "resource": "https://vault.azure.net" }
+                                    }
+                                },
+                                {
+                                    "name": "Refresh_AccessToken",
+                                    "description": "Acquire OAuth2 token (AAD returns cached token if still valid)",
+                                    "type": "WebActivity",
+                                    "dependsOn": [ { "activity": "Refresh_ClientSecret", "dependencyConditions": ["Succeeded"] } ],
+                                    "policy": { "timeout": "0.00:05:00", "retry": 2, "retryIntervalInSeconds": 30, "secureOutput": true, "secureInput": true },
+                                    "userProperties": [],
+                                    "typeProperties": {
+                                        "method": "POST",
+                                        "headers": { "Content-Type": "application/x-www-form-urlencoded" },
+                                        "url": { "value": "@concat('https://login.microsoftonline.com/', pipeline().parameters.ServicePrincipalTenantId, '/oauth2/v2.0/token')", "type": "Expression" },
+                                        "body": { "value": "@concat('grant_type=client_credentials&client_id=', pipeline().parameters.ServicePrincipalId, '&client_secret=', encodeUriComponent(activity('Refresh_ClientSecret').output.value), '&scope=https%3A%2F%2Fgraph.microsoft.com%2F.default')", "type": "Expression" }
+                                    }
+                                },
+                                {
+                                    "name": "Set_RefreshedToken",
+                                    "type": "SetVariable",
+                                    "dependsOn": [ { "activity": "Refresh_AccessToken", "dependencyConditions": ["Succeeded"] } ],
+                                    "policy": { "secureOutput": true, "secureInput": true },
+                                    "userProperties": [],
+                                    "typeProperties": {
+                                        "variableName": "InternalAccessToken",
+                                        "value": { "value": "@activity('Refresh_AccessToken').output.access_token", "type": "Expression" }
                                     }
                                 },
                                 {
                                     "name": "Get_FolderPage",
                                     "description": "Fetch current page of folder children from Graph API",
                                     "type": "WebActivity",
-                                    "dependsOn": [ { "activity": "If_TokenExpiring", "dependencyConditions": ["Succeeded"] } ],
+                                    "dependsOn": [ { "activity": "Set_RefreshedToken", "dependencyConditions": ["Succeeded"] } ],
                                     "policy": { "timeout": "0.00:10:00", "retry": 5, "retryIntervalInSeconds": 60, "secureOutput": false, "secureInput": true },
                                     "userProperties": [],
                                     "typeProperties": {
@@ -141,7 +120,7 @@
                                 },
                                 {
                                     "name": "Filter_Files",
-                                    "description": "Filter Graph response to only file items (those with downloadUrl)",
+                                    "description": "Filter Graph response to only file items",
                                     "type": "Filter",
                                     "dependsOn": [ { "activity": "Get_FolderPage", "dependencyConditions": ["Succeeded"] } ],
                                     "userProperties": [],
@@ -151,149 +130,61 @@
                                     }
                                 },
                                 {
-                                    "name": "ForEach_CopyFile",
-                                    "description": "Copy each file from this page. Handles empty arrays gracefully (0 iterations).",
-                                    "type": "ForEach",
+                                    "name": "Execute_CopyFileBatch",
+                                    "description": "Delegate file copying to child pipeline (works around ADF restriction on ForEach inside Until)",
+                                    "type": "ExecutePipeline",
                                     "dependsOn": [ { "activity": "Filter_Files", "dependencyConditions": ["Succeeded"] } ],
                                     "userProperties": [],
                                     "typeProperties": {
-                                        "items": { "value": "@activity('Filter_Files').output.value", "type": "Expression" },
-                                        "isSequential": false,
-                                        "batchCount": 10,
-                                        "activities": [
-                                            {
-                                                "name": "Copy_File",
-                                                "type": "Copy",
-                                                "dependsOn": [],
-                                                "policy": { "timeout": "0.01:00:00", "retry": 5, "retryIntervalInSeconds": 60, "secureOutput": false, "secureInput": false },
-                                                "userProperties": [],
-                                                "typeProperties": {
-                                                    "source": {
-                                                        "type": "BinarySource",
-                                                        "storeSettings": {
-                                                            "type": "HttpReadSettings",
-                                                            "requestMethod": "GET",
-                                                            "additionalHeaders": { "value": "@concat('Authorization: Bearer ', variables('InternalAccessToken'))", "type": "Expression" },
-                                                            "requestTimeout": "00:30:00"
-                                                        },
-                                                        "formatSettings": { "type": "BinaryReadSettings" }
-                                                    },
-                                                    "sink": {
-                                                        "type": "BinarySink",
-                                                        "storeSettings": { "type": "AzureBlobFSWriteSettings" }
-                                                    },
-                                                    "enableStaging": false
-                                                },
-                                                "inputs": [
-                                                    {
-                                                        "referenceName": "DS_Graph_Content_Download",
-                                                        "type": "DatasetReference",
-                                                        "parameters": {
-                                                            "ContentPath": { "value": "@concat('/v1.0/drives/', pipeline().parameters.DriveId, '/items/', item().id, '/content')", "type": "Expression" }
-                                                        }
-                                                    }
-                                                ],
-                                                "outputs": [
-                                                    {
-                                                        "referenceName": "DS_ADLS_Binary_Sink",
-                                                        "type": "DatasetReference",
-                                                        "parameters": {
-                                                            "ContainerName": { "value": "@pipeline().parameters.ContainerName", "type": "Expression" },
-                                                            "SiteName": { "value": "@replace(pipeline().parameters.SiteUrl, '/sites/', '')", "type": "Expression" },
-                                                            "LibraryName": { "value": "@pipeline().parameters.LibraryName", "type": "Expression" },
-                                                            "FolderPath": { "value": "@pipeline().parameters.FolderRelativePath", "type": "Expression" },
-                                                            "FileName": { "value": "@item().name", "type": "Expression" }
-                                                        }
-                                                    }
-                                                ]
-                                            },
-                                            {
-                                                "name": "Log_Success",
-                                                "type": "SqlServerStoredProcedure",
-                                                "dependsOn": [ { "activity": "Copy_File", "dependencyConditions": ["Succeeded"] } ],
-                                                "policy": { "timeout": "0.00:05:00", "retry": 2, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
-                                                "userProperties": [],
-                                                "typeProperties": {
-                                                    "storedProcedureName": "[[dbo].[usp_LogFileAudit]",
-                                                    "storedProcedureParameters": {
-                                                        "FileName": { "value": { "value": "@item().name", "type": "Expression" }, "type": "String" },
-                                                        "SourcePath": { "value": { "value": "@concat(pipeline().parameters.SiteUrl, '/', pipeline().parameters.LibraryName, '/', pipeline().parameters.FolderRelativePath, '/', item().name)", "type": "Expression" }, "type": "String" },
-                                                        "DestinationPath": { "value": { "value": "@concat(pipeline().parameters.ContainerName, '/', replace(pipeline().parameters.SiteUrl, '/sites/', ''), '/', pipeline().parameters.LibraryName, '/', pipeline().parameters.FolderRelativePath, '/', item().name)", "type": "Expression" }, "type": "String" },
-                                                        "FileSizeBytes": { "value": { "value": "@item().size", "type": "Expression" }, "type": "Int64" },
-                                                        "MigrationStatus": { "value": "Success", "type": "String" },
-                                                        "PipelineRunId": { "value": { "value": "@pipeline().RunId", "type": "Expression" }, "type": "String" },
-                                                        "ErrorDetails": { "value": null, "type": "String" }
-                                                    }
-                                                },
-                                                "linkedServiceName": { "referenceName": "LS_AzureSqlDatabase", "type": "LinkedServiceReference" }
-                                            },
-                                            {
-                                                "name": "Log_Failure",
-                                                "type": "SqlServerStoredProcedure",
-                                                "dependsOn": [ { "activity": "Copy_File", "dependencyConditions": ["Failed"] } ],
-                                                "policy": { "timeout": "0.00:05:00", "retry": 2, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
-                                                "userProperties": [],
-                                                "typeProperties": {
-                                                    "storedProcedureName": "[[dbo].[usp_LogFileAudit]",
-                                                    "storedProcedureParameters": {
-                                                        "FileName": { "value": { "value": "@item().name", "type": "Expression" }, "type": "String" },
-                                                        "SourcePath": { "value": { "value": "@concat(pipeline().parameters.SiteUrl, '/', pipeline().parameters.LibraryName, '/', pipeline().parameters.FolderRelativePath, '/', item().name)", "type": "Expression" }, "type": "String" },
-                                                        "DestinationPath": { "value": { "value": "@concat(pipeline().parameters.ContainerName, '/', replace(pipeline().parameters.SiteUrl, '/sites/', ''), '/', pipeline().parameters.LibraryName, '/', pipeline().parameters.FolderRelativePath)", "type": "Expression" }, "type": "String" },
-                                                        "FileSizeBytes": { "value": { "value": "@item().size", "type": "Expression" }, "type": "Int64" },
-                                                        "MigrationStatus": { "value": "Failed", "type": "String" },
-                                                        "PipelineRunId": { "value": { "value": "@pipeline().RunId", "type": "Expression" }, "type": "String" },
-                                                        "ErrorDetails": { "value": { "value": "@activity('Copy_File').output.errors[0].Message", "type": "Expression" }, "type": "String" }
-                                                    }
-                                                },
-                                                "linkedServiceName": { "referenceName": "LS_AzureSqlDatabase", "type": "LinkedServiceReference" }
-                                            }
-                                        ]
+                                        "pipeline": { "referenceName": "PL_Copy_File_Batch", "type": "PipelineReference" },
+                                        "waitOnCompletion": true,
+                                        "parameters": {
+                                            "FileItems": { "value": "@activity('Filter_Files').output.value", "type": "Expression" },
+                                            "DriveId": { "value": "@pipeline().parameters.DriveId", "type": "Expression" },
+                                            "AccessToken": { "value": "@variables('InternalAccessToken')", "type": "Expression" },
+                                            "ContainerName": { "value": "@pipeline().parameters.ContainerName", "type": "Expression" },
+                                            "SiteName": { "value": "@replace(pipeline().parameters.SiteUrl, '/sites/', '')", "type": "Expression" },
+                                            "LibraryName": { "value": "@pipeline().parameters.LibraryName", "type": "Expression" },
+                                            "FolderPath": { "value": "@pipeline().parameters.FolderRelativePath", "type": "Expression" },
+                                            "SourcePathPrefix": { "value": "@concat(pipeline().parameters.SiteUrl, '/', pipeline().parameters.LibraryName, '/', pipeline().parameters.FolderRelativePath)", "type": "Expression" },
+                                            "DestPathPrefix": { "value": "@concat(pipeline().parameters.ContainerName, '/', replace(pipeline().parameters.SiteUrl, '/sites/', ''), '/', pipeline().parameters.LibraryName, '/', pipeline().parameters.FolderRelativePath)", "type": "Expression" },
+                                            "MigrationStatus": "Success",
+                                            "ParentRunId": { "value": "@pipeline().RunId", "type": "Expression" }
+                                        }
                                     }
                                 },
                                 {
-                                    "name": "If_HasNextPage",
-                                    "description": "Check if the response contains @odata.nextLink for more pages",
-                                    "type": "IfCondition",
-                                    "dependsOn": [ { "activity": "ForEach_CopyFile", "dependencyConditions": ["Succeeded"] } ],
+                                    "name": "Set_HasMorePages",
+                                    "description": "Set pagination flag based on presence of @odata.nextLink",
+                                    "type": "SetVariable",
+                                    "dependsOn": [ { "activity": "Execute_CopyFileBatch", "dependencyConditions": ["Succeeded"] } ],
+                                    "policy": { "secureOutput": false, "secureInput": false },
                                     "userProperties": [],
                                     "typeProperties": {
-                                        "expression": { "value": "@contains(string(activity('Get_FolderPage').output), '@odata.nextLink')", "type": "Expression" },
-                                        "ifTrueActivities": [
-                                            {
-                                                "name": "Set_NextPageUrl",
-                                                "type": "SetVariable",
-                                                "dependsOn": [],
-                                                "policy": { "secureOutput": false, "secureInput": false },
-                                                "userProperties": [],
-                                                "typeProperties": {
-                                                    "variableName": "CurrentPageUrl",
-                                                    "value": { "value": "@activity('Get_FolderPage').output['@odata.nextLink']", "type": "Expression" }
-                                                }
-                                            },
-                                            {
-                                                "name": "Wait_ThrottleDelay",
-                                                "description": "Wait between pages to avoid Graph API throttling",
-                                                "type": "Wait",
-                                                "dependsOn": [ { "activity": "Set_NextPageUrl", "dependencyConditions": ["Succeeded"] } ],
-                                                "userProperties": [],
-                                                "typeProperties": {
-                                                    "waitTimeInSeconds": { "value": "@pipeline().parameters.ThrottleDelaySeconds", "type": "Expression" }
-                                                }
-                                            }
-                                        ],
-                                        "ifFalseActivities": [
-                                            {
-                                                "name": "Set_HasMorePages_False",
-                                                "type": "SetVariable",
-                                                "dependsOn": [],
-                                                "policy": { "secureOutput": false, "secureInput": false },
-                                                "userProperties": [],
-                                                "typeProperties": {
-                                                    "variableName": "HasMorePages",
-                                                    "value": { "value": "@bool(false)", "type": "Expression" }
-                                                }
-                                            }
-                                        ]
+                                        "variableName": "HasMorePages",
+                                        "value": { "value": "@contains(string(activity('Get_FolderPage').output), '@odata.nextLink')", "type": "Expression" }
+                                    }
+                                },
+                                {
+                                    "name": "Set_CurrentPageUrl_Next",
+                                    "description": "Update page URL to nextLink if present",
+                                    "type": "SetVariable",
+                                    "dependsOn": [ { "activity": "Set_HasMorePages", "dependencyConditions": ["Succeeded"] } ],
+                                    "policy": { "secureOutput": false, "secureInput": false },
+                                    "userProperties": [],
+                                    "typeProperties": {
+                                        "variableName": "CurrentPageUrl",
+                                        "value": { "value": "@if(contains(string(activity('Get_FolderPage').output), '@odata.nextLink'), activity('Get_FolderPage').output['@odata.nextLink'], variables('CurrentPageUrl'))", "type": "Expression" }
+                                    }
+                                },
+                                {
+                                    "name": "Wait_ThrottleDelay",
+                                    "description": "Wait between pages to avoid Graph API throttling",
+                                    "type": "Wait",
+                                    "dependsOn": [ { "activity": "Set_CurrentPageUrl_Next", "dependencyConditions": ["Succeeded"] } ],
+                                    "userProperties": [],
+                                    "typeProperties": {
+                                        "waitTimeInSeconds": { "value": "@pipeline().parameters.ThrottleDelaySeconds", "type": "Expression" }
                                     }
                                 }
                             ],

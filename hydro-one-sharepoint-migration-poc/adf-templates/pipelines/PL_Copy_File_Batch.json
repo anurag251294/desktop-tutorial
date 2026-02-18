@@ -1,0 +1,137 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "factoryName": {
+            "type": "string",
+            "metadata": { "description": "Name of the Azure Data Factory instance" }
+        }
+    },
+    "resources": [
+        {
+            "name": "[concat(parameters('factoryName'), '/PL_Copy_File_Batch')]",
+            "type": "Microsoft.DataFactory/factories/pipelines",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "description": "Lightweight child pipeline that copies a batch of files from Graph API to ADLS Gen2. Called by parent pipelines via ExecutePipeline to work around ADF's restriction on ForEach inside Until loops.",
+                "activities": [
+                    {
+                        "name": "ForEach_CopyFile",
+                        "description": "Iterate over the file items array and copy each file. Handles empty arrays gracefully (0 iterations).",
+                        "type": "ForEach",
+                        "dependsOn": [],
+                        "userProperties": [],
+                        "typeProperties": {
+                            "items": { "value": "@pipeline().parameters.FileItems", "type": "Expression" },
+                            "isSequential": false,
+                            "batchCount": 10,
+                            "activities": [
+                                {
+                                    "name": "Copy_File",
+                                    "type": "Copy",
+                                    "dependsOn": [],
+                                    "policy": { "timeout": "0.01:00:00", "retry": 5, "retryIntervalInSeconds": 60, "secureOutput": false, "secureInput": false },
+                                    "userProperties": [],
+                                    "typeProperties": {
+                                        "source": {
+                                            "type": "BinarySource",
+                                            "storeSettings": {
+                                                "type": "HttpReadSettings",
+                                                "requestMethod": "GET",
+                                                "additionalHeaders": { "value": "@concat('Authorization: Bearer ', pipeline().parameters.AccessToken)", "type": "Expression" },
+                                                "requestTimeout": "00:30:00"
+                                            },
+                                            "formatSettings": { "type": "BinaryReadSettings" }
+                                        },
+                                        "sink": {
+                                            "type": "BinarySink",
+                                            "storeSettings": { "type": "AzureBlobFSWriteSettings" }
+                                        },
+                                        "enableStaging": false
+                                    },
+                                    "inputs": [
+                                        {
+                                            "referenceName": "DS_Graph_Content_Download",
+                                            "type": "DatasetReference",
+                                            "parameters": {
+                                                "ContentPath": { "value": "@concat('/v1.0/drives/', pipeline().parameters.DriveId, '/items/', item().id, '/content')", "type": "Expression" }
+                                            }
+                                        }
+                                    ],
+                                    "outputs": [
+                                        {
+                                            "referenceName": "DS_ADLS_Binary_Sink",
+                                            "type": "DatasetReference",
+                                            "parameters": {
+                                                "ContainerName": { "value": "@pipeline().parameters.ContainerName", "type": "Expression" },
+                                                "SiteName": { "value": "@pipeline().parameters.SiteName", "type": "Expression" },
+                                                "LibraryName": { "value": "@pipeline().parameters.LibraryName", "type": "Expression" },
+                                                "FolderPath": { "value": "@if(contains(item(), 'parentReference'), replace(replace(item().parentReference.path, concat('/drives/', pipeline().parameters.DriveId, '/root:'), ''), concat('/drives/', pipeline().parameters.DriveId, '/root'), ''), pipeline().parameters.FolderPath)", "type": "Expression" },
+                                                "FileName": { "value": "@item().name", "type": "Expression" }
+                                            }
+                                        }
+                                    ]
+                                },
+                                {
+                                    "name": "Log_Success",
+                                    "type": "SqlServerStoredProcedure",
+                                    "dependsOn": [ { "activity": "Copy_File", "dependencyConditions": ["Succeeded"] } ],
+                                    "policy": { "timeout": "0.00:05:00", "retry": 2, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+                                    "userProperties": [],
+                                    "typeProperties": {
+                                        "storedProcedureName": "[[dbo].[usp_LogFileAudit]",
+                                        "storedProcedureParameters": {
+                                            "FileName": { "value": { "value": "@item().name", "type": "Expression" }, "type": "String" },
+                                            "SourcePath": { "value": { "value": "@concat(pipeline().parameters.SourcePathPrefix, if(contains(item(), 'parentReference'), replace(replace(item().parentReference.path, concat('/drives/', pipeline().parameters.DriveId, '/root:'), ''), concat('/drives/', pipeline().parameters.DriveId, '/root'), ''), ''), '/', item().name)", "type": "Expression" }, "type": "String" },
+                                            "DestinationPath": { "value": { "value": "@concat(pipeline().parameters.DestPathPrefix, if(contains(item(), 'parentReference'), replace(replace(item().parentReference.path, concat('/drives/', pipeline().parameters.DriveId, '/root:'), ''), concat('/drives/', pipeline().parameters.DriveId, '/root'), ''), ''), '/', item().name)", "type": "Expression" }, "type": "String" },
+                                            "FileSizeBytes": { "value": { "value": "@item().size", "type": "Expression" }, "type": "Int64" },
+                                            "MigrationStatus": { "value": { "value": "@pipeline().parameters.MigrationStatus", "type": "Expression" }, "type": "String" },
+                                            "PipelineRunId": { "value": { "value": "@pipeline().parameters.ParentRunId", "type": "Expression" }, "type": "String" },
+                                            "ErrorDetails": { "value": null, "type": "String" }
+                                        }
+                                    },
+                                    "linkedServiceName": { "referenceName": "LS_AzureSqlDatabase", "type": "LinkedServiceReference" }
+                                },
+                                {
+                                    "name": "Log_Failure",
+                                    "type": "SqlServerStoredProcedure",
+                                    "dependsOn": [ { "activity": "Copy_File", "dependencyConditions": ["Failed"] } ],
+                                    "policy": { "timeout": "0.00:05:00", "retry": 2, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+                                    "userProperties": [],
+                                    "typeProperties": {
+                                        "storedProcedureName": "[[dbo].[usp_LogFileAudit]",
+                                        "storedProcedureParameters": {
+                                            "FileName": { "value": { "value": "@item().name", "type": "Expression" }, "type": "String" },
+                                            "SourcePath": { "value": { "value": "@concat(pipeline().parameters.SourcePathPrefix, if(contains(item(), 'parentReference'), replace(replace(item().parentReference.path, concat('/drives/', pipeline().parameters.DriveId, '/root:'), ''), concat('/drives/', pipeline().parameters.DriveId, '/root'), ''), ''), '/', item().name)", "type": "Expression" }, "type": "String" },
+                                            "DestinationPath": { "value": { "value": "@concat(pipeline().parameters.DestPathPrefix, if(contains(item(), 'parentReference'), replace(replace(item().parentReference.path, concat('/drives/', pipeline().parameters.DriveId, '/root:'), ''), concat('/drives/', pipeline().parameters.DriveId, '/root'), ''), ''), '/', item().name)", "type": "Expression" }, "type": "String" },
+                                            "FileSizeBytes": { "value": { "value": "@item().size", "type": "Expression" }, "type": "Int64" },
+                                            "MigrationStatus": { "value": "Failed", "type": "String" },
+                                            "PipelineRunId": { "value": { "value": "@pipeline().parameters.ParentRunId", "type": "Expression" }, "type": "String" },
+                                            "ErrorDetails": { "value": { "value": "@activity('Copy_File').output.errors[0].Message", "type": "Expression" }, "type": "String" }
+                                        }
+                                    },
+                                    "linkedServiceName": { "referenceName": "LS_AzureSqlDatabase", "type": "LinkedServiceReference" }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "parameters": {
+                    "FileItems": { "type": "array" },
+                    "DriveId": { "type": "string" },
+                    "AccessToken": { "type": "string" },
+                    "ContainerName": { "type": "string", "defaultValue": "sharepoint-migration" },
+                    "SiteName": { "type": "string" },
+                    "LibraryName": { "type": "string" },
+                    "FolderPath": { "type": "string", "defaultValue": "" },
+                    "SourcePathPrefix": { "type": "string" },
+                    "DestPathPrefix": { "type": "string" },
+                    "MigrationStatus": { "type": "string", "defaultValue": "Success" },
+                    "ParentRunId": { "type": "string" }
+                },
+                "annotations": [ "child-pipeline", "file-copy", "hydro-one-migration", "graph-api", "production" ],
+                "folder": { "name": "SharePoint Migration" }
+            }
+        }
+    ]
+}
