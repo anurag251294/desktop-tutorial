@@ -27,6 +27,7 @@
 12. [PowerShell Scripts](#12-powershell-scripts)
 13. [ARM Template Reference](#13-arm-template-reference)
 14. [Data Flow Diagrams](#14-data-flow-diagrams)
+15. [Test Results](#15-test-results-february-17-2026)
 
 ---
 
@@ -796,12 +797,12 @@ ForEach_ValidateLibrary --> Generate_ValidationReport (SQL summary query)
 5. Uses **pagination via Until loop** with `@odata.nextLink` to handle large delta result sets
 6. If a stored `DeltaLink` exists, uses it as the starting URL so Graph API only returns items changed since the last sync; otherwise performs a fresh delta query
 7. Filters delta results to only include file items (excludes folders and deleted items)
-8. Copies modified/new files to ADLS via `DS_Graph_Content_Download` using the `/v1.0/drives/{driveId}/items/{itemId}/content` endpoint with Bearer token
-9. **Token refresh** every 45 minutes for long-running sync operations
+8. Copies modified/new files to ADLS via `PL_Copy_File_Batch` (ExecutePipeline), which uses `DS_Graph_Content_Download` with the `/v1.0/drives/{driveId}/items/{itemId}/content` endpoint and Bearer token
+9. **Token refresh** every iteration (AAD caches tokens, ~500ms overhead) -- replaces the previous 45-minute threshold check
 10. Persists the final `@odata.deltaLink` to SQL for true incremental sync on subsequent runs
 11. Updates the watermark with `DeltaLink` and `DriveId` after successful sync
 
-### 8.4 Activity Flow
+### 9.4 Activity Flow
 
 ```
 Get_ClientSecret (MSI to Key Vault)
@@ -815,20 +816,25 @@ ForEach_LibrarySync (SEQUENTIAL - isSequential: true)
     +-- Get_Drive (resolve site to Graph drive ID)
     +-- Set_InitialDeltaUrl (use stored DeltaLink or fresh /root/delta)
     +-- Set_HasMorePages_True (reset for this library)
-    +-- Until_AllDeltaPagesProcessed
-    |       +-- If_TokenExpiring → Refresh token
-    |       +-- Get_DeltaPage (retry:5)
-    |       +-- Filter_DeltaFiles (files only, exclude deleted)
-    |       +-- If_HasDeltaFiles → ForEach_ModifiedFile → Copy + Log
-    |       +-- If_HasNextDeltaPage
-    |           +-- Yes: Set_NextDeltaPageUrl + Wait_ThrottleDelay
-    |           +-- No: Set_HasMorePages=false + Set_DeltaLink
+    +-- Until_AllDeltaPagesProcessed (all flat — no container activities):
+    |       1. Refresh_ClientSecret (Key Vault)
+    |       2. Refresh_AccessToken (POST to AAD)
+    |       3. Set_RefreshedToken
+    |       4. Get_DeltaPage (retry:5)
+    |       5. Filter_DeltaFiles (files only, exclude deleted)
+    |       6. Execute_CopyFileBatch (ExecutePipeline → PL_Copy_File_Batch)
+    |       7. Set_HasMorePages (@if contains @odata.nextLink)
+    |       8. Set_CurrentPageUrl_Next (@if has nextLink)
+    |       9. Set_DeltaLink (@if has deltaLink)
+    |       10. Wait_ThrottleDelay
     +-- Update_Watermark (with DeltaLink and DriveId)
     |
 ForEach_LibrarySync → Log_SyncComplete
 ```
 
-### 8.5 Graph API Delta Query
+**Key design change:** Same flat Until loop pattern as `PL_Migrate_Single_Library`. All container activities (IfCondition, ForEach) replaced by flat activities. File copies delegated to `PL_Copy_File_Batch` via ExecutePipeline.
+
+### 9.5 Graph API Delta Query
 
 The delta endpoint returns all changes (created, modified, deleted) since the last delta token:
 
@@ -850,9 +856,61 @@ Key behaviors:
 
 ---
 
-## 9. SQL Schema & Stored Procedures
+## 10. ADF Container Activity Limitations
 
-### 9.1 MigrationControl Table
+### 10.1 Overview
+
+Azure Data Factory enforces strict nesting rules for container activities (Until, ForEach, IfCondition, Switch). These limitations directly drove the restructuring of the Until loops in `PL_Migrate_Single_Library`, `PL_Process_Subfolder`, and `PL_Incremental_Sync` from a nested pattern (with IfCondition and ForEach inside Until) to a flat pattern (with only ExecutePipeline, SetVariable, Filter, WebActivity, and Wait inside Until).
+
+### 10.2 Nesting Restrictions
+
+| Constraint | Description |
+|-----------|-------------|
+| **Until cannot contain ForEach** | An Until loop body cannot include a ForEach activity. Attempting to do so results in a validation error at publish time. |
+| **Until cannot contain IfCondition** | An Until loop body cannot include an IfCondition activity. The same validation error applies. |
+| **Until cannot contain Switch** | An Until loop body cannot include a Switch activity. Only flat (non-container) activities and ExecutePipeline are allowed. |
+| **IfCondition cannot contain ForEach** | An IfCondition's True/False branches cannot contain a ForEach activity. |
+| **SetVariable cannot self-reference** | A SetVariable activity cannot reference the same variable it is setting (no self-referencing). Use a separate intermediate variable or an `@if()` expression that conditionally produces the new value. |
+| **ForEach handles empty arrays** | ForEach gracefully handles an empty array input with 0 iterations and no error. This means there is no need to guard ForEach with an IfCondition checking array length. |
+
+### 10.3 Workaround Patterns Applied
+
+**Problem: ForEach inside Until**
+- Old pattern: `Until → ForEach_CopyFile → (Copy + Log)`
+- New pattern: `Until → Execute_CopyFileBatch (ExecutePipeline → PL_Copy_File_Batch)`
+- The ForEach is extracted into a child pipeline (`PL_Copy_File_Batch`) and invoked via ExecutePipeline, which is allowed inside Until.
+
+**Problem: IfCondition inside Until (token refresh)**
+- Old pattern: `Until → If_TokenExpiring → (true: Refresh_ClientSecret → Refresh_AccessToken)`
+- New pattern: `Until → Refresh_ClientSecret → Refresh_AccessToken → Set_RefreshedToken` (unconditional)
+- Token refresh runs every iteration. AAD caches tokens internally, so redundant refresh calls add only ~500ms overhead per iteration -- negligible compared to the Graph API pagination cost.
+
+**Problem: IfCondition inside Until (pagination branching)**
+- Old pattern: `Until → If_HasNextPage → (true: Set_NextPageUrl + Wait, false: Set_HasMorePages=false + Set_DeltaLink)`
+- New pattern: `Until → Set_HasMorePages (@if expression) → Set_CurrentPageUrl_Next (@if expression) → Set_DeltaLink (@if expression) → Wait_ThrottleDelay`
+- All branching logic is embedded in `@if()`/`@contains()` expressions within SetVariable activities, eliminating the need for IfCondition.
+
+### 10.4 Allowed Activities Inside Until
+
+The following activity types are permitted directly inside an Until loop body:
+
+| Activity Type | Example |
+|--------------|---------|
+| WebActivity | `Refresh_AccessToken`, `Get_DeltaPage` |
+| SetVariable | `Set_HasMorePages`, `Set_CurrentPageUrl_Next` |
+| Filter | `Filter_PageFiles` |
+| ExecutePipeline | `Execute_CopyFileBatch` |
+| Wait | `Wait_ThrottleDelay` |
+| Lookup | (if needed for SQL queries) |
+| StoredProcedure | (if needed for audit logging) |
+
+Container activities (ForEach, IfCondition, Switch, Until) are **not allowed** inside Until.
+
+---
+
+## 11. SQL Schema & Stored Procedures
+
+### 11.1 MigrationControl Table
 
 **File:** `sql/create_control_table.sql`
 
@@ -887,7 +945,7 @@ Key behaviors:
 | `CreatedDate` | DATETIME2 | Record creation timestamp |
 | `ModifiedDate` | DATETIME2 | Last modification timestamp |
 
-### 9.2 MigrationAuditLog Table
+### 11.2 MigrationAuditLog Table
 
 **File:** `sql/create_audit_log_table.sql`
 
@@ -916,7 +974,7 @@ Key behaviors:
 | `SiteName` | NVARCHAR(255) | Extracted site name |
 | `LibraryName` | NVARCHAR(255) | Extracted library name |
 
-### 9.3 Key Stored Procedures
+### 11.3 Key Stored Procedures
 
 **usp_UpdateMigrationStatus:**
 ```sql
@@ -950,7 +1008,7 @@ EXEC dbo.usp_LogBatchStart
     @StartTime = '2024-01-15T20:00:00'
 ```
 
-### 9.4 Performance Indexes
+### 11.4 Performance Indexes
 
 | Index | Table | Columns | Purpose |
 |-------|-------|---------|---------|
@@ -961,7 +1019,7 @@ EXEC dbo.usp_LogBatchStart
 | `IX_AuditLog_BatchId` | MigrationAuditLog | BatchId | Batch-level reporting |
 | `IX_AuditLog_SiteLibrary` | MigrationAuditLog | SiteName, LibraryName | Per-library queries |
 
-### 9.5 IncrementalWatermark Production Columns
+### 11.5 IncrementalWatermark Production Columns
 
 **File:** `sql/03_production_schema_updates.sql`
 
@@ -974,9 +1032,9 @@ The `usp_UpdateWatermark` stored procedure is updated to accept `@DeltaLink` and
 
 ---
 
-## 10. PowerShell Scripts
+## 12. PowerShell Scripts
 
-### 10.1 Setup-AzureResources.ps1
+### 12.1 Setup-AzureResources.ps1
 
 **File:** `scripts/Setup-AzureResources.ps1`
 
@@ -996,7 +1054,7 @@ The `usp_UpdateWatermark` stored procedure is updated to accept `@DeltaLink` and
 - Azure Key Vault
 - Azure Data Factory
 
-### 10.2 Register-SharePointApp.ps1
+### 12.2 Register-SharePointApp.ps1
 
 **File:** `scripts/Register-SharePointApp.ps1`
 
@@ -1009,7 +1067,7 @@ The `usp_UpdateWatermark` stored procedure is updated to accept `@DeltaLink` and
 4. Stores credentials in Key Vault
 5. Outputs admin consent URL
 
-### 10.3 Monitor-Migration.ps1
+### 12.3 Monitor-Migration.ps1
 
 **File:** `scripts/Monitor-Migration.ps1`
 
@@ -1023,7 +1081,7 @@ The `usp_UpdateWatermark` stored procedure is updated to accept `@DeltaLink` and
 - Throughput metrics (GB/hour)
 - Continuous refresh mode
 
-### 10.4 Validate-Migration.ps1
+### 12.4 Validate-Migration.ps1
 
 **File:** `scripts/Validate-Migration.ps1`
 
@@ -1038,9 +1096,9 @@ The `usp_UpdateWatermark` stored procedure is updated to accept `@DeltaLink` and
 
 ---
 
-## 11. ARM Template Reference
+## 13. ARM Template Reference
 
-### 11.1 Main Template: arm-template.json
+### 13.1 Main Template: arm-template.json
 
 **File:** `adf-templates/arm-template.json`
 
@@ -1062,25 +1120,26 @@ The `usp_UpdateWatermark` stored procedure is updated to accept `@DeltaLink` and
 2. `factories/linkedServices` - 6 linked services (including `LS_HTTP_Graph_API`)
 3. `factories/datasets` - 7 datasets (including `DS_Graph_Content_Download`)
 
-### 11.2 Pipeline Templates
+### 13.2 Pipeline Templates
 
 Each pipeline is a separate ARM template in `adf-templates/pipelines/`:
 
 | File | Resource |
 |------|----------|
 | `PL_Master_Migration_Orchestrator.json` | Master orchestrator pipeline |
-| `PL_Migrate_Single_Library.json` | Single library migration pipeline (Graph API) |
-| `PL_Process_Subfolder.json` | Subfolder processing pipeline (Graph API, non-recursive) |
+| `PL_Migrate_Single_Library.json` | Single library migration pipeline (Graph API, flat Until loop) |
+| `PL_Process_Subfolder.json` | Subfolder processing pipeline (Graph API, flat Until loop) |
+| `PL_Copy_File_Batch.json` | Lightweight child pipeline for batched file copy + audit logging |
 | `PL_Validation.json` | Validation pipeline |
-| `PL_Incremental_Sync.json` | Incremental sync pipeline (Graph API delta query) |
+| `PL_Incremental_Sync.json` | Incremental sync pipeline (Graph API delta query, flat Until loop) |
 
 **Note:** Stored procedure names in ARM templates use `[[dbo]` syntax to escape the `[` character, which ARM treats as an expression delimiter. The `[[` evaluates to a literal `[` at deployment time.
 
 ---
 
-## 12. Data Flow Diagrams
+## 14. Data Flow Diagrams
 
-### 12.1 File Copy Data Flow
+### 14.1 File Copy Data Flow
 
 ```mermaid
 sequenceDiagram
@@ -1134,7 +1193,7 @@ sequenceDiagram
     end
 ```
 
-### 12.2 Authentication Flow
+### 14.2 Authentication Flow
 
 ```mermaid
 sequenceDiagram
@@ -1163,7 +1222,7 @@ sequenceDiagram
     Graph-->>ADF: Binary file content
 ```
 
-### 12.3 Incremental Sync Flow
+### 14.3 Incremental Sync Flow
 
 ```mermaid
 sequenceDiagram
@@ -1196,7 +1255,7 @@ sequenceDiagram
     end
 ```
 
-### 12.4 Error Handling Flow
+### 14.4 Error Handling Flow
 
 ```mermaid
 flowchart TD
@@ -1218,9 +1277,9 @@ flowchart TD
 
 ---
 
-## 13. Test Results (February 17, 2026)
+## 15. Test Results (February 17, 2026)
 
-### 13.1 Test Environment
+### 15.1 Test Environment
 
 | Resource | Value |
 |----------|-------|
@@ -1232,14 +1291,14 @@ flowchart TD
 | Storage | `sthydroonemigtest` |
 | Key Vault | `kv-hydroone-test2` |
 
-### 13.2 Test Data
+### 15.2 Test Data
 
 - 10 sample documents uploaded to ADLS: `sharepoint-migration/TestSite/Documents/`
 - Control table populated with 1 library record (TestSite/Documents, 10 files, 659 bytes)
 - 10 audit log records inserted (all `Success` status)
 - 1 batch log record (BATCH-TEST-001)
 
-### 13.3 Pipeline Test Results
+### 15.3 Pipeline Test Results
 
 **PL_Master_Migration_Orchestrator** -- Run ID: `7bb1ca75-5180-4087-9870-6dea48e667a6`
 
@@ -1271,7 +1330,7 @@ flowchart TD
 
 **Result:** All 8 activities succeeded. Validation compared expected 10 files vs 10 actual migrated files. No discrepancies found. Library marked as `Validated`.
 
-### 13.4 End-to-End Graph API Migration Test (February 17, 2026)
+### 15.4 End-to-End Graph API Migration Test (February 17, 2026)
 
 **Test Scope:** Full end-to-end migration using the Graph API implementation.
 
@@ -1293,7 +1352,7 @@ flowchart TD
 
 **Result:** Successful end-to-end migration of test library via Graph API delta query. All files (root and all subfolder depths) were enumerated via `/root/delta`, paginated through Until loop, downloaded, and written to ADLS Gen2 with correct folder path mapping reconstructed from `parentReference.path`.
 
-### 13.5 Verified Connectivity
+### 15.5 Verified Connectivity
 
 | Connection | Method | Status |
 |------------|--------|--------|
@@ -1304,7 +1363,7 @@ flowchart TD
 | ADF -> Graph API (file enumeration) | Service Principal (Bearer token via AAD) | Working |
 | ADF -> Graph API (file download) | Service Principal (Bearer token via AAD) | Working |
 
-### 13.6 Production Feature Test Results
+### 15.6 Production Feature Test Results
 
 #### Pagination Test
 
@@ -1380,7 +1439,7 @@ flowchart TD
 | 7 | Audit trail | All files at all depths logged in MigrationAuditLog | [ ] |
 | 8 | Error handling | Failed files logged with error details, library status = Failed | [ ] |
 
-### 13.7 Known Issues & Fixes Applied
+### 15.7 Known Issues & Fixes Applied
 
 | Issue | Root Cause | Fix |
 |-------|-----------|-----|
@@ -1392,6 +1451,9 @@ flowchart TD
 | ForEach batchCount expression error | `batchCount` must be a static integer (1-50) | Changed from expression to literal `4` |
 | Boolean `ValidateAll` in SQL query | ADF renders `True`/`False`, SQL expects `1`/`0` | Used `@{if(pipeline().parameters.ValidateAll, 1, 0)}` |
 | Validation required SharePoint access | `Get_SourceFileCount` called SharePoint API | Replaced with SQL control table `ExpectedFileCount` |
+| **Until loop cannot contain ForEach/IfCondition** | ADF validation rejects container activities (ForEach, IfCondition, Switch) nested inside Until loops | **Fixed by flattening Until loop body**: extracted ForEach into `PL_Copy_File_Batch` child pipeline (invoked via ExecutePipeline); replaced IfCondition with `@if()`/`@contains()` expressions in SetVariable activities. See [Section 10](#10-adf-container-activity-limitations) |
+| **IfCondition cannot contain ForEach** | ADF validation rejects ForEach nested inside IfCondition True/False branches | **Fixed by removing the guard IfCondition**: ForEach handles empty arrays gracefully (0 iterations), so `If_HasPageFiles` was unnecessary |
+| **SetVariable self-reference error** | SetVariable cannot reference the same variable it is setting | **Fixed by using `@if()` expressions** that conditionally produce the new value without self-referencing |
 
 ---
 
@@ -1401,10 +1463,11 @@ flowchart TD
 |-----------|------|-------------|
 | `adf-templates/arm-template.json` | ARM Template | Main ADF deployment template |
 | `adf-templates/pipelines/PL_Master_Migration_Orchestrator.json` | ARM Template | Master orchestrator pipeline |
-| `adf-templates/pipelines/PL_Migrate_Single_Library.json` | ARM Template | Single library migration (Graph API) |
-| `adf-templates/pipelines/PL_Process_Subfolder.json` | ARM Template | Subfolder processing (Graph API, non-recursive) |
+| `adf-templates/pipelines/PL_Migrate_Single_Library.json` | ARM Template | Single library migration (Graph API, flat Until loop) |
+| `adf-templates/pipelines/PL_Process_Subfolder.json` | ARM Template | Subfolder processing (Graph API, flat Until loop) |
+| `adf-templates/pipelines/PL_Copy_File_Batch.json` | ARM Template | Lightweight child pipeline for batched file copy + audit logging |
 | `adf-templates/pipelines/PL_Validation.json` | ARM Template | Post-migration validation |
-| `adf-templates/pipelines/PL_Incremental_Sync.json` | ARM Template | Delta sync pipeline (Graph API delta query) |
+| `adf-templates/pipelines/PL_Incremental_Sync.json` | ARM Template | Delta sync pipeline (Graph API delta query, flat Until loop) |
 | `adf-templates/linkedServices/*.json` | JSON | Linked service definitions (includes LS_HTTP_Graph_API) |
 | `adf-templates/datasets/*.json` | JSON | Dataset definitions (includes DS_Graph_Content_Download) |
 | `adf-templates/triggers/TR_Triggers.json` | ARM Template | Trigger definitions |
