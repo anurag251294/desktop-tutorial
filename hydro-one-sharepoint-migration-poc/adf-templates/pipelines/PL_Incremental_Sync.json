@@ -233,91 +233,81 @@
                                                 }
                                             },
                                             {
-                                                "name": "If_HasDeltaFiles",
-                                                "type": "IfCondition",
+                                                "name": "ForEach_ModifiedFile",
+                                                "description": "Copy each modified file from this delta page. Handles empty arrays gracefully (0 iterations).",
+                                                "type": "ForEach",
                                                 "dependsOn": [ { "activity": "Filter_DeltaFiles", "dependencyConditions": ["Succeeded"] } ],
                                                 "userProperties": [],
                                                 "typeProperties": {
-                                                    "expression": { "value": "@greater(activity('Filter_DeltaFiles').output.FilteredItemsCount, 0)", "type": "Expression" },
-                                                    "ifTrueActivities": [
+                                                    "items": { "value": "@activity('Filter_DeltaFiles').output.value", "type": "Expression" },
+                                                    "isSequential": false,
+                                                    "batchCount": 10,
+                                                    "activities": [
                                                         {
-                                                            "name": "ForEach_ModifiedFile",
-                                                            "type": "ForEach",
+                                                            "name": "Copy_ModifiedFile",
+                                                            "type": "Copy",
                                                             "dependsOn": [],
+                                                            "policy": { "timeout": "0.01:00:00", "retry": 5, "retryIntervalInSeconds": 60, "secureOutput": false, "secureInput": false },
                                                             "userProperties": [],
                                                             "typeProperties": {
-                                                                "items": { "value": "@activity('Filter_DeltaFiles').output.value", "type": "Expression" },
-                                                                "isSequential": false,
-                                                                "batchCount": 10,
-                                                                "activities": [
-                                                                    {
-                                                                        "name": "Copy_ModifiedFile",
-                                                                        "type": "Copy",
-                                                                        "dependsOn": [],
-                                                                        "policy": { "timeout": "0.01:00:00", "retry": 5, "retryIntervalInSeconds": 60, "secureOutput": false, "secureInput": false },
-                                                                        "userProperties": [],
-                                                                        "typeProperties": {
-                                                                            "source": {
-                                                                                "type": "BinarySource",
-                                                                                "storeSettings": {
-                                                                                    "type": "HttpReadSettings",
-                                                                                    "requestMethod": "GET",
-                                                                                    "additionalHeaders": { "value": "@concat('Authorization: Bearer ', variables('AccessToken'))", "type": "Expression" },
-                                                                                    "requestTimeout": "00:30:00"
-                                                                                },
-                                                                                "formatSettings": { "type": "BinaryReadSettings" }
-                                                                            },
-                                                                            "sink": {
-                                                                                "type": "BinarySink",
-                                                                                "storeSettings": { "type": "AzureBlobFSWriteSettings" }
-                                                                            },
-                                                                            "enableStaging": false
-                                                                        },
-                                                                        "inputs": [
-                                                                            {
-                                                                                "referenceName": "DS_Graph_Content_Download",
-                                                                                "type": "DatasetReference",
-                                                                                "parameters": {
-                                                                                    "ContentPath": { "value": "@concat('/v1.0/drives/', activity('Get_Drive').output.id, '/items/', item().id, '/content')", "type": "Expression" }
-                                                                                }
-                                                                            }
-                                                                        ],
-                                                                        "outputs": [
-                                                                            {
-                                                                                "referenceName": "DS_ADLS_Binary_Sink",
-                                                                                "type": "DatasetReference",
-                                                                                "parameters": {
-                                                                                    "ContainerName": { "value": "@pipeline().parameters.ContainerName", "type": "Expression" },
-                                                                                    "SiteName": { "value": "@replace(item().SiteUrl, '/sites/', '')", "type": "Expression" },
-                                                                                    "LibraryName": { "value": "@item().LibraryName", "type": "Expression" },
-                                                                                    "FolderPath": { "value": "@if(contains(item(), 'parentReference'), replace(replace(item().parentReference.path, concat('/drives/', activity('Get_Drive').output.id, '/root:'), ''), concat('/drives/', activity('Get_Drive').output.id, '/root'), ''), '')", "type": "Expression" },
-                                                                                    "FileName": { "value": "@item().name", "type": "Expression" }
-                                                                                }
-                                                                            }
-                                                                        ]
+                                                                "source": {
+                                                                    "type": "BinarySource",
+                                                                    "storeSettings": {
+                                                                        "type": "HttpReadSettings",
+                                                                        "requestMethod": "GET",
+                                                                        "additionalHeaders": { "value": "@concat('Authorization: Bearer ', variables('AccessToken'))", "type": "Expression" },
+                                                                        "requestTimeout": "00:30:00"
                                                                     },
-                                                                    {
-                                                                        "name": "Log_IncrementalCopy",
-                                                                        "type": "SqlServerStoredProcedure",
-                                                                        "dependsOn": [ { "activity": "Copy_ModifiedFile", "dependencyConditions": ["Succeeded"] } ],
-                                                                        "policy": { "timeout": "0.00:05:00", "retry": 2, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
-                                                                        "userProperties": [],
-                                                                        "typeProperties": {
-                                                                            "storedProcedureName": "[[dbo].[usp_LogFileAudit]",
-                                                                            "storedProcedureParameters": {
-                                                                                "FileName": { "value": { "value": "@item().name", "type": "Expression" }, "type": "String" },
-                                                                                "SourcePath": { "value": { "value": "@concat(item().SiteUrl, '/', item().LibraryName, '/', item().name)", "type": "Expression" }, "type": "String" },
-                                                                                "DestinationPath": { "value": { "value": "@concat(pipeline().parameters.ContainerName, '/', replace(item().SiteUrl, '/sites/', ''), '/', item().LibraryName, '/', item().name)", "type": "Expression" }, "type": "String" },
-                                                                                "FileSizeBytes": { "value": { "value": "@item().size", "type": "Expression" }, "type": "Int64" },
-                                                                                "MigrationStatus": { "value": "IncrementalSync", "type": "String" },
-                                                                                "PipelineRunId": { "value": { "value": "@pipeline().RunId", "type": "Expression" }, "type": "String" },
-                                                                                "ErrorDetails": { "value": null, "type": "String" }
-                                                                            }
-                                                                        },
-                                                                        "linkedServiceName": { "referenceName": "LS_AzureSqlDatabase", "type": "LinkedServiceReference" }
+                                                                    "formatSettings": { "type": "BinaryReadSettings" }
+                                                                },
+                                                                "sink": {
+                                                                    "type": "BinarySink",
+                                                                    "storeSettings": { "type": "AzureBlobFSWriteSettings" }
+                                                                },
+                                                                "enableStaging": false
+                                                            },
+                                                            "inputs": [
+                                                                {
+                                                                    "referenceName": "DS_Graph_Content_Download",
+                                                                    "type": "DatasetReference",
+                                                                    "parameters": {
+                                                                        "ContentPath": { "value": "@concat('/v1.0/drives/', activity('Get_Drive').output.id, '/items/', item().id, '/content')", "type": "Expression" }
                                                                     }
-                                                                ]
-                                                            }
+                                                                }
+                                                            ],
+                                                            "outputs": [
+                                                                {
+                                                                    "referenceName": "DS_ADLS_Binary_Sink",
+                                                                    "type": "DatasetReference",
+                                                                    "parameters": {
+                                                                        "ContainerName": { "value": "@pipeline().parameters.ContainerName", "type": "Expression" },
+                                                                        "SiteName": { "value": "@replace(item().SiteUrl, '/sites/', '')", "type": "Expression" },
+                                                                        "LibraryName": { "value": "@item().LibraryName", "type": "Expression" },
+                                                                        "FolderPath": { "value": "@if(contains(item(), 'parentReference'), replace(replace(item().parentReference.path, concat('/drives/', activity('Get_Drive').output.id, '/root:'), ''), concat('/drives/', activity('Get_Drive').output.id, '/root'), ''), '')", "type": "Expression" },
+                                                                        "FileName": { "value": "@item().name", "type": "Expression" }
+                                                                    }
+                                                                }
+                                                            ]
+                                                        },
+                                                        {
+                                                            "name": "Log_IncrementalCopy",
+                                                            "type": "SqlServerStoredProcedure",
+                                                            "dependsOn": [ { "activity": "Copy_ModifiedFile", "dependencyConditions": ["Succeeded"] } ],
+                                                            "policy": { "timeout": "0.00:05:00", "retry": 2, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+                                                            "userProperties": [],
+                                                            "typeProperties": {
+                                                                "storedProcedureName": "[[dbo].[usp_LogFileAudit]",
+                                                                "storedProcedureParameters": {
+                                                                    "FileName": { "value": { "value": "@item().name", "type": "Expression" }, "type": "String" },
+                                                                    "SourcePath": { "value": { "value": "@concat(item().SiteUrl, '/', item().LibraryName, '/', item().name)", "type": "Expression" }, "type": "String" },
+                                                                    "DestinationPath": { "value": { "value": "@concat(pipeline().parameters.ContainerName, '/', replace(item().SiteUrl, '/sites/', ''), '/', item().LibraryName, '/', item().name)", "type": "Expression" }, "type": "String" },
+                                                                    "FileSizeBytes": { "value": { "value": "@item().size", "type": "Expression" }, "type": "Int64" },
+                                                                    "MigrationStatus": { "value": "IncrementalSync", "type": "String" },
+                                                                    "PipelineRunId": { "value": { "value": "@pipeline().RunId", "type": "Expression" }, "type": "String" },
+                                                                    "ErrorDetails": { "value": null, "type": "String" }
+                                                                }
+                                                            },
+                                                            "linkedServiceName": { "referenceName": "LS_AzureSqlDatabase", "type": "LinkedServiceReference" }
                                                         }
                                                     ]
                                                 }
@@ -326,7 +316,7 @@
                                                 "name": "If_HasNextDeltaPage",
                                                 "description": "Check if the delta response contains @odata.nextLink for more pages",
                                                 "type": "IfCondition",
-                                                "dependsOn": [ { "activity": "If_HasDeltaFiles", "dependencyConditions": ["Succeeded"] } ],
+                                                "dependsOn": [ { "activity": "ForEach_ModifiedFile", "dependencyConditions": ["Succeeded"] } ],
                                                 "userProperties": [],
                                                 "typeProperties": {
                                                     "expression": { "value": "@contains(string(activity('Get_DeltaPage').output), '@odata.nextLink')", "type": "Expression" },

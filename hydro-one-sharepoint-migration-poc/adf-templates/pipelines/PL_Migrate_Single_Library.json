@@ -219,112 +219,101 @@
                                     }
                                 },
                                 {
-                                    "name": "If_HasPageFiles",
-                                    "description": "Only process files if this page has file items",
-                                    "type": "IfCondition",
+                                    "name": "ForEach_CopyFile",
+                                    "description": "Copy each file from this delta page. Handles empty arrays gracefully (0 iterations).",
+                                    "type": "ForEach",
                                     "dependsOn": [ { "activity": "Filter_PageFiles", "dependencyConditions": ["Succeeded"] } ],
                                     "userProperties": [],
                                     "typeProperties": {
-                                        "expression": { "value": "@greater(activity('Filter_PageFiles').output.FilteredItemsCount, 0)", "type": "Expression" },
-                                        "ifTrueActivities": [
+                                        "items": { "value": "@activity('Filter_PageFiles').output.value", "type": "Expression" },
+                                        "isSequential": false,
+                                        "batchCount": 10,
+                                        "activities": [
                                             {
-                                                "name": "ForEach_CopyFile",
-                                                "type": "ForEach",
+                                                "name": "Copy_SingleFile",
+                                                "type": "Copy",
                                                 "dependsOn": [],
+                                                "policy": { "timeout": "0.01:00:00", "retry": 5, "retryIntervalInSeconds": 60, "secureOutput": false, "secureInput": false },
                                                 "userProperties": [],
                                                 "typeProperties": {
-                                                    "items": { "value": "@activity('Filter_PageFiles').output.value", "type": "Expression" },
-                                                    "isSequential": false,
-                                                    "batchCount": 10,
-                                                    "activities": [
-                                                        {
-                                                            "name": "Copy_SingleFile",
-                                                            "type": "Copy",
-                                                            "dependsOn": [],
-                                                            "policy": { "timeout": "0.01:00:00", "retry": 5, "retryIntervalInSeconds": 60, "secureOutput": false, "secureInput": false },
-                                                            "userProperties": [],
-                                                            "typeProperties": {
-                                                                "source": {
-                                                                    "type": "BinarySource",
-                                                                    "storeSettings": {
-                                                                        "type": "HttpReadSettings",
-                                                                        "requestMethod": "GET",
-                                                                        "additionalHeaders": { "value": "@concat('Authorization: Bearer ', variables('AccessToken'))", "type": "Expression" },
-                                                                        "requestTimeout": "00:30:00"
-                                                                    },
-                                                                    "formatSettings": { "type": "BinaryReadSettings" }
-                                                                },
-                                                                "sink": {
-                                                                    "type": "BinarySink",
-                                                                    "storeSettings": { "type": "AzureBlobFSWriteSettings" }
-                                                                },
-                                                                "enableStaging": false
-                                                            },
-                                                            "inputs": [
-                                                                {
-                                                                    "referenceName": "DS_Graph_Content_Download",
-                                                                    "type": "DatasetReference",
-                                                                    "parameters": {
-                                                                        "ContentPath": { "value": "@concat('/v1.0/drives/', variables('DriveId'), '/items/', item().id, '/content')", "type": "Expression" }
-                                                                    }
-                                                                }
-                                                            ],
-                                                            "outputs": [
-                                                                {
-                                                                    "referenceName": "DS_ADLS_Binary_Sink",
-                                                                    "type": "DatasetReference",
-                                                                    "parameters": {
-                                                                        "ContainerName": { "value": "@pipeline().parameters.ContainerName", "type": "Expression" },
-                                                                        "SiteName": { "value": "@replace(pipeline().parameters.SiteUrl, '/sites/', '')", "type": "Expression" },
-                                                                        "LibraryName": { "value": "@pipeline().parameters.LibraryName", "type": "Expression" },
-                                                                        "FolderPath": { "value": "@if(contains(item(), 'parentReference'), replace(replace(item().parentReference.path, concat('/drives/', variables('DriveId'), '/root:'), ''), concat('/drives/', variables('DriveId'), '/root'), ''), '')", "type": "Expression" },
-                                                                        "FileName": { "value": "@item().name", "type": "Expression" }
-                                                                    }
-                                                                }
-                                                            ]
+                                                    "source": {
+                                                        "type": "BinarySource",
+                                                        "storeSettings": {
+                                                            "type": "HttpReadSettings",
+                                                            "requestMethod": "GET",
+                                                            "additionalHeaders": { "value": "@concat('Authorization: Bearer ', variables('AccessToken'))", "type": "Expression" },
+                                                            "requestTimeout": "00:30:00"
                                                         },
-                                                        {
-                                                            "name": "Log_FileSuccess",
-                                                            "type": "SqlServerStoredProcedure",
-                                                            "dependsOn": [ { "activity": "Copy_SingleFile", "dependencyConditions": ["Succeeded"] } ],
-                                                            "policy": { "timeout": "0.00:05:00", "retry": 2, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
-                                                            "userProperties": [],
-                                                            "typeProperties": {
-                                                                "storedProcedureName": "[[dbo].[usp_LogFileAudit]",
-                                                                "storedProcedureParameters": {
-                                                                    "FileName": { "value": { "value": "@item().name", "type": "Expression" }, "type": "String" },
-                                                                    "SourcePath": { "value": { "value": "@concat(pipeline().parameters.SiteUrl, '/', pipeline().parameters.LibraryName, if(contains(item(), 'parentReference'), replace(replace(item().parentReference.path, concat('/drives/', variables('DriveId'), '/root:'), ''), concat('/drives/', variables('DriveId'), '/root'), ''), ''), '/', item().name)", "type": "Expression" }, "type": "String" },
-                                                                    "DestinationPath": { "value": { "value": "@concat(pipeline().parameters.ContainerName, '/', replace(pipeline().parameters.SiteUrl, '/sites/', ''), '/', pipeline().parameters.LibraryName, if(contains(item(), 'parentReference'), replace(replace(item().parentReference.path, concat('/drives/', variables('DriveId'), '/root:'), ''), concat('/drives/', variables('DriveId'), '/root'), ''), ''), '/', item().name)", "type": "Expression" }, "type": "String" },
-                                                                    "FileSizeBytes": { "value": { "value": "@item().size", "type": "Expression" }, "type": "Int64" },
-                                                                    "MigrationStatus": { "value": "Success", "type": "String" },
-                                                                    "PipelineRunId": { "value": { "value": "@pipeline().RunId", "type": "Expression" }, "type": "String" },
-                                                                    "ErrorDetails": { "value": null, "type": "String" }
-                                                                }
-                                                            },
-                                                            "linkedServiceName": { "referenceName": "LS_AzureSqlDatabase", "type": "LinkedServiceReference" }
-                                                        },
-                                                        {
-                                                            "name": "Log_FileFailure",
-                                                            "type": "SqlServerStoredProcedure",
-                                                            "dependsOn": [ { "activity": "Copy_SingleFile", "dependencyConditions": ["Failed"] } ],
-                                                            "policy": { "timeout": "0.00:05:00", "retry": 2, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
-                                                            "userProperties": [],
-                                                            "typeProperties": {
-                                                                "storedProcedureName": "[[dbo].[usp_LogFileAudit]",
-                                                                "storedProcedureParameters": {
-                                                                    "FileName": { "value": { "value": "@item().name", "type": "Expression" }, "type": "String" },
-                                                                    "SourcePath": { "value": { "value": "@concat(pipeline().parameters.SiteUrl, '/', pipeline().parameters.LibraryName, if(contains(item(), 'parentReference'), replace(replace(item().parentReference.path, concat('/drives/', variables('DriveId'), '/root:'), ''), concat('/drives/', variables('DriveId'), '/root'), ''), ''), '/', item().name)", "type": "Expression" }, "type": "String" },
-                                                                    "DestinationPath": { "value": { "value": "@concat(pipeline().parameters.ContainerName, '/', replace(pipeline().parameters.SiteUrl, '/sites/', ''), '/', pipeline().parameters.LibraryName, if(contains(item(), 'parentReference'), replace(replace(item().parentReference.path, concat('/drives/', variables('DriveId'), '/root:'), ''), concat('/drives/', variables('DriveId'), '/root'), ''), ''), '/', item().name)", "type": "Expression" }, "type": "String" },
-                                                                    "FileSizeBytes": { "value": { "value": "@item().size", "type": "Expression" }, "type": "Int64" },
-                                                                    "MigrationStatus": { "value": "Failed", "type": "String" },
-                                                                    "PipelineRunId": { "value": { "value": "@pipeline().RunId", "type": "Expression" }, "type": "String" },
-                                                                    "ErrorDetails": { "value": { "value": "@activity('Copy_SingleFile').output.errors[0].Message", "type": "Expression" }, "type": "String" }
-                                                                }
-                                                            },
-                                                            "linkedServiceName": { "referenceName": "LS_AzureSqlDatabase", "type": "LinkedServiceReference" }
+                                                        "formatSettings": { "type": "BinaryReadSettings" }
+                                                    },
+                                                    "sink": {
+                                                        "type": "BinarySink",
+                                                        "storeSettings": { "type": "AzureBlobFSWriteSettings" }
+                                                    },
+                                                    "enableStaging": false
+                                                },
+                                                "inputs": [
+                                                    {
+                                                        "referenceName": "DS_Graph_Content_Download",
+                                                        "type": "DatasetReference",
+                                                        "parameters": {
+                                                            "ContentPath": { "value": "@concat('/v1.0/drives/', variables('DriveId'), '/items/', item().id, '/content')", "type": "Expression" }
                                                         }
-                                                    ]
-                                                }
+                                                    }
+                                                ],
+                                                "outputs": [
+                                                    {
+                                                        "referenceName": "DS_ADLS_Binary_Sink",
+                                                        "type": "DatasetReference",
+                                                        "parameters": {
+                                                            "ContainerName": { "value": "@pipeline().parameters.ContainerName", "type": "Expression" },
+                                                            "SiteName": { "value": "@replace(pipeline().parameters.SiteUrl, '/sites/', '')", "type": "Expression" },
+                                                            "LibraryName": { "value": "@pipeline().parameters.LibraryName", "type": "Expression" },
+                                                            "FolderPath": { "value": "@if(contains(item(), 'parentReference'), replace(replace(item().parentReference.path, concat('/drives/', variables('DriveId'), '/root:'), ''), concat('/drives/', variables('DriveId'), '/root'), ''), '')", "type": "Expression" },
+                                                            "FileName": { "value": "@item().name", "type": "Expression" }
+                                                        }
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "name": "Log_FileSuccess",
+                                                "type": "SqlServerStoredProcedure",
+                                                "dependsOn": [ { "activity": "Copy_SingleFile", "dependencyConditions": ["Succeeded"] } ],
+                                                "policy": { "timeout": "0.00:05:00", "retry": 2, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+                                                "userProperties": [],
+                                                "typeProperties": {
+                                                    "storedProcedureName": "[[dbo].[usp_LogFileAudit]",
+                                                    "storedProcedureParameters": {
+                                                        "FileName": { "value": { "value": "@item().name", "type": "Expression" }, "type": "String" },
+                                                        "SourcePath": { "value": { "value": "@concat(pipeline().parameters.SiteUrl, '/', pipeline().parameters.LibraryName, if(contains(item(), 'parentReference'), replace(replace(item().parentReference.path, concat('/drives/', variables('DriveId'), '/root:'), ''), concat('/drives/', variables('DriveId'), '/root'), ''), ''), '/', item().name)", "type": "Expression" }, "type": "String" },
+                                                        "DestinationPath": { "value": { "value": "@concat(pipeline().parameters.ContainerName, '/', replace(pipeline().parameters.SiteUrl, '/sites/', ''), '/', pipeline().parameters.LibraryName, if(contains(item(), 'parentReference'), replace(replace(item().parentReference.path, concat('/drives/', variables('DriveId'), '/root:'), ''), concat('/drives/', variables('DriveId'), '/root'), ''), ''), '/', item().name)", "type": "Expression" }, "type": "String" },
+                                                        "FileSizeBytes": { "value": { "value": "@item().size", "type": "Expression" }, "type": "Int64" },
+                                                        "MigrationStatus": { "value": "Success", "type": "String" },
+                                                        "PipelineRunId": { "value": { "value": "@pipeline().RunId", "type": "Expression" }, "type": "String" },
+                                                        "ErrorDetails": { "value": null, "type": "String" }
+                                                    }
+                                                },
+                                                "linkedServiceName": { "referenceName": "LS_AzureSqlDatabase", "type": "LinkedServiceReference" }
+                                            },
+                                            {
+                                                "name": "Log_FileFailure",
+                                                "type": "SqlServerStoredProcedure",
+                                                "dependsOn": [ { "activity": "Copy_SingleFile", "dependencyConditions": ["Failed"] } ],
+                                                "policy": { "timeout": "0.00:05:00", "retry": 2, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
+                                                "userProperties": [],
+                                                "typeProperties": {
+                                                    "storedProcedureName": "[[dbo].[usp_LogFileAudit]",
+                                                    "storedProcedureParameters": {
+                                                        "FileName": { "value": { "value": "@item().name", "type": "Expression" }, "type": "String" },
+                                                        "SourcePath": { "value": { "value": "@concat(pipeline().parameters.SiteUrl, '/', pipeline().parameters.LibraryName, if(contains(item(), 'parentReference'), replace(replace(item().parentReference.path, concat('/drives/', variables('DriveId'), '/root:'), ''), concat('/drives/', variables('DriveId'), '/root'), ''), ''), '/', item().name)", "type": "Expression" }, "type": "String" },
+                                                        "DestinationPath": { "value": { "value": "@concat(pipeline().parameters.ContainerName, '/', replace(pipeline().parameters.SiteUrl, '/sites/', ''), '/', pipeline().parameters.LibraryName, if(contains(item(), 'parentReference'), replace(replace(item().parentReference.path, concat('/drives/', variables('DriveId'), '/root:'), ''), concat('/drives/', variables('DriveId'), '/root'), ''), ''), '/', item().name)", "type": "Expression" }, "type": "String" },
+                                                        "FileSizeBytes": { "value": { "value": "@item().size", "type": "Expression" }, "type": "Int64" },
+                                                        "MigrationStatus": { "value": "Failed", "type": "String" },
+                                                        "PipelineRunId": { "value": { "value": "@pipeline().RunId", "type": "Expression" }, "type": "String" },
+                                                        "ErrorDetails": { "value": { "value": "@activity('Copy_SingleFile').output.errors[0].Message", "type": "Expression" }, "type": "String" }
+                                                    }
+                                                },
+                                                "linkedServiceName": { "referenceName": "LS_AzureSqlDatabase", "type": "LinkedServiceReference" }
                                             }
                                         ]
                                     }
@@ -333,7 +322,7 @@
                                     "name": "If_HasNextPage",
                                     "description": "Check if the delta response contains @odata.nextLink for more pages",
                                     "type": "IfCondition",
-                                    "dependsOn": [ { "activity": "If_HasPageFiles", "dependencyConditions": ["Succeeded"] } ],
+                                    "dependsOn": [ { "activity": "ForEach_CopyFile", "dependencyConditions": ["Succeeded"] } ],
                                     "userProperties": [],
                                     "typeProperties": {
                                         "expression": { "value": "@contains(string(activity('Get_DeltaPage').output), '@odata.nextLink')", "type": "Expression" },
