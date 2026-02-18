@@ -40,13 +40,39 @@ The migration uses **Microsoft Graph API** (not SharePoint REST API) for all Sha
 
 The migration is orchestrated through Azure Data Factory with the following pipelines:
 
-| Pipeline | Purpose |
-|----------|---------|
-| `PL_Master_Migration_Orchestrator` | Reads from control table, iterates through libraries in batches |
-| `PL_Migrate_Single_Library` | Migrates all files from a single library using Graph API delta query with pagination, token refresh, and unlimited folder depth |
-| `PL_Process_Subfolder` | Standalone utility for subfolder processing with pagination and token refresh (no longer called from delta-based migration) |
-| `PL_Validation` | Post-migration validation comparing source file counts vs destination |
-| `PL_Incremental_Sync` | Delta sync for ongoing synchronization |
+| # | Pipeline | Purpose |
+|---|----------|---------|
+| 1 | `PL_Master_Migration_Orchestrator` | Reads from control table, iterates through libraries in batches |
+| 2 | `PL_Migrate_Single_Library` | Delta query enumeration with paginated Until loop, calls `PL_Copy_File_Batch` for file copy + audit logging |
+| 3 | `PL_Copy_File_Batch` | Child pipeline with ForEach file copy + audit logging (workaround for ADF Until activity restriction — see ADF Limitations below) |
+| 4 | `PL_Process_Subfolder` | Processes subfolder children with pagination, calls `PL_Copy_File_Batch` for file copy + audit logging |
+| 5 | `PL_Incremental_Sync` | Delta sync with deltaLink persistence, calls `PL_Copy_File_Batch` for file copy + audit logging |
+| 6 | `PL_Post_Migration_Validation` | Post-migration validation comparing source file counts/sizes vs destination |
+
+**Deployment order:** `PL_Copy_File_Batch` must be deployed before its parent pipelines (`PL_Migrate_Single_Library`, `PL_Process_Subfolder`, `PL_Incremental_Sync`), since they reference it via ExecutePipeline. Recommended deployment sequence:
+
+1. `PL_Copy_File_Batch` (child — no dependencies)
+2. `PL_Process_Subfolder` (depends on `PL_Copy_File_Batch`)
+3. `PL_Migrate_Single_Library` (depends on `PL_Copy_File_Batch` and `PL_Process_Subfolder`)
+4. `PL_Incremental_Sync` (depends on `PL_Copy_File_Batch`)
+5. `PL_Post_Migration_Validation` (standalone)
+6. `PL_Master_Migration_Orchestrator` (depends on `PL_Migrate_Single_Library`)
+
+**Token management:** Token is refreshed every Until iteration via WebActivity call to the AAD token endpoint. AAD returns a cached token if still valid, adding only ~500ms overhead per iteration. This always-refresh approach eliminates the need for IfCondition-based expiry checks inside Until loops (which ADF does not permit).
+
+### ADF Limitations Discovered During Implementation
+
+During POC development, several Azure Data Factory activity nesting restrictions were discovered that shaped the pipeline architecture:
+
+| Limitation | Description |
+|------------|-------------|
+| **Until cannot contain ForEach** | The Until activity only permits ExecutePipeline as a child activity; ForEach, IfCondition, and Switch are not allowed inside Until |
+| **IfCondition cannot contain ForEach** | ForEach is not permitted as a child activity inside IfCondition branches |
+| **SetVariable cannot self-reference** | A SetVariable activity cannot reference the same variable it is setting (e.g., appending to an array or incrementing a counter requires a separate variable) |
+
+**Solution: Child pipeline pattern + flat SetVariable with `@if()` expressions**
+
+To work around these restrictions, file copy and audit logging logic was extracted into a dedicated child pipeline (`PL_Copy_File_Batch`). Parent pipelines (`PL_Migrate_Single_Library`, `PL_Process_Subfolder`, `PL_Incremental_Sync`) call `PL_Copy_File_Batch` via ExecutePipeline inside their Until pagination loops. Conditional logic that would otherwise require IfCondition is handled with flat `SetVariable` activities using `@if()` expressions inline.
 
 ### Prerequisites
 
@@ -77,7 +103,7 @@ The migration is orchestrated through Azure Data Factory with the following pipe
 - ADF pipelines successfully enumerate folders, download files via Graph pre-authenticated URLs, and write to ADLS Gen2
 - Folder structure is preserved in the destination container
 - ADF does not support recursive pipeline execution; subfolder processing uses iterative patterns within `PL_Process_Subfolder`
-- Production readiness improvements implemented: delta-based file enumeration (unlimited depth), pagination via Until loops, automatic token refresh (45-min threshold), configurable throttle delays, and deltaLink persistence for true incremental sync
+- Production readiness improvements implemented: delta-based file enumeration (unlimited depth), pagination via Until loops, always-refresh token strategy (AAD caches valid tokens, ~500ms overhead per iteration), child pipeline pattern (`PL_Copy_File_Batch`), configurable throttle delays, and deltaLink persistence for true incremental sync
 
 | Task | Owner | Duration | Deliverable | Status |
 |------|-------|----------|-------------|--------|
@@ -100,7 +126,7 @@ The migration is orchestrated through Azure Data Factory with the following pipe
 **Exit Criteria:**
 - [ ] POC sign-off obtained
 - [x] Issues documented and resolved (Graph API pivot documented)
-- [x] Production features implemented (pagination, token refresh, deep folders, deltaLink)
+- [x] Production features implemented (pagination, always-refresh token, child pipeline pattern, deep folders, deltaLink)
 - [ ] Go/No-Go decision for Phase 2
 
 ---
@@ -134,7 +160,7 @@ The migration is orchestrated through Azure Data Factory with the following pipe
 - [ ] No data loss
 - [ ] Pagination verified (Until loop with PageSize=3 runs multiple iterations)
 - [ ] Deep folder files (depth >2) migrated with correct ADLS paths
-- [ ] Token refresh verified (If_TokenExpiring fires with lowered threshold)
+- [ ] Token refresh verified (always-refresh via WebActivity every Until iteration, AAD caches valid tokens)
 - [ ] DeltaLink stored in IncrementalWatermark after initial migration
 - [ ] Incremental sync uses stored DeltaLink (only changed files copied)
 
@@ -194,7 +220,7 @@ The migration is orchestrated through Azure Data Factory with the following pipe
 |------|-------|----------|-------------|
 | Run validation pipeline | Microsoft | 1 day | Validation results |
 | Address discrepancies | Microsoft | 2 days | Issues resolved |
-| Verify production features (pagination, deep folders, deltaLink, token refresh) | Microsoft | 1 day | Production test checklist |
+| Verify production features (pagination, deep folders, deltaLink, always-refresh token, child pipeline pattern) | Microsoft | 1 day | Production test checklist |
 | Generate final report | Microsoft | 1 day | Migration report |
 | Business validation | Hydro One | 2 days | Business sign-off |
 
@@ -239,7 +265,8 @@ The migration is orchestrated through Azure Data Factory with the following pipe
 | R10 | Regulatory/compliance issues | Low | High | Early legal review, audit logging | Open | Hydro One |
 | R11 | SharePoint REST API incompatible with AAD v2.0 app-only tokens | High | High | Switched to Microsoft Graph API for all file enumeration and downloads. Graph API fully supports client credentials flow with AAD v2.0 endpoints. | **Resolved** (POC) | Microsoft |
 | R12 | ADF does not support recursive pipeline execution | Medium | Medium | Replaced subfolder-based enumeration with Graph API delta query (`/root/delta`), which returns ALL files at ALL folder depths in a flat list. No recursive traversal needed. `PL_Process_Subfolder` retained as standalone utility with pagination support. | **Resolved** (Production) | Microsoft |
-| R13 | Token expiration during long-running migrations | Medium | High | Implemented automatic token refresh every 45 minutes in all pipelines. AAD tokens have ~60-min lifetime; 15-minute safety margin ensures uninterrupted processing of large libraries. | **Resolved** (Production) | Microsoft |
+| R13 | Token expiration during long-running migrations | Medium | High | Token refreshed every Until iteration via WebActivity. AAD returns cached token if still valid (~500ms overhead per iteration). Eliminates the need for IfCondition inside Until loops, avoiding ADF container activity restrictions. | **Resolved** (Production) | Microsoft |
+| R14 | ADF Until activity cannot contain ForEach, IfCondition, or Switch | High | High | Extracted file copy + audit logging into child pipeline (`PL_Copy_File_Batch`). Parent pipelines call it via ExecutePipeline inside Until loops. Conditional logic uses flat SetVariable with `@if()` expressions. | **Resolved** (Production) | Microsoft |
 
 ### Risk Response Plan
 
@@ -265,8 +292,13 @@ The migration is orchestrated through Azure Data Factory with the following pipe
 
 **R13 - Token Expiration During Long-Running Migrations (RESOLVED):**
 - **Root Cause:** AAD OAuth2 access tokens have an approximate 60-minute lifetime. Long-running migrations processing large libraries can exceed this duration.
-- **Resolution:** Implemented automatic token refresh every 45 minutes in all pipelines. A 15-minute safety margin before token expiry ensures uninterrupted processing.
-- **Impact:** Large libraries with thousands of files can be processed without token-related failures.
+- **Resolution:** Adopted an always-refresh approach: token is refreshed every Until iteration via WebActivity. AAD returns a cached token if still valid, adding only ~500ms overhead per iteration. This eliminates the need for IfCondition-based token expiry checks inside Until loops, avoiding ADF container activity restrictions entirely.
+- **Impact:** Large libraries with thousands of files can be processed without token-related failures. No conditional logic needed inside Until loops.
+
+**R14 - ADF Until Activity Container Restrictions (RESOLVED):**
+- **Root Cause:** Azure Data Factory's Until activity only permits ExecutePipeline as a child activity. ForEach, IfCondition, and Switch activities are not allowed inside Until. Additionally, IfCondition cannot contain ForEach, and SetVariable cannot self-reference the variable being set.
+- **Resolution:** Extracted file copy and audit logging into a dedicated child pipeline (`PL_Copy_File_Batch`). Parent pipelines call it via ExecutePipeline inside Until pagination loops. Conditional logic uses flat SetVariable activities with `@if()` expressions instead of IfCondition blocks.
+- **Impact:** All pagination loops work within ADF constraints. The child pipeline pattern provides clean separation of concerns and reusability across `PL_Migrate_Single_Library`, `PL_Process_Subfolder`, and `PL_Incremental_Sync`.
 
 ---
 
@@ -414,7 +446,7 @@ DECISIONS NEEDED:
 |-----|------|-------|-------|--------|
 | Mon | Deploy Azure resources | 4 | Microsoft | Done |
 | Mon | Register Azure AD app (Graph API permissions) | 2 | Microsoft | Done |
-| Tue | Deploy ADF pipelines (Graph API based) | 6 | Microsoft | Done |
+| Tue | Deploy ADF pipelines (Graph API based; deploy `PL_Copy_File_Batch` first, then parent pipelines) | 6 | Microsoft | Done |
 | Wed | Initialize SQL database | 2 | Microsoft | Done |
 | Wed | Enumerate SalesAndMarketing library via Graph API | 2 | Microsoft | Done |
 | Wed | Run POC migration | 4 | Microsoft | Done |

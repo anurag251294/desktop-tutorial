@@ -140,6 +140,7 @@ Provide a complete list of:
   - [ ] Key Vault public network access **enabled** (or private endpoint configured)
   - [ ] Storage account public network access **enabled** (or private endpoint configured)
   - [ ] SQL Server public network access **enabled** (or private endpoint configured)
+  - [ ] SQL Server firewall has **AllowAzureServices** rule (`0.0.0.0`) to permit ADF connections
   - [ ] ADF Managed Identity has **Storage Blob Data Contributor** on the storage account
   - [ ] ADF Managed Identity has **Key Vault Secrets User** on the Key Vault
 
@@ -248,13 +249,13 @@ The migration pipelines follow this flow:
    - Pagination follows `@odata.nextLink` in an Until loop with configurable throttle delay
    - `parentReference.path` on each item is used to reconstruct ADLS folder paths
 
-4. **File Copy:** ADF downloads each file using the Graph `/content` endpoint with a Bearer token in the Authorization header:
+4. **File Copy (via PL_Copy_File_Batch):** Each page of files is copied by the child pipeline `PL_Copy_File_Batch`, which is called via ExecutePipeline from the three parent pipelines (`PL_Migrate_Single_Library`, `PL_Incremental_Sync`, and `PL_Process_Subfolder`). Inside the child pipeline, ADF downloads each file using the Graph `/content` endpoint with a Bearer token in the Authorization header:
    - `GET https://graph.microsoft.com/v1.0/drives/{drive-id}/items/{item-id}/content`
    - The file is streamed directly to ADLS Gen2 (`sthydroonemigtest`) via a Copy activity
 
 5. **Subfolder Processing:** With the delta-based approach, `PL_Process_Subfolder` is no longer called from `PL_Migrate_Single_Library`. The delta query returns all files at all depths, eliminating the need for separate subfolder processing. `PL_Process_Subfolder` remains available as a standalone utility.
 
-6. **Token Refresh:** If the pipeline runs for more than 45 minutes, the OAuth2 token is automatically refreshed to prevent 401 errors on long-running libraries.
+6. **Token Refresh:** Tokens are refreshed at the start of every Until loop iteration. Azure AD caches tokens server-side, so repeated token requests add only ~500ms overhead per page rather than a full token generation. This approach eliminates the need for conditional token refresh logic (which would require an IfCondition container activity inside the Until loop -- not allowed by ADF).
 
 7. **DeltaLink Storage:** After processing all delta pages, the `@odata.deltaLink` URL is stored in the IncrementalWatermark SQL table for use by subsequent incremental sync runs.
 
@@ -377,6 +378,17 @@ VALUES ('/sites/SalesAndMarketing', 'Shared Documents', 'Sales And Marketing', '
        }
    ```
 
+### Pipeline Inventory
+
+| Pipeline | Type | Description |
+|----------|------|-------------|
+| PL_Master_Migration_Orchestrator | Parent | Reads control table, iterates libraries in batches |
+| PL_Migrate_Single_Library | Parent | Token acquisition, drive resolution, delta pagination, calls PL_Copy_File_Batch per page |
+| PL_Incremental_Sync | Parent | Delta sync using stored deltaLink, calls PL_Copy_File_Batch per page |
+| PL_Process_Subfolder | Parent | Processes files within one subfolder level, calls PL_Copy_File_Batch |
+| PL_Copy_File_Batch | Child | Copies a batch of files from SharePoint to ADLS via Graph `/content` endpoint. Called by the 3 parent pipelines above via ExecutePipeline. |
+| PL_Post_Migration_Validation | Utility | File count and size validation |
+
 ### Monitoring Pipeline Runs
 
 **In Azure Portal:**
@@ -384,6 +396,7 @@ VALUES ('/sites/SalesAndMarketing', 'Shared Documents', 'Sales And Marketing', '
 2. View Pipeline Runs
 3. Click on run for details
 4. Check Activity Runs for per-file status
+5. **Note:** `PL_Copy_File_Batch` appears as a **child run** under each parent pipeline. Expand the parent run to see individual child runs and their Copy activity results.
 
 **Using PowerShell:**
 ```powershell
@@ -523,12 +536,26 @@ Invoke-AzDataFactoryV2Pipeline `
 2. Assign the **Storage Blob Data Contributor** role to the ADF Managed Identity on the storage account
 3. Verify the linked service in ADF uses Managed Identity authentication (not account key)
 
-#### SQL Server "Deny Public Network Access" error
-**Cause:** The SQL Server (`sql-hydroone-migration-test`) has public network access disabled.
+#### SQL Server "Deny Public Network Access" / "SqlDeniedPublicAccess" error
+**Cause:** The SQL Server (`sql-hydroone-migration-test`) has public network access disabled, or the AllowAzureServices firewall rule is missing. ADF cannot connect to the control table or audit log.
 **Resolution:**
-1. In Azure Portal, go to SQL Server > Networking
-2. Set **Public network access** to **Selected networks** or **All networks**
-3. Add the ADF outbound IP addresses to the firewall rules, or check "Allow Azure services and resources to access this server"
+1. Enable public network access:
+   ```bash
+   az sql server update \
+       --resource-group rg-hydroone-migration-test \
+       --name sql-hydroone-migration-test \
+       --set publicNetworkAccess="Enabled"
+   ```
+2. Create the AllowAzureServices firewall rule to permit Azure services (including ADF):
+   ```bash
+   az sql server firewall-rule create \
+       --resource-group rg-hydroone-migration-test \
+       --server sql-hydroone-migration-test \
+       --name AllowAzureServices \
+       --start-ip-address 0.0.0.0 \
+       --end-ip-address 0.0.0.0
+   ```
+3. Alternatively, configure a private endpoint between ADF and the SQL Server
 
 #### Key Vault access denied (403)
 **Cause:** The Key Vault (`kv-hydroone-test2`) has public network access disabled, or the ADF Managed Identity does not have the Key Vault Secrets User role.
@@ -544,6 +571,25 @@ Invoke-AzDataFactoryV2Pipeline `
 2. Instead, have `PL_Migrate_Library` handle recursive traversal by calling `PL_Process_Subfolder` for each subfolder discovered
 3. `PL_Process_Subfolder` enumerates items in a single folder and calls back to `PL_Migrate_Library` (or a wrapper) for any sub-subfolders
 
+#### "Container activity cannot include another container activity"
+**Cause:** ADF does not allow nesting container activities. For example, an Until loop cannot directly contain a ForEach, IfCondition, or Switch activity.
+**Resolution:**
+1. Move the inner container activity (ForEach, IfCondition, Switch) into a separate child pipeline
+2. Call that child pipeline from the Until loop using an ExecutePipeline activity
+3. This is the pattern used by `PL_Copy_File_Batch` -- it contains the ForEach that copies files, and is called from inside the Until pagination loop via ExecutePipeline
+
+#### "ForEach activity is not allowed under an If Condition Activity"
+**Cause:** ADF does not allow ForEach inside an IfCondition activity. This is a special case of the container nesting restriction above.
+**Resolution:**
+1. Move the ForEach activity outside the IfCondition, or
+2. Move the ForEach into a child pipeline and call it via ExecutePipeline from inside the IfCondition
+
+#### "The expression contains self referencing variable"
+**Cause:** A SetVariable activity references the same variable it is setting. ADF does not allow a variable to reference itself (e.g., setting `NextLink` to an expression that reads `NextLink`).
+**Resolution:**
+1. Use an empty string or a literal default value as the fallback instead of referencing the same variable
+2. Alternatively, use a different intermediate variable to hold the previous value and reference that in the expression
+
 #### HTTP 401 - Unauthorized
 **Cause:** Token expired or invalid credentials
 **Resolution:**
@@ -555,10 +601,14 @@ Invoke-AzDataFactoryV2Pipeline `
 
 #### Token Expiration During Long-Running Migration
 **Cause:** Libraries with thousands of files take >60 minutes to process, causing the OAuth2 token to expire mid-run.
-**Resolution:** The production pipelines include automatic token refresh every 45 minutes. If you still see 401 errors:
-1. Verify the `If_TokenExpiring` activity is present in the pipeline
-2. Check that Key Vault access is still working (the refresh flow re-reads the client secret)
-3. Verify the client secret has not expired on the Azure AD app registration
+**Resolution:** The production pipelines refresh the token at the start of every Until loop iteration (via the `Refresh_ClientSecret` and `Refresh_AccessToken` activities). Azure AD caches tokens server-side, so this adds only ~500ms overhead per page rather than performing a full token generation each time. This approach was chosen because ADF does not allow IfCondition inside an Until loop (container nesting restriction), making conditional refresh every 45 minutes impractical.
+
+**Expected behavior:** In ADF Monitor, you will see `Refresh_ClientSecret` and `Refresh_AccessToken` running on every iteration of the Until loop. This is normal and expected -- it is not a sign of token problems.
+
+If you still see 401 errors:
+1. Check that Key Vault access is still working (the refresh flow re-reads the client secret)
+2. Verify the client secret has not expired on the Azure AD app registration
+3. Verify the token scope is `https://graph.microsoft.com/.default`
 
 #### HTTP 403 - Forbidden (Graph API)
 **Cause:** Insufficient Graph API permissions or admin consent not granted

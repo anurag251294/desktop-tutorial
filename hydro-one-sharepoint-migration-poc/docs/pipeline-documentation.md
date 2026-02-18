@@ -5,9 +5,9 @@
 | Field | Value |
 |-------|-------|
 | Project | Hydro One SharePoint to Azure Data Lake Migration |
-| Version | 2.0 |
+| Version | 3.0 |
 | Author | Microsoft Azure Data Engineering Team |
-| Last Updated | February 17, 2026 |
+| Last Updated | February 18, 2026 |
 
 ---
 
@@ -19,12 +19,14 @@
 4. [Pipeline: PL_Master_Migration_Orchestrator](#4-pipeline-pl_master_migration_orchestrator)
 5. [Pipeline: PL_Migrate_Single_Library](#5-pipeline-pl_migrate_single_library)
 6. [Pipeline: PL_Process_Subfolder](#6-pipeline-pl_process_subfolder)
-7. [Pipeline: PL_Validation](#7-pipeline-pl_validation)
-8. [Pipeline: PL_Incremental_Sync](#8-pipeline-pl_incremental_sync)
-9. [SQL Schema & Stored Procedures](#9-sql-schema--stored-procedures)
-10. [PowerShell Scripts](#10-powershell-scripts)
-11. [ARM Template Reference](#11-arm-template-reference)
-12. [Data Flow Diagrams](#12-data-flow-diagrams)
+7. [Pipeline: PL_Copy_File_Batch](#7-pipeline-pl_copy_file_batch)
+8. [Pipeline: PL_Validation](#8-pipeline-pl_validation)
+9. [Pipeline: PL_Incremental_Sync](#9-pipeline-pl_incremental_sync)
+10. [ADF Container Activity Limitations](#10-adf-container-activity-limitations)
+11. [SQL Schema & Stored Procedures](#11-sql-schema--stored-procedures)
+12. [PowerShell Scripts](#12-powershell-scripts)
+13. [ARM Template Reference](#13-arm-template-reference)
+14. [Data Flow Diagrams](#14-data-flow-diagrams)
 
 ---
 
@@ -51,7 +53,7 @@
                                  +------------------+
 ```
 
-### 1.2 Pipeline Hierarchy
+### 1.2 Pipeline Hierarchy (6 Pipelines)
 
 ```
 PL_Master_Migration_Orchestrator          <-- Top-level orchestrator
@@ -66,20 +68,27 @@ PL_Master_Migration_Orchestrator          <-- Top-level orchestrator
               +-- Get_Drive (resolve site to Graph drive ID)
               +-- Set_InitialDeltaUrl (/root/delta?$top=PageSize)
               |
-              +-- Until_AllPagesProcessed  <-- Paginated delta loop
-                   +-- If_TokenExpiring (>45 min? refresh)
+              +-- Until_AllPagesProcessed  <-- Paginated delta loop (flat, no container activities)
+                   +-- Refresh_ClientSecret (Key Vault)
+                   +-- Refresh_AccessToken (AAD)
+                   +-- Set_RefreshedToken
                    +-- Get_DeltaPage (current page URL)
                    +-- Filter_PageFiles (files only, exclude deleted)
-                   +-- ForEach_CopyFile
-                   |    +-- Copy via DS_Graph_Content_Download
-                   |    +-- Log_FileSuccess / Log_FileFailure
-                   +-- If_HasNextPage
-                        +-- Yes: Set_NextPageUrl + Wait_ThrottleDelay
-                        +-- No: Set_HasMorePages=false + Set_DeltaLink
+                   +-- Execute_CopyFileBatch → PL_Copy_File_Batch
+                   +-- Set_HasMorePages
+                   +-- Set_CurrentPageUrl_Next
+                   +-- Set_DeltaLink
+                   +-- Wait_ThrottleDelay
 
-PL_Process_Subfolder                      <-- Standalone utility (paginated, with token refresh)
+PL_Copy_File_Batch                        <-- Lightweight child: ForEach file copy + audit logging
+    +-- ForEach_CopyFile (batchCount: 10, parallel)
+         +-- Copy_File (Binary copy via Graph API /content endpoint)
+         +-- Log_Success (stored proc)
+         +-- Log_Failure (stored proc)
+
+PL_Process_Subfolder                      <-- Standalone utility (paginated, flat Until loop)
 PL_Validation                             <-- Post-migration validation
-PL_Incremental_Sync                       <-- Ongoing delta sync (paginated, with deltaLink persistence)
+PL_Incremental_Sync                       <-- Ongoing delta sync (paginated, flat Until loop, deltaLink persistence)
 ```
 
 ---
@@ -376,22 +385,22 @@ Get_Drive (resolve site URL to Graph drive ID)
         |
 Set_DriveId → Set_InitialDeltaUrl
         |
-Until_AllPagesProcessed (24h timeout):
-  ├── If_TokenExpiring (>45 min elapsed?)
-  │   └── true: Refresh_ClientSecret → Refresh_AccessToken → Set vars
-  ├── Get_DeltaPage (GET CurrentPageUrl, retry:5, interval:60s)
-  ├── Filter_PageFiles (has 'file' property, not deleted)
-  ├── If_HasPageFiles
-  │   └── true: ForEach_CopyFile (batchCount: 10)
-  │       ├── Copy_SingleFile (1hr timeout, retry:5)
-  │       ├── Log_FileSuccess
-  │       └── Log_FileFailure
-  └── If_HasNextPage (@odata.nextLink?)
-      ├── true:  Set_NextPageUrl + Wait_ThrottleDelay
-      └── false: Set_HasMorePages=false + Set_DeltaLink
+Until_AllPagesProcessed (24h timeout, all flat — no container activities):
+  1. Refresh_ClientSecret (Key Vault — AAD caches tokens, ~500ms overhead)
+  2. Refresh_AccessToken (POST to AAD)
+  3. Set_RefreshedToken
+  4. Get_DeltaPage (GET CurrentPageUrl, retry:5, interval:60s)
+  5. Filter_PageFiles (has 'file' property, not deleted)
+  6. Execute_CopyFileBatch (ExecutePipeline → PL_Copy_File_Batch)
+  7. Set_HasMorePages (@if contains @odata.nextLink → true, else false)
+  8. Set_CurrentPageUrl_Next (@if has nextLink → nextLink URL, else unchanged)
+  9. Set_DeltaLink (@if has deltaLink → store it, else unchanged)
+  10. Wait_ThrottleDelay
         |
 Update_Status_Completed / Update_Status_Failed
 ```
+
+**Key design change:** The Until loop body now contains only flat activities (WebActivity, SetVariable, Filter, ExecutePipeline, Wait). All container activities (IfCondition, ForEach) have been removed due to ADF limitations (see [Section 10: ADF Container Activity Limitations](#10-adf-container-activity-limitations)). Token refresh occurs unconditionally every iteration (AAD caches tokens, so redundant refreshes add only ~500ms overhead). The ForEach file copy is delegated to `PL_Copy_File_Batch` via ExecutePipeline. IfCondition branching is replaced by `@if()`/`@contains()` expressions inside SetVariable activities.
 
 ### 5.4 Key Activities
 
@@ -431,14 +440,15 @@ Update_Status_Completed / Update_Status_Failed
 **Until_AllPagesProcessed:**
 - Type: Until (timeout: 24 hours)
 - Expression: `@equals(variables('HasMorePages'), false)`
-- Contains: If_TokenExpiring, Get_DeltaPage, Filter_PageFiles, If_HasPageFiles, If_HasNextPage
-- Loops through all delta pages, processing files on each page
+- Contains (all flat, no container activities): Refresh_ClientSecret, Refresh_AccessToken, Set_RefreshedToken, Get_DeltaPage, Filter_PageFiles, Execute_CopyFileBatch, Set_HasMorePages, Set_CurrentPageUrl_Next, Set_DeltaLink, Wait_ThrottleDelay
+- Loops through all delta pages, delegating file copies to `PL_Copy_File_Batch` via ExecutePipeline
 
-**If_TokenExpiring:**
-- Type: IfCondition
-- Expression: `@greater(div(sub(ticks(utcNow()), ticks(variables('TokenAcquiredTime'))), 10000000), 2700)`
-- Checks if >45 minutes (2700 seconds) since last token acquisition
-- If true: Re-acquires token from Key Vault + AAD
+**Refresh_ClientSecret / Refresh_AccessToken / Set_RefreshedToken:**
+- Refresh_ClientSecret: WebActivity (GET) to Key Vault — retrieves client secret
+- Refresh_AccessToken: WebActivity (POST) to AAD — acquires new Bearer token
+- Set_RefreshedToken: SetVariable — stores refreshed token in `AccessToken` variable
+- Executes unconditionally every iteration (AAD caches tokens, ~500ms overhead per refresh)
+- Replaces the previous `If_TokenExpiring` IfCondition pattern
 
 **Get_DeltaPage:**
 - Type: WebActivity (GET)
@@ -451,21 +461,27 @@ Update_Status_Completed / Update_Status_Failed
 - Expression: `@and(contains(string(item()), '"file"'), not(contains(string(item()), '"deleted"')))`
 - Keeps only file items, excludes folders and deleted items
 
-**Copy (via DS_Graph_Content_Download):**
-- Type: Copy Activity
-- Source: `DS_Graph_Content_Download` (linked to `LS_HTTP_Graph_API`)
-- Source ContentPath: `/v1.0/drives/{driveId}/items/{itemId}/content`
-- Source Additional Headers: `Authorization: Bearer {accessToken}`
-- Sink: `DS_ADLS_Binary_Sink` (ADLS write)
-- Retry: 5 attempts, 60s interval
-- Timeout: 1 hour per file
-- Request timeout: 30 minutes
-- FolderPath: Derived from `item().parentReference.path` (supports unlimited depth)
+**Execute_CopyFileBatch:**
+- Type: ExecutePipeline
+- Pipeline: `PL_Copy_File_Batch`
+- Parameters passed: `FileItems` (filtered file array), `DriveId`, `AccessToken`, `ContainerName`, `SiteName`, `LibraryName`, `FolderPath`, `SourcePathPrefix`, `DestPathPrefix`, `ParentRunId`
+- Replaces the previous inline `ForEach_CopyFile` pattern (ADF does not allow ForEach inside Until)
+- See [Section 7: PL_Copy_File_Batch](#7-pipeline-pl_copy_file_batch) for details on the child pipeline
 
-**Log_FileSuccess / Log_FileFailure:**
-- Type: SqlServerStoredProcedure
-- Calls: `dbo.usp_LogFileAudit`
-- Logs file name, source/destination paths, size, status, errors
+**Set_HasMorePages:**
+- Type: SetVariable
+- Expression: `@if(contains(string(activity('Get_DeltaPage').output), '@odata.nextLink'), 'true', 'false')`
+- Replaces the previous `If_HasNextPage` IfCondition
+
+**Set_CurrentPageUrl_Next:**
+- Type: SetVariable
+- Expression: `@if(contains(string(activity('Get_DeltaPage').output), '@odata.nextLink'), activity('Get_DeltaPage').output['@odata.nextLink'], variables('CurrentPageUrl'))`
+- Sets the next page URL when `@odata.nextLink` is present; retains current URL otherwise
+
+**Set_DeltaLink:**
+- Type: SetVariable
+- Expression: `@if(contains(string(activity('Get_DeltaPage').output), '@odata.deltaLink'), activity('Get_DeltaPage').output['@odata.deltaLink'], variables('DeltaLink'))`
+- Captures the final `@odata.deltaLink` for incremental sync persistence
 
 ---
 
@@ -505,13 +521,20 @@ Update_Status_Completed / Update_Status_Failed
 ```
 Set_InternalAccessToken + Set_InternalTokenAcquiredTime + Set_InitialPageUrl
 
-Until_AllPagesProcessed (24h timeout):
-  ├── If_TokenExpiring → Refresh token
-  ├── Get_FolderPage (retry:5)
-  ├── Filter_Files
-  ├── If_HasFiles → ForEach_CopyFile (Copy + Log_Success + Log_Failure)
-  └── If_HasNextPage → Set_NextPageUrl + Wait or Set_HasMorePages=false
+Until_AllPagesProcessed (24h timeout, all flat — no container activities):
+  1. Refresh_ClientSecret (Key Vault)
+  2. Refresh_AccessToken (POST to AAD)
+  3. Set_RefreshedToken
+  4. Get_FolderPage (retry:5)
+  5. Filter_Files
+  6. Execute_CopyFileBatch (ExecutePipeline → PL_Copy_File_Batch)
+  7. Set_HasMorePages (@if contains @odata.nextLink → true, else false)
+  8. Set_CurrentPageUrl_Next (@if has nextLink → nextLink URL, else unchanged)
+  9. Set_DeltaLink (not applicable for subfolder, but kept for consistency)
+  10. Wait_ThrottleDelay
 ```
+
+**Key design change:** Same flat Until loop pattern as `PL_Migrate_Single_Library`. All container activities (IfCondition, ForEach) replaced by flat activities. File copies delegated to `PL_Copy_File_Batch` via ExecutePipeline.
 
 ### 6.4 Key Activities
 
@@ -526,12 +549,16 @@ Until_AllPagesProcessed (24h timeout):
 - Expression: Filters items where `file` property exists
 - Purpose: Excludes subfolders from the copy operation (since the pipeline is not recursive, nested subfolders are not traversed)
 
-**ForEach_File:**
-- Type: ForEach
-- Parallelism: 10 concurrent files
-- Copy source: `DS_Graph_Content_Download` with `ContentPath` set to `/v1.0/drives/{DriveId}/items/{itemId}/content`
-- Copy sink: `DS_ADLS_Binary_Sink` with folder path derived from `FolderRelativePath`
-- Additional headers: `Authorization: Bearer {AccessToken}`
+**Execute_CopyFileBatch:**
+- Type: ExecutePipeline
+- Pipeline: `PL_Copy_File_Batch`
+- Parameters passed: `FileItems` (filtered file array), `DriveId`, `AccessToken`, `ContainerName`, `SiteName`, `LibraryName`, `FolderPath` (from `FolderRelativePath`), `SourcePathPrefix`, `DestPathPrefix`, `ParentRunId`
+- Replaces the previous inline `ForEach_CopyFile` pattern
+
+**Set_HasMorePages / Set_CurrentPageUrl_Next:**
+- Type: SetVariable
+- Uses `@if()`/`@contains()` expressions to replace IfCondition branching
+- See PL_Migrate_Single_Library (Section 5.4) for expression details
 
 ### 6.5 ADLS Path Mapping
 

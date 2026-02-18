@@ -226,8 +226,23 @@ az sql db create \
     --resource-group "rg-hydroone-migration-{env}" \
     --service-objective "S1" \
     --backup-storage-redundancy "Local"
+```
+
+**SQL Server Networking (Required for ADF Runtime Access):**
+
+ADF's managed runtime connects to Azure SQL over the public endpoint. Both public network access and the AllowAzureServices firewall rule must be enabled, or ADF pipeline activities (Lookup, StoredProcedure, etc.) will fail with connection errors at runtime.
+
+```bash
+# Enable public network access on the SQL Server
+az sql server update \
+    --name "sql-hydroone-migration-{env}" \
+    --resource-group "rg-hydroone-migration-{env}" \
+    --set publicNetworkAccess="Enabled"
 
 # Allow Azure services firewall rule
+# The 0.0.0.0 range is an Azure-recognized special rule that permits
+# only Azure-internal traffic (other Azure services) — it does NOT
+# open the server to the entire internet.
 az sql server firewall-rule create \
     --name "AllowAzureServices" \
     --server "sql-hydroone-migration-{env}" \
@@ -235,7 +250,7 @@ az sql server firewall-rule create \
     --start-ip-address 0.0.0.0 \
     --end-ip-address 0.0.0.0
 
-# Allow your client IP (for SQL management)
+# Allow your client IP (for SQL management via SSMS / Portal Query Editor)
 az sql server firewall-rule create \
     --name "AllowClientIP" \
     --server "sql-hydroone-migration-{env}" \
@@ -243,6 +258,8 @@ az sql server firewall-rule create \
     --start-ip-address "<your-ip>" \
     --end-ip-address "<your-ip>"
 ```
+
+> **Important:** If public network access is disabled or the AllowAzureServices rule is missing, ADF pipelines will fail at the first SQL activity (typically `Lookup_PendingLibraries`) with a connection timeout. For production environments, consider replacing the public endpoint with a Private Endpoint and VNet integration.
 
 ### 3.6 Create Azure Key Vault
 
@@ -489,50 +506,68 @@ This deploys:
 
 ### 5.4 Deploy Pipelines
 
-Deploy each pipeline ARM template:
+Deploy each pipeline ARM template. **Deployment order matters** because parent pipelines reference child pipelines via ExecutePipeline activities. Deploy leaf pipelines first (bottom-up):
 
 ```bash
-# 1. Deploy PL_Process_Subfolder (no dependencies)
+# 1. Deploy PL_Copy_File_Batch (leaf child pipeline, no outbound ExecutePipeline references)
+az deployment group create \
+    --resource-group "rg-hydroone-migration-{env}" \
+    --template-file "adf-templates/pipelines/PL_Copy_File_Batch.json" \
+    --parameters factoryName="adf-hydroone-migration-{env}" \
+    --name "pipeline-copy-file-batch"
+
+# 2. Deploy PL_Process_Subfolder (references PL_Copy_File_Batch)
 az deployment group create \
     --resource-group "rg-hydroone-migration-{env}" \
     --template-file "adf-templates/pipelines/PL_Process_Subfolder.json" \
     --parameters factoryName="adf-hydroone-migration-{env}" \
     --name "pipeline-subfolder"
 
-# 2. Deploy PL_Migrate_Single_Library (depends on PL_Process_Subfolder)
-az deployment group create \
-    --resource-group "rg-hydroone-migration-{env}" \
-    --template-file "adf-templates/pipelines/PL_Migrate_Single_Library.json" \
-    --parameters factoryName="adf-hydroone-migration-{env}" \
-    --name "pipeline-single-library"
-
-# 3. Deploy PL_Validation
-az deployment group create \
-    --resource-group "rg-hydroone-migration-{env}" \
-    --template-file "adf-templates/pipelines/PL_Validation.json" \
-    --parameters factoryName="adf-hydroone-migration-{env}" \
-    --name "pipeline-validation"
-
-# 4. Deploy PL_Master_Migration_Orchestrator (depends on PL_Migrate_Single_Library)
-az deployment group create \
-    --resource-group "rg-hydroone-migration-{env}" \
-    --template-file "adf-templates/pipelines/PL_Master_Migration_Orchestrator.json" \
-    --parameters factoryName="adf-hydroone-migration-{env}" \
-    --name "pipeline-master"
-
-# 5. Deploy PL_Incremental_Sync
+# 3. Deploy PL_Incremental_Sync (references PL_Copy_File_Batch)
 az deployment group create \
     --resource-group "rg-hydroone-migration-{env}" \
     --template-file "adf-templates/pipelines/PL_Incremental_Sync.json" \
     --parameters factoryName="adf-hydroone-migration-{env}" \
     --name "pipeline-incremental"
 
-# 6. Deploy triggers
+# 4. Deploy PL_Migrate_Single_Library (references PL_Copy_File_Batch)
+az deployment group create \
+    --resource-group "rg-hydroone-migration-{env}" \
+    --template-file "adf-templates/pipelines/PL_Migrate_Single_Library.json" \
+    --parameters factoryName="adf-hydroone-migration-{env}" \
+    --name "pipeline-single-library"
+
+# 5. Deploy PL_Master_Migration_Orchestrator (references PL_Migrate_Single_Library)
+az deployment group create \
+    --resource-group "rg-hydroone-migration-{env}" \
+    --template-file "adf-templates/pipelines/PL_Master_Migration_Orchestrator.json" \
+    --parameters factoryName="adf-hydroone-migration-{env}" \
+    --name "pipeline-master"
+
+# 6. Deploy PL_Validation
+az deployment group create \
+    --resource-group "rg-hydroone-migration-{env}" \
+    --template-file "adf-templates/pipelines/PL_Validation.json" \
+    --parameters factoryName="adf-hydroone-migration-{env}" \
+    --name "pipeline-validation"
+
+# 7. Deploy triggers
 az deployment group create \
     --resource-group "rg-hydroone-migration-{env}" \
     --template-file "adf-templates/triggers/TR_Triggers.json" \
     --parameters factoryName="adf-hydroone-migration-{env}" \
     --name "triggers"
+```
+
+> **Why this order?** ADF validates ExecutePipeline references at deployment time. If you deploy `PL_Migrate_Single_Library` before `PL_Copy_File_Batch` exists, the deployment will fail with a "referenced pipeline not found" error. Always deploy leaf pipelines first.
+
+**Deployment dependency graph:**
+```
+PL_Copy_File_Batch          (leaf - deploy first)
+    ├── PL_Process_Subfolder
+    ├── PL_Incremental_Sync
+    └── PL_Migrate_Single_Library
+            └── PL_Master_Migration_Orchestrator
 ```
 
 ### 5.5 Verify Deployment
@@ -546,6 +581,7 @@ az rest --method GET \
 
 Expected output:
 ```
+PL_Copy_File_Batch
 PL_Master_Migration_Orchestrator
 PL_Migrate_Single_Library
 PL_Process_Subfolder
@@ -998,6 +1034,56 @@ After an initial migration completes:
 | 6 | No-change run | Incremental sync completes with 0 files when nothing changed | [ ] |
 | 7 | Audit trail | All files logged in MigrationAuditLog with correct paths | [ ] |
 | 8 | Error handling | Failed files logged with error details, status set to Failed | [ ] |
+
+### 9.6 Database Reset for Fresh End-to-End Testing
+
+When you need to re-run a full end-to-end test from scratch (e.g., after pipeline changes), reset the database to a clean state. This clears all audit/log data, reseeds identity columns, and inserts a fresh `Pending` row for the target library.
+
+```sql
+-- =============================================================
+-- DATABASE RESET FOR FRESH END-TO-END TESTING
+-- WARNING: This deletes ALL migration data. Use only in dev/test.
+-- =============================================================
+
+-- 1. Clear all tables (order matters due to potential FK references)
+DELETE FROM dbo.MigrationAuditLog;
+DELETE FROM dbo.ValidationLog;
+DELETE FROM dbo.BatchLog;
+DELETE FROM dbo.SyncLog;
+DELETE FROM dbo.IncrementalWatermark;
+DELETE FROM dbo.MigrationControl;
+
+-- 2. Reseed identity columns back to 0
+DBCC CHECKIDENT ('dbo.MigrationAuditLog', RESEED, 0);
+DBCC CHECKIDENT ('dbo.ValidationLog', RESEED, 0);
+DBCC CHECKIDENT ('dbo.BatchLog', RESEED, 0);
+DBCC CHECKIDENT ('dbo.MigrationControl', RESEED, 0);
+
+-- 3. Insert a fresh Pending row for the target library
+INSERT INTO dbo.MigrationControl (
+    SiteUrl, LibraryName, SiteName,
+    TotalFileCount, TotalSizeBytes,
+    Status, Priority, ContainerName
+)
+VALUES (
+    '/sites/SalesAndMarketing',       -- SharePoint site relative URL
+    'Shared Documents',               -- Library name
+    'SalesAndMarketing',              -- Friendly site name
+    0, 0,                             -- Counts will be populated by pipeline
+    'Pending',                        -- Initial status
+    1,                                -- Priority
+    'sharepoint-migration'            -- ADLS container name
+);
+
+-- 4. Verify clean state
+SELECT 'MigrationControl' AS TableName, COUNT(*) AS RowCount FROM dbo.MigrationControl
+UNION ALL SELECT 'MigrationAuditLog', COUNT(*) FROM dbo.MigrationAuditLog
+UNION ALL SELECT 'ValidationLog', COUNT(*) FROM dbo.ValidationLog
+UNION ALL SELECT 'BatchLog', COUNT(*) FROM dbo.BatchLog
+UNION ALL SELECT 'IncrementalWatermark', COUNT(*) FROM dbo.IncrementalWatermark;
+```
+
+> **Note:** Adjust the `SiteUrl`, `LibraryName`, and `SiteName` values in step 3 to match your target SharePoint library. If `SyncLog` does not have an identity column, skip its `DBCC CHECKIDENT` line.
 
 ---
 

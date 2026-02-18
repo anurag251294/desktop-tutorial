@@ -19,9 +19,12 @@ graph TB
         ADF[Azure Data Factory]
         ADF --> MASTER[PL_Master_Orchestrator]
         MASTER --> |ForEach| CHILD[PL_Migrate_Single_Library]
+        CHILD --> |ExecutePipeline| COPYBATCH[PL_Copy_File_Batch]
         CHILD --> SUBFOLDER[PL_Process_Subfolder]
+        SUBFOLDER --> |ExecutePipeline| COPYBATCH
         ADF --> VALIDATION[PL_Validation]
         ADF --> INCREMENTAL[PL_Incremental_Sync]
+        INCREMENTAL --> |ExecutePipeline| COPYBATCH
 
         subgraph "Linked Services"
             LS_GRAPH[LS_HTTP_Graph_API<br/>Base URL: https://graph.microsoft.com<br/>Auth: Anonymous]
@@ -97,12 +100,15 @@ graph TB
 | Pipeline | Purpose |
 |----------|---------|
 | `PL_Master_Migration_Orchestrator` | Master pipeline reading from control table, iterating through libraries |
-| `PL_Migrate_Single_Library` | Migrates all files from a single library using Graph API delta query with pagination, token refresh, and throttle management |
-| `PL_Process_Subfolder` | Standalone utility for subfolder processing with pagination and token refresh (no longer called from delta-based PL_Migrate_Single_Library) |
-| `PL_Validation` | Post-migration validation comparing source vs destination |
-| `PL_Incremental_Sync` | Delta sync with pagination, deltaLink persistence, and token refresh for ongoing synchronization |
+| `PL_Migrate_Single_Library` | Migrates all files from a single library using Graph API delta query with paginated Until loop; calls `PL_Copy_File_Batch` via ExecutePipeline |
+| `PL_Copy_File_Batch` | Lightweight child pipeline containing ForEach loop for file copy (via Graph `/content`) + audit logging (Log_Success, Log_Failure). Called by all 3 paginated pipelines |
+| `PL_Process_Subfolder` | Processes subfolder children with paginated Until loop; calls `PL_Copy_File_Batch` via ExecutePipeline |
+| `PL_Incremental_Sync` | Delta sync with deltaLink persistence and paginated Until loop; calls `PL_Copy_File_Batch` via ExecutePipeline |
+| `PL_Post_Migration_Validation` | Post-migration file count/size validation comparing source vs destination |
 
-> **Note:** `PL_Migrate_Single_Library` now uses Graph API delta query (`/root/delta`) which returns ALL files at ALL folder depths in a flat list, eliminating the need for recursive subfolder traversal. `PL_Process_Subfolder` is retained as a standalone utility.
+> **Note:** `PL_Migrate_Single_Library` uses Graph API delta query (`/root/delta`) which returns ALL files at ALL folder depths in a flat list, eliminating the need for recursive subfolder traversal. `PL_Process_Subfolder` is retained as a standalone utility.
+
+> **Note:** `PL_Copy_File_Batch` was introduced because ADF's Until activity cannot contain container activities (ForEach, IfCondition, Switch). Only ExecutePipeline is allowed as a container child inside Until. The ForEach file copy logic was therefore extracted into this dedicated child pipeline.
 
 ### Linked Services
 
@@ -214,17 +220,25 @@ flowchart LR
     C --> D[Resolve Drive ID<br/>GET /v1.0/sites/host:path:/drive]
     D --> E[Delta Query<br/>GET /v1.0/drives/driveId/root/delta]
     E --> F{Until: All Pages}
-    F --> G[Filter: Files only<br/>exclude deleted]
-    G --> H[Copy via Graph /content<br/>GET /v1.0/drives/driveId/items/itemId/content]
-    H --> I[Write to ADLS Gen2]
-    I --> J[Log to SQL Audit Table]
-    J --> K{@odata.nextLink?}
-    K -->|Yes| L[Wait ThrottleDelay]
-    L --> F
-    K -->|No| M[Store @odata.deltaLink]
-    M --> N{More Libraries?}
-    N -->|Yes| C
-    N -->|No| O[Update Control Table<br/>Complete]
+    F --> G[Refresh Token<br/>AAD caches ~500ms]
+    G --> H[Get Delta Page]
+    H --> I[Filter: Files only<br/>exclude deleted]
+    I --> J[ExecutePipeline:<br/>PL_Copy_File_Batch]
+    J --> K[Set_HasMorePages<br/>via @if expression]
+    K --> L{@odata.nextLink?}
+    L -->|Yes| M[Wait ThrottleDelay]
+    M --> F
+    L -->|No| N[Store @odata.deltaLink]
+    N --> O{More Libraries?}
+    O -->|Yes| C
+    O -->|No| P[Update Control Table<br/>Complete]
+
+    subgraph "PL_Copy_File_Batch"
+        J --> J1{ForEach File}
+        J1 --> J2[Copy via Graph /content]
+        J2 --> J3[Write to ADLS Gen2]
+        J3 --> J4[Log_Success / Log_Failure]
+    end
 ```
 
 ### Detailed Pipeline Data Flow
@@ -232,25 +246,64 @@ flowchart LR
 1. **Token Acquisition**: Web Activity retrieves client secret from Key Vault (via MSI), then POSTs to AAD token endpoint (`https://login.microsoftonline.com/{sharepoint-tenant-id}/oauth2/v2.0/token`) with `scope=https://graph.microsoft.com/.default`
 2. **Drive Resolution**: Web Activity calls `GET /v1.0/sites/{hostname}:{siteRelativeUrl}:/drive` to resolve the SharePoint site's default document library to a Graph drive ID
 3. **Delta Query**: Web Activity calls `GET /v1.0/drives/{driveId}/root/delta?$top=200` to enumerate ALL files at ALL depths in a flat list
-4. **Pagination**: Until loop follows `@odata.nextLink` to fetch all pages, with configurable throttle delay between pages
+4. **Pagination (Until Loop)**: Until loop follows `@odata.nextLink` to fetch all pages, using only flat activities (see Until Loop Activity Flow below). File copying is delegated to `PL_Copy_File_Batch` via ExecutePipeline
 5. **Filter Files**: Filter activity excludes folders and deleted items, keeping only file items
-6. **Copy Files via Graph /content**: Copy Activity uses `DS_Graph_Content_Download` dataset to GET `/v1.0/drives/{driveId}/items/{itemId}/content` with Bearer token authentication
+6. **Copy Files via PL_Copy_File_Batch**: ExecutePipeline calls `PL_Copy_File_Batch`, which contains the ForEach loop using `DS_Graph_Content_Download` dataset to GET `/v1.0/drives/{driveId}/items/{itemId}/content` with Bearer token authentication, plus audit logging (Log_Success, Log_Failure)
 7. **Folder Path Reconstruction**: Each delta item's `parentReference.path` is parsed to reconstruct the ADLS folder structure
-8. **Token Refresh**: If >45 minutes elapsed since token acquisition, a fresh token is obtained before the next page
-9. **DeltaLink Storage**: The final `@odata.deltaLink` is stored in SQL for use by incremental sync
+8. **Token Refresh**: Token is refreshed **every iteration** of the Until loop via WebActivity. AAD caches tokens server-side, so redundant refreshes add only ~500ms overhead per iteration. This approach replaces the previous IfCondition-based conditional refresh, which is not allowed inside Until
+9. **Pagination Control**: Instead of IfCondition with true/false branches, pagination uses conditional `@if()` expressions in SetVariable to determine the next page URL or signal completion
+10. **DeltaLink Storage**: The final `@odata.deltaLink` is stored in SQL for use by incremental sync
+
+### Until Loop Activity Flow
+
+All 3 paginated pipelines (`PL_Migrate_Single_Library`, `PL_Incremental_Sync`, `PL_Process_Subfolder`) use the same restructured Until loop pattern with only flat activities (no nested containers):
+
+```
+Refresh_ClientSecret → Refresh_AccessToken → Set_RefreshedToken → Get_DeltaPage → Filter_PageFiles → Execute_CopyFileBatch → Set_HasMorePages → Set_CurrentPageUrl_Next → Set_DeltaLink → Wait_ThrottleDelay
+```
+
+| Activity | Type | Purpose |
+|----------|------|---------|
+| `Refresh_ClientSecret` | WebActivity | Retrieve latest client secret from Key Vault |
+| `Refresh_AccessToken` | WebActivity | POST to AAD token endpoint for fresh token (AAD caches server-side, ~500ms) |
+| `Set_RefreshedToken` | SetVariable | Store refreshed token for use in subsequent activities |
+| `Get_DeltaPage` | WebActivity | Fetch current page of delta/children results from Graph API |
+| `Filter_PageFiles` | Filter | Exclude folders and deleted items, keep only files |
+| `Execute_CopyFileBatch` | ExecutePipeline | Call `PL_Copy_File_Batch` with filtered file items |
+| `Set_HasMorePages` | SetVariable | Use `@if()` expression to check for `@odata.nextLink` |
+| `Set_CurrentPageUrl_Next` | SetVariable | Use `@if()` expression to set next page URL or empty string |
+| `Set_DeltaLink` | SetVariable | Use `@if()` expression to capture `@odata.deltaLink` if present |
+| `Wait_ThrottleDelay` | Wait | Configurable delay between pages (default 2 seconds) |
+
+### ADF Nesting Restrictions
+
+The following ADF nesting restrictions were discovered during development and drove the architectural decision to create `PL_Copy_File_Batch`:
+
+| Restriction | Description |
+|-------------|-------------|
+| **No ForEach inside Until** | ADF's Until activity cannot contain ForEach, IfCondition, or Switch activities. Only ExecutePipeline is allowed as a container child inside Until |
+| **No ForEach inside IfCondition** | ForEach cannot be nested inside an IfCondition activity |
+| **No self-referencing variables** | A SetVariable activity's expression cannot reference the same variable being set (no `@variables('x')` in an expression that sets `x`) |
+| **No self-referencing pipelines** | ADF rejects ExecutePipeline calls that reference the same pipeline ("circular reference not allowed") |
+
+These restrictions require that any complex logic inside an Until loop be extracted into a separate child pipeline called via ExecutePipeline.
 
 ### Incremental Sync Flow
 
 ```mermaid
 flowchart LR
-    A[Read Watermark] --> B[Acquire Token<br/>KV Secret → AAD]
-    B --> C[Query Modified Items<br/>via Graph API delta]
-    C --> D{Items Found?}
-    D -->|No| E[Update Watermark]
-    D -->|Yes| F[Copy Modified Files<br/>GET /content with Bearer Token]
-    F --> G[Log Changes to SQL]
-    G --> E
-    E --> H[Complete]
+    A[Read Watermark<br/>+ deltaLink] --> B[Acquire Token<br/>KV Secret → AAD]
+    B --> C{Until: All Pages}
+    C --> D[Refresh Token<br/>AAD caches ~500ms]
+    D --> E[Query Delta Page<br/>via stored deltaLink]
+    E --> F[Filter: Files only]
+    F --> G[ExecutePipeline:<br/>PL_Copy_File_Batch]
+    G --> H[Set_HasMorePages<br/>via @if expression]
+    H --> I{@odata.nextLink?}
+    I -->|Yes| J[Wait ThrottleDelay]
+    J --> C
+    I -->|No| K[Store new deltaLink<br/>to SQL]
+    K --> L[Complete]
 ```
 
 ## Network Considerations
@@ -311,7 +364,7 @@ If SharePoint is behind Conditional Access policies:
 
 | Error Code | Meaning | Handling |
 |------------|---------|----------|
-| 401 | Unauthorized | Check token expiry; pipeline auto-refreshes every 45 min |
+| 401 | Unauthorized | Check token expiry; pipeline refreshes token every Until loop iteration |
 | 403 | Forbidden | Check Graph API permissions, cross-tenant consent |
 | 404 | Not Found | Log and skip, file/drive may have been deleted |
 | 429 | Throttled | Wait per Retry-After header, retry with backoff |
@@ -322,7 +375,7 @@ If SharePoint is behind Conditional Access policies:
 ### Retry Logic
 - **Max Retries**: 5 per Graph API call, 3 per library
 - **Inter-page Delay**: Configurable (default 2 seconds) between pagination pages
-- **Token Refresh**: Automatic refresh every 45 minutes (15-minute safety margin before 60-min expiry)
+- **Token Refresh**: Refreshed every Until loop iteration (AAD caches tokens server-side; ~500ms overhead). This replaces the previous IfCondition-based conditional refresh, which ADF does not allow inside Until
 - **Retry Interval**: Exponential backoff (60s between retries)
 - **Circuit Breaker**: Pause batch if >50% failures
 
@@ -370,20 +423,38 @@ If SharePoint is behind Conditional Access policies:
 | Page size ($top) | 999 | **200** |
 | Graph API retries | 3 | **5** |
 | Copy timeout | 30 min | **1 hour** |
-| Token refresh | Never | **Every 45 min** |
+| Token refresh | Never | **Every Until iteration** (AAD caches; ~500ms) |
 | Inter-page delay | None | **2 seconds** |
 | Subfolder depth | Root + 1 | **Unlimited** (delta) |
 | ForEach_LibrarySync (incremental) | Parallel (4) | **Sequential** |
 | DeltaLink persistence | No | **Yes** (SQL) |
 | Until loop timeout | N/A | **24 hours** |
 
-### New Pipeline Parameters
+### Pipeline Parameters
+
+#### Parent Pipeline Parameters (PL_Migrate_Single_Library, PL_Process_Subfolder, PL_Incremental_Sync)
 
 | Parameter | Type | Default | Purpose |
 |-----------|------|---------|---------|
 | `PageSize` | int | 200 | `$top` value for Graph API delta/children calls |
-| `CopyBatchCount` | int | 10 | ForEach batchCount for parallel file copy |
+| `CopyBatchCount` | int | 10 | ForEach batchCount for parallel file copy (passed to PL_Copy_File_Batch) |
 | `ThrottleDelaySeconds` | int | 2 | Wait time between pagination pages |
+
+#### PL_Copy_File_Batch Parameters
+
+| Parameter | Type | Purpose |
+|-----------|------|---------|
+| `FileItems` | array | Array of file items to copy (from Filter activity output) |
+| `DriveId` | string | Graph API drive ID for source SharePoint library |
+| `AccessToken` | string | Bearer token for Graph API authentication |
+| `ContainerName` | string | ADLS Gen2 destination container name |
+| `SiteName` | string | SharePoint site name (used in ADLS path construction) |
+| `LibraryName` | string | SharePoint library name (used in ADLS path construction) |
+| `FolderPath` | string | Current folder path within the library |
+| `SourcePathPrefix` | string | Prefix to strip from source `parentReference.path` |
+| `DestPathPrefix` | string | Prefix to prepend for ADLS destination path |
+| `MigrationStatus` | string | Status label for audit logging (e.g., "InitialMigration", "IncrementalSync") |
+| `ParentRunId` | string | Parent pipeline run ID for audit log correlation |
 
 ### Production Testing
 
@@ -393,7 +464,7 @@ The following tests validate the four production features:
 |---|---------|-------------|---------------|
 | 1 | **Pagination** | Run with `PageSize = 3` | `Until_AllPagesProcessed` runs multiple iterations |
 | 2 | **Deep folder traversal** | Create folders at depth 3+ in SharePoint | Files at all depths appear in ADLS |
-| 3 | **Token refresh** | Temporarily set threshold to 60s (from 2700s) | `If_TokenExpiring` fires; `Refresh_AccessToken` succeeds |
+| 3 | **Token refresh** | Verify token refresh in Until loop iteration | `Refresh_AccessToken` succeeds every iteration (~500ms); AAD caches server-side |
 | 4 | **DeltaLink persistence** | Complete initial migration | `IncrementalWatermark.DeltaLink` is non-null |
 | 5 | **Incremental sync** | Add file → run `PL_Incremental_Sync` | Only new file copied; stored deltaLink reused |
 | 6 | **No-change sync** | Run incremental sync with no changes | 0 files processed |
