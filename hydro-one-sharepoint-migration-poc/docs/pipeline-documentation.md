@@ -582,9 +582,116 @@ Note: `PL_Migrate_Single_Library` now uses delta query for file enumeration (unl
 
 ---
 
-## 7. Pipeline: PL_Validation
+## 7. Pipeline: PL_Copy_File_Batch
 
 ### 7.1 Overview
+
+| Property | Value |
+|----------|-------|
+| File | `adf-templates/pipelines/PL_Copy_File_Batch.json` |
+| Purpose | Lightweight child pipeline that copies a batch of files from SharePoint to ADLS Gen2 via Graph API and logs each result to SQL audit table |
+| Called By | `PL_Migrate_Single_Library` (ExecutePipeline), `PL_Process_Subfolder` (ExecutePipeline), `PL_Incremental_Sync` (ExecutePipeline) |
+| API | Microsoft Graph API `/content` endpoint (binary download) |
+
+### 7.2 Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `FileItems` | array | - | Array of Graph API file items to copy (from Filter activity output) |
+| `DriveId` | string | - | Graph drive ID for the source SharePoint library |
+| `AccessToken` | string | - | Bearer token for Graph API authentication |
+| `ContainerName` | string | `sharepoint-migration` | ADLS destination container |
+| `SiteName` | string | - | SharePoint site name (used as top-level ADLS folder) |
+| `LibraryName` | string | - | Document library name (subfolder under site in ADLS) |
+| `FolderPath` | string | - | Fallback relative folder path within library (used when `parentReference.path` is not available) |
+| `SourcePathPrefix` | string | - | Prefix for constructing the audit log SourcePath |
+| `DestPathPrefix` | string | - | Prefix for constructing the audit log DestinationPath |
+| `MigrationStatus` | string | `Success` | Status value for audit log entries (e.g., `Success`, `IncrementalSync`) |
+| `ParentRunId` | string | - | Pipeline run ID of the calling parent pipeline (for audit correlation) |
+
+### 7.3 Activity Flow
+
+```
+ForEach_CopyFile (batchCount: 10, isSequential: false)
+    |
+    +-- Copy_File
+    |       Source: DS_Graph_Content_Download (/v1.0/drives/{DriveId}/items/{itemId}/content)
+    |       Sink: DS_ADLS_Binary_Sink
+    |       FolderPath: @if(parentReference.path available, derive from parentReference.path, use FolderPath parameter)
+    |       Retry: 5, Interval: 60s, Timeout: 1hr
+    |
+    +-- (on success) Log_Success
+    |       Stored proc: usp_LogFileAudit
+    |       SourcePath/DestinationPath: folder-path-aware (uses parentReference)
+    |
+    +-- (on failure) Log_Failure
+            Stored proc: usp_LogFileAudit (Status=Failed, ErrorDetails from activity error)
+```
+
+### 7.4 Key Activities
+
+**ForEach_CopyFile:**
+- Type: ForEach
+- Items: `@pipeline().parameters.FileItems`
+- Batch count: 10 (parallel)
+- Handles empty arrays gracefully (0 iterations, no error)
+
+**Copy_File:**
+- Type: Copy Activity (Binary)
+- Source: `DS_Graph_Content_Download` (linked to `LS_HTTP_Graph_API`)
+- Source ContentPath: `@concat('/v1.0/drives/', pipeline().parameters.DriveId, '/items/', item().id, '/content')`
+- Source Additional Headers: `@concat('Bearer ', pipeline().parameters.AccessToken)`
+- Sink: `DS_ADLS_Binary_Sink`
+- Sink FolderPath: Uses `item().parentReference.path` when available (for delta query items that include subfolder paths); falls back to `pipeline().parameters.FolderPath` when `parentReference.path` is not present
+- Retry: 5 attempts, 60s interval
+- Timeout: 1 hour per file
+- Request timeout: 30 minutes
+
+**FolderPath Resolution Logic:**
+```
+@if(
+    and(
+        contains(string(item()), 'parentReference'),
+        contains(string(item().parentReference), 'path')
+    ),
+    <derive from parentReference.path — strip /drives/{driveId}/root:/{libraryName}/ prefix>,
+    pipeline().parameters.FolderPath
+)
+```
+
+This ensures that files returned by delta query (which include full `parentReference.path` for all subfolder depths) are written to the correct ADLS subfolder, while files from simpler children queries (which may not include full paths) fall back to the explicit `FolderPath` parameter.
+
+**Log_Success:**
+- Type: SqlServerStoredProcedure
+- Procedure: `dbo.usp_LogFileAudit`
+- Depends on: Copy_File (success)
+- SourcePath: Folder-path-aware, constructed using `parentReference.path` when available
+- DestinationPath: Folder-path-aware, mirrors source path structure under ADLS container
+- MigrationStatus: `@pipeline().parameters.MigrationStatus`
+- PipelineRunId: `@pipeline().parameters.ParentRunId`
+
+**Log_Failure:**
+- Type: SqlServerStoredProcedure
+- Procedure: `dbo.usp_LogFileAudit`
+- Depends on: Copy_File (failure)
+- MigrationStatus: `Failed`
+- ErrorDetails: `@activity('Copy_File').error.message`
+
+### 7.5 Design Rationale
+
+This pipeline exists because ADF does not allow ForEach activities inside Until loops (see [Section 10: ADF Container Activity Limitations](#10-adf-container-activity-limitations)). By extracting the file copy loop into a separate child pipeline invoked via ExecutePipeline, the Until loop in parent pipelines contains only flat activities.
+
+The `PL_Copy_File_Batch` pattern provides:
+- **Reusability**: Called by `PL_Migrate_Single_Library`, `PL_Process_Subfolder`, and `PL_Incremental_Sync`
+- **Parallel file copies**: ForEach with `batchCount: 10` for concurrent downloads
+- **Consistent audit logging**: All callers get the same success/failure logging behavior
+- **Empty array safety**: ForEach handles empty `FileItems` arrays with 0 iterations (no error)
+
+---
+
+## 8. Pipeline: PL_Validation
+
+### 8.1 Overview
 
 | Property | Value |
 |----------|-------|
@@ -593,14 +700,14 @@ Note: `PL_Migrate_Single_Library` now uses delta query for file enumeration (unl
 | Trigger | Manual (after migration batches complete) |
 | Test Status | **Validated** -- successfully tested with 10 sample files (run ID: `92158504-c822-46a3-9a4f-2cbd780986f6`) |
 
-### 7.2 Parameters
+### 8.2 Parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `SharePointTenantUrl` | string | `https://hydroone.sharepoint.com` | SharePoint tenant URL (reserved for future SharePoint-direct validation) |
 | `ValidateAll` | bool | `false` | When `true`, re-validates all completed libraries. When `false`, only validates libraries with `ValidationStatus = NULL` or `Pending` |
 
-### 7.3 Validation Approach
+### 8.3 Validation Approach
 
 The pipeline uses **SQL-only validation** -- comparing control table expected file counts against audit log actual migration results. This approach:
 - Does not require SharePoint API access during validation
@@ -613,7 +720,7 @@ The pipeline uses **SQL-only validation** -- comparing control table expected fi
 2. **Failed File Detection**: Checks for any audit log entries with `MigrationStatus = 'Failed'`
 3. **Discrepancy Flagging**: If expected != actual OR any failures exist, marks library as `Discrepancy` with details
 
-### 7.4 Activity Flow
+### 8.4 Activity Flow
 
 ```
 Lookup_CompletedLibraries --> ForEach_ValidateLibrary
@@ -629,7 +736,7 @@ ForEach_ValidateLibrary --> Generate_ValidationReport (SQL summary query)
                         --> Set_ValidationSummary (pipeline variable output)
 ```
 
-### 7.5 Activity Details
+### 8.5 Activity Details
 
 **Lookup_CompletedLibraries:**
 - Type: Lookup
@@ -656,9 +763,9 @@ ForEach_ValidateLibrary --> Generate_ValidationReport (SQL summary query)
 
 ---
 
-## 8. Pipeline: PL_Incremental_Sync
+## 9. Pipeline: PL_Incremental_Sync
 
-### 8.1 Overview
+### 9.1 Overview
 
 | Property | Value |
 |----------|-------|
@@ -667,7 +774,7 @@ ForEach_ValidateLibrary --> Generate_ValidationReport (SQL summary query)
 | Trigger | Tumbling window (every 6 hours) |
 | API | Microsoft Graph API delta query |
 
-### 8.2 Parameters
+### 9.2 Parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -680,7 +787,7 @@ ForEach_ValidateLibrary --> Generate_ValidationReport (SQL summary query)
 | `ThrottleDelaySeconds` | int | 2 | Wait between pagination pages |
 | `CopyBatchCount` | int | 10 | Concurrent file copies per page |
 
-### 8.3 How It Works
+### 9.3 How It Works
 
 1. Acquires a Graph API access token via AAD client credentials flow (same mechanism as `PL_Migrate_Single_Library`)
 2. Looks up completed libraries from the `MigrationControl` table that have `EnableIncrementalSync = 1`, including stored `DeltaLink` and `DriveId` from `IncrementalWatermark`

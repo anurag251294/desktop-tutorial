@@ -433,6 +433,41 @@ VALUES ('/sites/SalesAndMarketing', 'Shared Documents', 'Sales And Marketing', '
 
 2. Re-enable trigger or manually trigger pipeline
 
+### Database Reset Procedure
+
+Use this procedure to fully reset the migration database to a clean state (e.g., between test runs or after a failed POC iteration). This removes all migration history and audit data.
+
+> **WARNING:** This permanently deletes all migration tracking data. Only use this when you intend to start fresh.
+
+**Step 1: Truncate/delete all tables:**
+```sql
+-- Clear audit log
+TRUNCATE TABLE dbo.MigrationAuditLog;
+
+-- Clear incremental watermarks (deltaLinks)
+TRUNCATE TABLE dbo.IncrementalWatermark;
+
+-- Delete control table rows (cannot TRUNCATE if foreign keys exist)
+DELETE FROM dbo.MigrationControl;
+```
+
+**Step 2: Reseed identity columns:**
+```sql
+-- Reset auto-increment counters to 1
+DBCC CHECKIDENT ('dbo.MigrationControl', RESEED, 0);
+DBCC CHECKIDENT ('dbo.MigrationAuditLog', RESEED, 0);
+DBCC CHECKIDENT ('dbo.IncrementalWatermark', RESEED, 0);
+```
+
+**Step 3: Insert fresh Pending row(s):**
+```sql
+-- Insert the library to migrate
+INSERT INTO dbo.MigrationControl (SiteUrl, LibraryName, SiteTitle, LibraryTitle, Status, Priority, EnableIncrementalSync, CreatedBy)
+VALUES ('/sites/SalesAndMarketing', 'Shared Documents', 'Sales And Marketing', 'Documents', 'Pending', 1, 1, 'anuragdhuria');
+```
+
+Adjust the INSERT values to match the libraries you want to migrate in the next run.
+
 ---
 
 ## Throttling Management

@@ -22,7 +22,7 @@ graph TB
         CHILD --> |ExecutePipeline| COPYBATCH[PL_Copy_File_Batch]
         CHILD --> SUBFOLDER[PL_Process_Subfolder]
         SUBFOLDER --> |ExecutePipeline| COPYBATCH
-        ADF --> VALIDATION[PL_Validation]
+        ADF --> VALIDATION[PL_Post_Migration_Validation]
         ADF --> INCREMENTAL[PL_Incremental_Sync]
         INCREMENTAL --> |ExecutePipeline| COPYBATCH
 
@@ -458,7 +458,7 @@ If SharePoint is behind Conditional Access policies:
 
 ### Production Testing
 
-The following tests validate the four production features:
+The following tests validate the production features:
 
 | # | Feature | Test Method | Pass Criteria |
 |---|---------|-------------|---------------|
@@ -468,6 +468,7 @@ The following tests validate the four production features:
 | 4 | **DeltaLink persistence** | Complete initial migration | `IncrementalWatermark.DeltaLink` is non-null |
 | 5 | **Incremental sync** | Add file → run `PL_Incremental_Sync` | Only new file copied; stored deltaLink reused |
 | 6 | **No-change sync** | Run incremental sync with no changes | 0 files processed |
+| 7 | **PL_Copy_File_Batch** | Verify child pipeline executes from Until loop | `Execute_CopyFileBatch` activity succeeds; Log_Success entries in MigrationAuditLog |
 
 **SQL verification queries:**
 

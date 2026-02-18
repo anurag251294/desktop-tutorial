@@ -109,7 +109,7 @@ To work around these restrictions, file copy and audit logging logic was extract
 |------|-------|----------|-------------|--------|
 | Deploy Azure resources (dev) | Microsoft | 1 day | Resource group deployed | Done |
 | Register Azure AD app | Microsoft | 0.5 day | App with Graph API permissions, admin consent | Done |
-| Deploy ADF pipelines | Microsoft | 1 day | Pipelines deployed (Graph API based) | Done |
+| Deploy ADF pipelines (6 pipelines) | Microsoft | 1 day | Pipelines deployed (Graph API based, child pipeline pattern) | Done |
 | Initialize control database | Microsoft | 0.5 day | Tables created | Done |
 | Enumerate test library via Graph API | Microsoft | 0.5 day | Control table populated (SalesAndMarketing) | Done |
 | Run POC migration | Microsoft | 1 day | Files migrated to ADLS | Done |
@@ -459,6 +459,8 @@ DECISIONS NEEDED:
 - Tenant: `m365x52073746.sharepoint.com` (dev/test)
 - Key pivot: Switched from SharePoint REST API to Microsoft Graph API due to AAD v2.0 token incompatibility
 - All file enumeration uses Graph drives/items endpoints; downloads use Graph `/content` endpoint (302 redirect to pre-authenticated URL)
+- Child pipeline pattern (`PL_Copy_File_Batch`) adopted to work around ADF Until activity nesting restrictions
+- Token refresh: always-refresh every Until iteration (AAD caches valid tokens, ~500ms overhead)
 
 ### Week 2-3 - Pilot Migration
 
