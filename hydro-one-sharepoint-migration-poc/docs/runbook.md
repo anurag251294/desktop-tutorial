@@ -4,10 +4,11 @@
 1. [Critical Prerequisites for Hydro One](#critical-prerequisites-for-hydro-one)
 2. [Pre-Migration](#pre-migration)
 3. [Migration Execution](#migration-execution)
-4. [Throttling Management](#throttling-management)
-5. [Error Handling & Recovery](#error-handling--recovery)
-6. [Post-Migration](#post-migration)
-7. [Rollback Plan](#rollback-plan)
+4. [Verified Test Results & Baseline Performance](#verified-test-results--baseline-performance)
+5. [Throttling Management](#throttling-management)
+6. [Error Handling & Recovery](#error-handling--recovery)
+7. [Post-Migration](#post-migration)
+8. [Rollback Plan](#rollback-plan)
 
 ---
 
@@ -470,6 +471,82 @@ Adjust the INSERT values to match the libraries you want to migrate in the next 
 
 ---
 
+## Verified Test Results & Baseline Performance
+
+> **Last verified: February 18, 2026** -- End-to-end POC test with all activities succeeding, 0 failures.
+
+### Baseline Performance
+
+| Metric | Value |
+|--------|-------|
+| Source Site | `/sites/SalesAndMarketing` |
+| Source Library | `Shared Documents` |
+| Files Migrated | 30 |
+| Total Size | 7.96 MB |
+| Total Duration | ~2 min 5 sec |
+| Throughput (files) | ~14.5 files/min |
+| Throughput (data) | ~3.8 MB/min |
+| Failures | 0 |
+| Subfolder Support | Verified -- `Monthly Reports/` subfolder correctly preserved in ADLS |
+
+### Expected Pipeline Activity Timing (Baseline)
+
+These timings are from a single-library run of `PL_Master_Migration_Orchestrator` with 30 files:
+
+| Activity | Duration |
+|----------|----------|
+| Lookup_PendingLibraries | ~11s |
+| Log_BatchStart | ~4s |
+| Execute_MigrateSingleLibrary | ~2m 14s |
+| Log_BatchComplete | ~4s |
+| **Total (1 library, 30 files)** | **~2m 15s** |
+
+### Monitoring Verification Queries (Verified Working)
+
+These SQL queries were validated against the POC database on Feb 18, 2026:
+
+```sql
+-- Check migration status
+SELECT Id, SiteUrl, LibraryName, Status, StartTime, EndTime
+FROM dbo.MigrationControl;
+
+-- Check audit log summary
+SELECT MigrationStatus, COUNT(*) AS FileCount, SUM(FileSizeBytes) AS TotalBytes
+FROM dbo.MigrationAuditLog
+GROUP BY MigrationStatus;
+
+-- Check individual files
+SELECT TOP 20 FileName, MigrationStatus, FileSizeBytes, SourcePath
+FROM dbo.MigrationAuditLog
+ORDER BY Id;
+```
+
+### ADLS Verification (Verified Working)
+
+These Azure CLI commands were validated against the POC storage account on Feb 18, 2026:
+
+```bash
+# List migrated files
+az storage fs directory list \
+    --file-system sharepoint-migration \
+    --account-name sthydroonemigtest \
+    --path SalesAndMarketing \
+    --recursive true \
+    --auth-mode login \
+    --query "[].name" -o tsv
+
+# Count files
+az storage fs file list \
+    --file-system sharepoint-migration \
+    --account-name sthydroonemigtest \
+    --path SalesAndMarketing \
+    --recursive true \
+    --auth-mode login \
+    --query "[].name" -o tsv | wc -l
+```
+
+---
+
 ## Throttling Management
 
 ### Microsoft Graph API Throttling Limits
@@ -606,22 +683,25 @@ Invoke-AzDataFactoryV2Pipeline `
 2. Instead, have `PL_Migrate_Library` handle recursive traversal by calling `PL_Process_Subfolder` for each subfolder discovered
 3. `PL_Process_Subfolder` enumerates items in a single folder and calls back to `PL_Migrate_Library` (or a wrapper) for any sub-subfolders
 
-#### "Container activity cannot include another container activity"
+#### "Container activity cannot include another container activity" -- RESOLVED
+**Status:** RESOLVED in production pipelines (verified Feb 18, 2026).
 **Cause:** ADF does not allow nesting container activities. For example, an Until loop cannot directly contain a ForEach, IfCondition, or Switch activity.
-**Resolution:**
+**Resolution (implemented):**
 1. Move the inner container activity (ForEach, IfCondition, Switch) into a separate child pipeline
 2. Call that child pipeline from the Until loop using an ExecutePipeline activity
 3. This is the pattern used by `PL_Copy_File_Batch` -- it contains the ForEach that copies files, and is called from inside the Until pagination loop via ExecutePipeline
 
-#### "ForEach activity is not allowed under an If Condition Activity"
+#### "ForEach activity is not allowed under an If Condition Activity" -- RESOLVED
+**Status:** RESOLVED in production pipelines (verified Feb 18, 2026).
 **Cause:** ADF does not allow ForEach inside an IfCondition activity. This is a special case of the container nesting restriction above.
-**Resolution:**
+**Resolution (implemented):**
 1. Move the ForEach activity outside the IfCondition, or
 2. Move the ForEach into a child pipeline and call it via ExecutePipeline from inside the IfCondition
 
-#### "The expression contains self referencing variable"
+#### "The expression contains self referencing variable" -- RESOLVED
+**Status:** RESOLVED in production pipelines (verified Feb 18, 2026).
 **Cause:** A SetVariable activity references the same variable it is setting. ADF does not allow a variable to reference itself (e.g., setting `NextLink` to an expression that reads `NextLink`).
-**Resolution:**
+**Resolution (implemented):**
 1. Use an empty string or a literal default value as the fallback instead of referencing the same variable
 2. Alternatively, use a different intermediate variable to hold the previous value and reference that in the expression
 

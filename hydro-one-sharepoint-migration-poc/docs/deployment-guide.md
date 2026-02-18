@@ -30,6 +30,7 @@
 14. [Troubleshooting Guide](#14-troubleshooting-guide)
 15. [Rollback Procedures](#15-rollback-procedures)
 16. [Appendix](#16-appendix)
+17. [Verified End-to-End Test Results](#17-verified-end-to-end-test-results)
 
 ---
 
@@ -1449,3 +1450,53 @@ If token acquisition fails:
 | Data Factory | Pay-as-you-go | ~$50-200 |
 | Key Vault | Standard | ~$5 |
 | **Total** | | **~$585-835/month** |
+
+---
+
+## 17. Verified End-to-End Test Results
+
+> **Test Date:** February 18, 2026
+> **Environment:** Test (`rg-hydroone-migration-test`, Canada Central)
+> **Target Library:** `/sites/SalesAndMarketing/Shared Documents`
+
+### 17.1 Deployment Verification
+
+All deployment steps completed successfully:
+
+| # | Component | Status |
+|---|-----------|--------|
+| 1 | SQL schema deployed (DeltaLink + DriveId columns, updated stored procs) | Passed |
+| 2 | PL_Copy_File_Batch deployed | Passed |
+| 3 | PL_Process_Subfolder deployed | Passed |
+| 4 | PL_Incremental_Sync deployed | Passed |
+| 5 | PL_Migrate_Single_Library deployed | Passed |
+| 6 | PL_Master_Migration_Orchestrator deployed | Passed |
+| 7 | TR_Triggers deployed | Passed |
+| 8 | SQL Server networking (public access + AllowAzureServices firewall rule) | Passed |
+
+### 17.2 End-to-End Migration Results
+
+| Metric | Value |
+|--------|-------|
+| Source library | `/sites/SalesAndMarketing/Shared Documents` |
+| Files migrated | 30 |
+| Failures | 0 |
+| Total data transferred | 7.96 MB |
+| Duration | ~2 min 5 sec |
+| Subfolder support | Verified (`Monthly Reports/` preserved in ADLS) |
+| Pipeline activities | All succeeded |
+| SQL audit log rows | 30 (all `MigrationStatus = 'Success'`) |
+| MigrationControl status | `Completed` |
+
+### 17.3 Post-Deployment Checklist
+
+| # | Verification Item | Status |
+|---|-------------------|--------|
+| 1 | SQL tables created with DeltaLink/DriveId columns | Verified |
+| 2 | All 6 pipelines deployed and runnable | Verified |
+| 3 | Triggers deployed | Verified |
+| 4 | SQL Server allows Azure services (AllowAzureServices firewall rule) | Verified |
+| 5 | End-to-end migration completes without errors | Verified |
+| 6 | Files appear in correct ADLS folder structure | Verified |
+| 7 | Subfolders preserved in ADLS | Verified |
+| 8 | Audit logs populated in SQL | Verified |
