@@ -678,6 +678,62 @@ AND MigrationStatus = 'Failed'
    - Compare file sizes
    - Verify file opens correctly
 
+5. **Production Feature Validation:**
+
+   **a. Pagination Verification:**
+   Re-run migration with `PageSize = 3` on a small library:
+   ```powershell
+   # Trigger with small PageSize to verify Until loop pagination
+   $params = @{
+       SiteUrl = "/sites/SalesAndMarketing"
+       LibraryName = "Shared Documents"
+       ControlTableId = "1"
+       BatchId = "TEST-PAGINATION"
+       ContainerName = "sharepoint-migration"
+       SharePointTenantUrl = "https://m365x52073746.sharepoint.com"
+       PageSize = 3
+       CopyBatchCount = 2
+       ThrottleDelaySeconds = 1
+   }
+   Invoke-AzDataFactoryV2Pipeline `
+       -ResourceGroupName "rg-hydroone-migration-test" `
+       -DataFactoryName "adf-hydroone-migration-test" `
+       -PipelineName "PL_Migrate_Single_Library" `
+       -Parameter $params
+   ```
+   Verify in ADF Monitor that `Until_AllPagesProcessed` ran multiple iterations.
+
+   **b. Deep Folder Verification:**
+   ```sql
+   -- Check that files from all folder depths were migrated
+   SELECT DestinationPath, FileSizeBytes, MigrationStatus
+   FROM dbo.MigrationAuditLog
+   WHERE DestinationPath LIKE '%/%/%/%'  -- 3+ path segments = subfolder depth >1
+   ORDER BY DestinationPath;
+   ```
+
+   **c. DeltaLink Verification:**
+   ```sql
+   -- Verify deltaLink stored after migration
+   SELECT SiteUrl, LibraryName, DriveId,
+       LEN(DeltaLink) AS DeltaLinkLength,
+       CASE WHEN DeltaLink IS NOT NULL THEN 'PASS' ELSE 'FAIL' END AS DeltaLinkStatus,
+       LastSyncTime
+   FROM dbo.IncrementalWatermark;
+   ```
+
+   **d. Incremental Sync Verification:**
+   - Add a new file to the SharePoint library
+   - Run `PL_Incremental_Sync`
+   - Verify only the new file was copied:
+   ```sql
+   SELECT FileName, MigrationStatus, [Timestamp]
+   FROM dbo.MigrationAuditLog
+   WHERE MigrationStatus = 'IncrementalSync'
+   ORDER BY [Timestamp] DESC;
+   ```
+   - Run again with no changes — should process 0 files
+
 ### Sign-Off Checklist
 
 - [ ] All libraries migrated (Status = 'Completed')
@@ -688,6 +744,11 @@ AND MigrationStatus = 'Failed'
 - [ ] Validation pipeline shows "Validated" status
 - [ ] Audit log reviewed for errors
 - [ ] Business stakeholder sign-off obtained
+- [ ] DeltaLink stored for all completed libraries (IncrementalWatermark)
+- [ ] Pagination verified with small PageSize (Until loop ran multiple iterations)
+- [ ] Deep folder files migrated correctly (depth >2 verified in ADLS)
+- [ ] Token refresh verified for long-running migrations
+- [ ] Incremental sync tested (only changed files copied)
 
 ### Cutover to Incremental Sync
 

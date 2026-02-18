@@ -100,6 +100,7 @@ The migration is orchestrated through Azure Data Factory with the following pipe
 **Exit Criteria:**
 - [ ] POC sign-off obtained
 - [x] Issues documented and resolved (Graph API pivot documented)
+- [x] Production features implemented (pagination, token refresh, deep folders, deltaLink)
 - [ ] Go/No-Go decision for Phase 2
 
 ---
@@ -131,6 +132,11 @@ The migration is orchestrated through Azure Data Factory with the following pipe
 - [ ] Throughput >50 GB/day achieved
 - [ ] Throttling managed effectively
 - [ ] No data loss
+- [ ] Pagination verified (Until loop with PageSize=3 runs multiple iterations)
+- [ ] Deep folder files (depth >2) migrated with correct ADLS paths
+- [ ] Token refresh verified (If_TokenExpiring fires with lowered threshold)
+- [ ] DeltaLink stored in IncrementalWatermark after initial migration
+- [ ] Incremental sync uses stored DeltaLink (only changed files copied)
 
 ---
 
@@ -188,6 +194,7 @@ The migration is orchestrated through Azure Data Factory with the following pipe
 |------|-------|----------|-------------|
 | Run validation pipeline | Microsoft | 1 day | Validation results |
 | Address discrepancies | Microsoft | 2 days | Issues resolved |
+| Verify production features (pagination, deep folders, deltaLink, token refresh) | Microsoft | 1 day | Production test checklist |
 | Generate final report | Microsoft | 1 day | Migration report |
 | Business validation | Hydro One | 2 days | Business sign-off |
 

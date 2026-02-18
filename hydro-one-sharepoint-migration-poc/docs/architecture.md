@@ -385,6 +385,41 @@ If SharePoint is behind Conditional Access policies:
 | `CopyBatchCount` | int | 10 | ForEach batchCount for parallel file copy |
 | `ThrottleDelaySeconds` | int | 2 | Wait time between pagination pages |
 
+### Production Testing
+
+The following tests validate the four production features:
+
+| # | Feature | Test Method | Pass Criteria |
+|---|---------|-------------|---------------|
+| 1 | **Pagination** | Run with `PageSize = 3` | `Until_AllPagesProcessed` runs multiple iterations |
+| 2 | **Deep folder traversal** | Create folders at depth 3+ in SharePoint | Files at all depths appear in ADLS |
+| 3 | **Token refresh** | Temporarily set threshold to 60s (from 2700s) | `If_TokenExpiring` fires; `Refresh_AccessToken` succeeds |
+| 4 | **DeltaLink persistence** | Complete initial migration | `IncrementalWatermark.DeltaLink` is non-null |
+| 5 | **Incremental sync** | Add file → run `PL_Incremental_Sync` | Only new file copied; stored deltaLink reused |
+| 6 | **No-change sync** | Run incremental sync with no changes | 0 files processed |
+
+**SQL verification queries:**
+
+```sql
+-- Verify DeltaLink and DriveId stored after migration
+SELECT SiteUrl, LibraryName, DriveId,
+    CASE WHEN DeltaLink IS NOT NULL THEN 'Stored' ELSE 'Missing' END AS DeltaLinkStatus,
+    LastSyncTime
+FROM dbo.IncrementalWatermark;
+
+-- Verify files from all folder depths were migrated
+SELECT DestinationPath, MigrationStatus
+FROM dbo.MigrationAuditLog
+WHERE DestinationPath LIKE '%/%/%/%'
+ORDER BY DestinationPath;
+
+-- Verify incremental sync only copied changed files
+SELECT FileName, MigrationStatus, [Timestamp]
+FROM dbo.MigrationAuditLog
+WHERE MigrationStatus = 'IncrementalSync'
+ORDER BY [Timestamp] DESC;
+```
+
 ## Monitoring & Alerting
 
 ### Monitoring Points

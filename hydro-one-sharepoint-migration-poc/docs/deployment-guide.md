@@ -898,6 +898,107 @@ GROUP BY mc.LibraryName, mc.TotalFileCount;
 
 > **Note:** You must have **Storage Blob Data Contributor** role on the storage account to browse files in the Azure Portal (see [Section 7.4](#74-grant-user-access-to-storage-account-portal-browsing)).
 
+### 9.5 Production Feature Testing
+
+After verifying the basic pilot run succeeds, test the four production features individually:
+
+#### Test 1: Pagination (Small PageSize)
+
+Run `PL_Migrate_Single_Library` with `PageSize = 3` to force the Until loop to iterate multiple times:
+
+1. In ADF Studio, Debug `PL_Migrate_Single_Library` with:
+   | Parameter | Value | Why |
+   |-----------|-------|-----|
+   | PageSize | **3** | Forces multiple Until loop iterations |
+   | CopyBatchCount | 2 | Low parallelism for easy debugging |
+   | ThrottleDelaySeconds | 1 | Short delay for testing |
+
+2. In the **Monitor** tab, drill into `Until_AllPagesProcessed`:
+   - Verify it runs **multiple iterations** (at least 2 if library has >3 items)
+   - Each iteration: `Get_DeltaPage` → `Filter_PageFiles` → `ForEach_CopyFile`
+   - Last iteration: `If_HasNextPage` takes the **False** branch
+   - `Set_DeltaLink` captures the `@odata.deltaLink` URL
+
+**Pass criteria:** Until loop completes with multiple iterations; all files copied.
+
+#### Test 2: Deep Folder Traversal
+
+Create a folder structure in SharePoint with depth >2:
+
+```
+Shared Documents/
+├── RootFile.docx
+├── FolderA/
+│   └── SubFolderA1/
+│       └── DeepFile.pdf           ← depth 2
+│           └── SubSubFolder/
+│               └── VeryDeepFile.txt  ← depth 3
+```
+
+Run migration and verify in ADLS:
+
+```powershell
+az storage blob list --account-name sthydroonemigtest `
+  --container-name sharepoint-migration `
+  --prefix "SalesAndMarketing/Shared Documents/" `
+  --output table
+```
+
+**Pass criteria:** Files at all folder depths appear in ADLS with correct paths. The old POC would have missed files at depth >1.
+
+#### Test 3: Token Refresh
+
+To test without waiting 45 minutes, temporarily lower the threshold in `PL_Migrate_Single_Library`:
+
+Change the `If_TokenExpiring` expression from `2700` (45 min) to `60` (1 min):
+```
+@greater(div(sub(ticks(utcNow()), ticks(variables('TokenAcquiredTime'))), 10000000), 60)
+```
+
+Run against a library with enough items that pagination takes >1 minute.
+
+**Pass criteria:** `If_TokenExpiring` takes the True branch on later iterations; `Refresh_AccessToken` succeeds; subsequent copies still work.
+
+> **Important:** Revert threshold to `2700` after testing.
+
+#### Test 4: Incremental Sync with DeltaLink
+
+After an initial migration completes:
+
+1. Verify deltaLink was stored:
+   ```sql
+   SELECT SiteUrl, LibraryName, DeltaLink, DriveId, LastSyncTime
+   FROM dbo.IncrementalWatermark;
+   ```
+
+2. Add a new file to the SharePoint library
+
+3. Run `PL_Incremental_Sync` with `PageSize = 5`
+
+4. Verify:
+   - Pipeline used the stored `DeltaLink` (not a fresh `/root/delta` call)
+   - Only the new file was copied
+   - `IncrementalWatermark.DeltaLink` was updated
+   - `MigrationAuditLog` has new entry with `MigrationStatus = 'IncrementalSync'`
+
+5. Run incremental sync again **without** changing anything:
+   - Should complete with 0 files copied
+
+**Pass criteria:** DeltaLink reused; only changed files synced; no-change run is a no-op.
+
+#### Production Feature Test Checklist
+
+| # | Test | Pass Criteria | Status |
+|---|------|---------------|--------|
+| 1 | Pagination | Until loop runs multiple iterations with PageSize=3 | [ ] |
+| 2 | Deep folders | Files at depth >2 appear in ADLS with correct paths | [ ] |
+| 3 | Token refresh | If_TokenExpiring fires and refreshes token | [ ] |
+| 4 | DeltaLink persistence | IncrementalWatermark.DeltaLink is non-null after migration | [ ] |
+| 5 | Incremental sync reuse | Only new/modified files copied on second run | [ ] |
+| 6 | No-change run | Incremental sync completes with 0 files when nothing changed | [ ] |
+| 7 | Audit trail | All files logged in MigrationAuditLog with correct paths | [ ] |
+| 8 | Error handling | Failed files logged with error details, status set to Failed | [ ] |
+
 ---
 
 ## 10. Phase 8: Full Migration Execution
@@ -915,6 +1016,9 @@ GROUP BY mc.LibraryName, mc.TotalFileCount;
 | ParallelLibraries | 4 |
 | MaxRetries | 3 |
 | TargetContainerName | `sharepoint-migration` |
+| PageSize | 200 |
+| CopyBatchCount | 10 |
+| ThrottleDelaySeconds | 2 |
 
 **Option B: PowerShell**
 ```powershell
@@ -923,6 +1027,9 @@ $params = @{
     ParallelLibraries = 4
     MaxRetries = 3
     TargetContainerName = "sharepoint-migration"
+    PageSize = 200
+    CopyBatchCount = 10
+    ThrottleDelaySeconds = 2
 }
 
 Invoke-AzDataFactoryV2Pipeline `
@@ -1042,6 +1149,10 @@ ORDER BY ErrorCount DESC;
 | 6 | Validation pipeline shows "Validated" | [ ] | |
 | 7 | Audit log reviewed for errors | [ ] | |
 | 8 | Business stakeholder sign-off | [ ] | |
+| 9 | DeltaLink stored for all completed libraries | [ ] | |
+| 10 | Pagination tested with small PageSize | [ ] | |
+| 11 | Deep folder files migrated correctly | [ ] | |
+| 12 | Token refresh verified for long-running libraries | [ ] | |
 
 ---
 
