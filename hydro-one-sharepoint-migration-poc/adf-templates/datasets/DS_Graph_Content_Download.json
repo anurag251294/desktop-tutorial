@@ -14,7 +14,7 @@
             "properties": {
                 "description": "Binary dataset for downloading files via Graph API /content endpoint. Uses item ID to construct download path.",
                 "linkedServiceName": {
-                    "referenceName": "LS_HTTP_Graph_API",
+                    "referenceName": "LS_HTTP_Graph_Download",
                     "type": "LinkedServiceReference",
                     "parameters": {}
                 },

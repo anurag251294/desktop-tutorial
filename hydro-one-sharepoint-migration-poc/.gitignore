@@ -67,6 +67,13 @@ appsettings.Development.json
 *.backup
 *.bkp
 
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+tfplan
+.terraform.lock.hcl
+
 # ARM template outputs (contain sensitive info)
 arm-output*.json
 deployment-output*.json

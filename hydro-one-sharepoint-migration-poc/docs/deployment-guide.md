@@ -462,7 +462,35 @@ grant_type=client_credentials
 
 ## 5. Phase 3: Data Factory Deployment
 
-### 5.1 Deploy ADF ARM Template
+### 5.1 Deployment Overview & Dependency Order
+
+> **CRITICAL: ADF validates all references at deployment time.** Deploying a pipeline before its linked services, datasets, or child pipelines exist will fail with errors like `"invalid reference 'DS_Graph_Content_Download'"`. You MUST deploy in this exact order:
+>
+> **Linked Services → Datasets → Pipelines (children first, then parents)**
+
+There are two deployment approaches:
+
+- **Option A (Recommended):** Use the automated deployment script `scripts/Deploy-ADF-Templates.sh` which handles all ordering automatically
+- **Option B:** Deploy the `arm-template.json` first (creates ADF + core resources), then deploy remaining individual templates manually
+
+### 5.2 Option A: Automated Deployment Script (Recommended)
+
+```bash
+./scripts/Deploy-ADF-Templates.sh \
+    --factory "adf-hydroone-migration-{env}" \
+    --resource-group "rg-hydroone-migration-{env}" \
+    --storage-account "sthydroonemig{env}" \
+    --sql-server "sql-hydroone-migration-{env}" \
+    --sql-database "MigrationControl" \
+    --key-vault "kv-hydroone-mig-{env}" \
+    --subscription "<subscription-id>"
+```
+
+This script deploys all 4 linked services, 7 datasets, and 6 pipelines in the correct dependency order.
+
+### 5.3 Option B: Manual Step-by-Step Deployment
+
+#### Step 1: Deploy ADF Instance + Core Resources (arm-template.json)
 
 ```bash
 az deployment group create \
@@ -473,41 +501,44 @@ az deployment group create \
         location="canadacentral" \
         sharePointTenantUrl="https://{tenant}.sharepoint.com" \
         servicePrincipalId="<app-id>" \
-        servicePrincipalTenantId="5447cfcd-3af1-439a-8157-760bd52b12df" \
+        tenantId="<sharepoint-tenant-id>" \
         keyVaultName="kv-hydroone-mig-{env}" \
         storageAccountName="sthydroonemig{env}" \
         sqlServerName="sql-hydroone-migration-{env}" \
-        sqlDatabaseName="MigrationControl"
+        sqlDatabaseName="MigrationControl" \
+    --name "adf-core"
 ```
 
 This deploys:
 - **ADF instance** with system-assigned managed identity
-- **6 Linked Services**: Key Vault, Graph API REST (for metadata), Graph API HTTP (for file downloads), ADLS Gen2, Azure SQL
-- **7 Datasets**: Graph Content Download (HTTP binary), ADLS Binary Sink, ADLS Parquet Metadata, SQL MigrationControl, SQL AuditLog
+- **Core Linked Services**: `LS_AzureKeyVault`, `LS_ADLS_Gen2`, `LS_AzureSqlDatabase`, `LS_SharePointOnline_REST`, `LS_SharePointOnline_HTTP`
+- **Core Datasets**: `DS_SQL_MigrationControl`, `DS_SQL_AuditLog`, `DS_ADLS_Binary_Sink`, `DS_SharePoint_Binary_HTTP`, `DS_ADLS_Parquet_Metadata`
 
-### 5.2 Linked Services Detail
+#### Step 2: Deploy Additional Linked Services
 
-| Linked Service | Type | Base URL / Target | Auth Method | Purpose |
-|----------------|------|-------------------|-------------|---------|
-| `LS_AzureKeyVault` | AzureKeyVault | `https://kv-hydroone-mig-{env}.vault.azure.net/` | Managed Identity | Retrieve client secret for token acquisition |
-| `LS_REST_Graph_API` | REST | `https://graph.microsoft.com` | Anonymous (token passed via headers) | Graph API calls for site/drive/file enumeration |
-| `LS_HTTP_Graph_API` | HTTP | `https://graph.microsoft.com` | Anonymous (token passed via headers) | File content downloads via Graph `/content` endpoint |
-| `LS_ADLS_Gen2` | AzureBlobFS | `https://sthydroonemig{env}.dfs.core.windows.net` | Managed Identity | Write migrated files to ADLS Gen2 |
-| `LS_AzureSqlDatabase` | AzureSqlDatabase | `sql-hydroone-migration-{env}.database.windows.net` | Managed Identity | Read/write migration control and audit tables |
+The Graph API HTTP linked service is NOT included in `arm-template.json` and must be deployed separately:
 
-### 5.3 Datasets Detail
+```bash
+# LS_HTTP_Graph_Download — used by DS_Graph_Content_Download for file downloads
+az deployment group create \
+    --resource-group "rg-hydroone-migration-{env}" \
+    --template-file "adf-templates/linkedServices/LS_HTTP_Graph_Download.json" \
+    --parameters factoryName="adf-hydroone-migration-{env}" \
+    --name "ls-graph-download"
+```
 
-| Dataset | Linked Service | Purpose | Parameters |
-|---------|---------------|---------|------------|
-| `DS_Graph_Content_Download` | `LS_HTTP_Graph_API` | Download file content via Graph API `/content` endpoint | `ContentPath` - the relative URL path for the Graph API item content request |
-| `DS_ADLS_Binary_Sink` | `LS_ADLS_Gen2` | Write binary file to ADLS Gen2 | Container, FolderPath, FileName |
-| `DS_ADLS_Parquet_Metadata` | `LS_ADLS_Gen2` | Write metadata in Parquet format | Container, FolderPath |
-| `DS_SQL_MigrationControl` | `LS_AzureSqlDatabase` | Migration control table operations | None |
-| `DS_SQL_AuditLog` | `LS_AzureSqlDatabase` | Audit log table operations | None |
+#### Step 3: Deploy Additional Datasets
 
-### 5.4 Deploy Pipelines
+```bash
+# DS_Graph_Content_Download — references LS_HTTP_Graph_Download (deployed in Step 2)
+az deployment group create \
+    --resource-group "rg-hydroone-migration-{env}" \
+    --template-file "adf-templates/datasets/DS_Graph_Content_Download.json" \
+    --parameters factoryName="adf-hydroone-migration-{env}" \
+    --name "ds-graph-content"
+```
 
-Deploy each pipeline ARM template. **Deployment order matters** because parent pipelines reference child pipelines via ExecutePipeline activities. Deploy leaf pipelines first (bottom-up):
+#### Step 4: Deploy Pipelines (children first, then parents)
 
 ```bash
 # 1. Deploy PL_Copy_File_Batch (leaf child pipeline, no outbound ExecutePipeline references)
@@ -524,33 +555,33 @@ az deployment group create \
     --parameters factoryName="adf-hydroone-migration-{env}" \
     --name "pipeline-subfolder"
 
-# 3. Deploy PL_Incremental_Sync (references PL_Copy_File_Batch)
-az deployment group create \
-    --resource-group "rg-hydroone-migration-{env}" \
-    --template-file "adf-templates/pipelines/PL_Incremental_Sync.json" \
-    --parameters factoryName="adf-hydroone-migration-{env}" \
-    --name "pipeline-incremental"
-
-# 4. Deploy PL_Migrate_Single_Library (references PL_Copy_File_Batch)
+# 3. Deploy PL_Migrate_Single_Library (references PL_Copy_File_Batch)
 az deployment group create \
     --resource-group "rg-hydroone-migration-{env}" \
     --template-file "adf-templates/pipelines/PL_Migrate_Single_Library.json" \
     --parameters factoryName="adf-hydroone-migration-{env}" \
     --name "pipeline-single-library"
 
-# 5. Deploy PL_Master_Migration_Orchestrator (references PL_Migrate_Single_Library)
+# 4. Deploy PL_Incremental_Sync (references PL_Copy_File_Batch)
 az deployment group create \
     --resource-group "rg-hydroone-migration-{env}" \
-    --template-file "adf-templates/pipelines/PL_Master_Migration_Orchestrator.json" \
+    --template-file "adf-templates/pipelines/PL_Incremental_Sync.json" \
     --parameters factoryName="adf-hydroone-migration-{env}" \
-    --name "pipeline-master"
+    --name "pipeline-incremental"
 
-# 6. Deploy PL_Validation
+# 5. Deploy PL_Validation
 az deployment group create \
     --resource-group "rg-hydroone-migration-{env}" \
     --template-file "adf-templates/pipelines/PL_Validation.json" \
     --parameters factoryName="adf-hydroone-migration-{env}" \
     --name "pipeline-validation"
+
+# 6. Deploy PL_Master_Migration_Orchestrator (references PL_Migrate_Single_Library)
+az deployment group create \
+    --resource-group "rg-hydroone-migration-{env}" \
+    --template-file "adf-templates/pipelines/PL_Master_Migration_Orchestrator.json" \
+    --parameters factoryName="adf-hydroone-migration-{env}" \
+    --name "pipeline-master"
 
 # 7. Deploy triggers
 az deployment group create \
@@ -560,18 +591,52 @@ az deployment group create \
     --name "triggers"
 ```
 
-> **Why this order?** ADF validates ExecutePipeline references at deployment time. If you deploy `PL_Migrate_Single_Library` before `PL_Copy_File_Batch` exists, the deployment will fail with a "referenced pipeline not found" error. Always deploy leaf pipelines first.
+> **Why this order?** ADF validates all references at deployment time. Deploying a pipeline before its referenced datasets, linked services, or child pipelines exist will fail. For example, deploying `PL_Copy_File_Batch` before `DS_Graph_Content_Download` exists fails with `"invalid reference 'DS_Graph_Content_Download'"`. Always deploy: linked services → datasets → leaf pipelines → parent pipelines.
 
-**Deployment dependency graph:**
+### 5.4 Full Deployment Dependency Graph
+
 ```
-PL_Copy_File_Batch          (leaf - deploy first)
-    ├── PL_Process_Subfolder
-    ├── PL_Incremental_Sync
-    └── PL_Migrate_Single_Library
-            └── PL_Master_Migration_Orchestrator
+Linked Services (deploy first, no dependencies):
+    LS_AzureKeyVault
+    LS_ADLS_Gen2 + LS_AzureBlobStorage
+    LS_AzureSqlDatabase
+    LS_HTTP_Graph_Download
+        │
+Datasets (depend on linked services):
+    DS_SQL_MigrationControl ──────── depends on LS_AzureSqlDatabase
+    DS_SQL_AuditLog ──────────────── depends on LS_AzureSqlDatabase
+    DS_ADLS_Binary_Sink ──────────── depends on LS_ADLS_Gen2
+    DS_Graph_Content_Download ────── depends on LS_HTTP_Graph_Download
+        │
+Pipelines (depend on datasets + child pipelines):
+    PL_Copy_File_Batch ───────────── leaf (deploy first)
+        ├── PL_Process_Subfolder
+        ├── PL_Incremental_Sync
+        └── PL_Migrate_Single_Library
+                └── PL_Master_Migration_Orchestrator
+    PL_Validation ────────────────── independent (deploy any time after datasets)
 ```
 
-### 5.5 Verify Deployment
+### 5.5 Linked Services Detail
+
+| Linked Service | Type | Base URL / Target | Auth Method | Purpose |
+|----------------|------|-------------------|-------------|---------|
+| `LS_AzureKeyVault` | AzureKeyVault | `https://kv-hydroone-mig-{env}.vault.azure.net/` | Managed Identity | Retrieve client secret for token acquisition |
+| `LS_HTTP_Graph_Download` | HTTP | `https://graph.microsoft.com` | Anonymous (Bearer token passed via `additionalHeaders`) | File content downloads via Graph `/content` endpoint |
+| `LS_ADLS_Gen2` | AzureBlobFS | `https://sthydroonemig{env}.dfs.core.windows.net` | Managed Identity | Write migrated files to ADLS Gen2 |
+| `LS_AzureSqlDatabase` | AzureSqlDatabase | `sql-hydroone-migration-{env}.database.windows.net` | Managed Identity | Read/write migration control and audit tables |
+
+### 5.6 Datasets Detail
+
+| Dataset | Linked Service | Purpose | Parameters |
+|---------|---------------|---------|------------|
+| `DS_Graph_Content_Download` | `LS_HTTP_Graph_Download` | Download file content via Graph API `/content` endpoint | `ContentPath` - the relative URL path for the Graph API item content request |
+| `DS_ADLS_Binary_Sink` | `LS_ADLS_Gen2` | Write binary file to ADLS Gen2 | ContainerName, SiteName, LibraryName, FolderPath, FileName |
+| `DS_ADLS_Parquet_Metadata` | `LS_ADLS_Gen2` | Write metadata in Parquet format | ContainerName, FolderPath |
+| `DS_SQL_MigrationControl` | `LS_AzureSqlDatabase` | Migration control table operations | SchemaName, TableName |
+| `DS_SQL_AuditLog` | `LS_AzureSqlDatabase` | Audit log table operations | SchemaName, TableName |
+
+### 5.7 Verify Deployment
 
 ```bash
 # List all deployed pipelines
