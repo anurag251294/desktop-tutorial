@@ -20,3 +20,12 @@ Thumbs.db
 .claude/settings.local.json
 .claude/*
 .claude/settings.local.json
+
+# Fabric VS Code extension metadata
+.vfsmeta/
+.work-folder-info
+.workspace-info
+.artifact-info
+.resource-info
+**/conf/lighter-config.json
+**/builtin/
