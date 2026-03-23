@@ -23,6 +23,8 @@ Thumbs.db
 
 # Fabric VS Code extension metadata
 .vfsmeta/
+.vfscache/
+.stubs/
 .work-folder-info
 .workspace-info
 .artifact-info
