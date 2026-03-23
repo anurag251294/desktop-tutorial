@@ -1,0 +1,11 @@
+{
+  "python.analysis.stubPath": "c:\\Users\\anuragdhuria\\OneDrive - Microsoft\\Documents\\GitHub\\desktop-tutorial\\fabric-demo\\.stubs\\pyspark34",
+  "python.analysis.diagnosticSeverityOverrides": {
+    "reportMissingModuleSource": "none"
+  },
+  "synapse.workspaceFilter": {
+    "workspaceIds": [
+      "4165f136-2c46-4753-be00-9376caac702e"
+    ]
+  }
+}
