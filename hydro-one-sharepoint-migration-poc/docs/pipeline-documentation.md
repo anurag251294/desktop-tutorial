@@ -195,7 +195,7 @@ PL_Incremental_Sync                       <-- Ongoing delta sync (paginated, fla
 - Relative URL: `@dataset().ContentPath` (e.g., `/v1.0/drives/{driveId}/items/{itemId}/content`)
 - Additional headers: `Authorization: Bearer {accessToken}`
 
-### 3.2 DS_SharePoint_Binary_HTTP (Legacy)
+### 3.2 DS_SharePoint_Binary_HTTP (DEPRECATED)
 
 | Property | Value |
 |----------|-------|
@@ -208,9 +208,9 @@ PL_Incremental_Sync                       <-- Ongoing delta sync (paginated, fla
 |-----------|------|-------------|
 | `FileUrl` | String | Full URL to the SharePoint file for download |
 
-**Purpose:** Previously used to download binary files from SharePoint via direct HTTP. **No longer used by the main migration pipelines** -- replaced by `DS_Graph_Content_Download`. Retained for backward compatibility.
+> **DEPRECATED:** This dataset is no longer used by any active pipeline. It was replaced by `DS_Graph_Content_Download` in v2.0. It can be safely removed from the ARM template during production cleanup. See [ADR-5 in architecture-decisions.md](architecture-decisions.md) for why it was replaced.
 
-**Note:** This dataset suffered from a "doubled download URL" issue where the base URL and file URL would concatenate incorrectly. The Graph API `/content` endpoint approach in `DS_Graph_Content_Download` eliminates this problem.
+**Purpose:** Previously used to download binary files from SharePoint via direct HTTP. Suffered from a "doubled download URL" issue where ADF's HTTP connector concatenated the base URL with the full `@microsoft.graph.downloadUrl`, producing an invalid URL like `https://host/https://host/...`. The Graph API `/content` endpoint approach in `DS_Graph_Content_Download` eliminates this problem.
 
 ### 3.3 DS_ADLS_Binary_Sink
 
@@ -1022,7 +1022,7 @@ EXEC dbo.usp_LogBatchStart
 
 ### 11.5 IncrementalWatermark Production Columns
 
-**File:** `sql/03_production_schema_updates.sql`
+**Applied manually via ALTER TABLE** (see deployment guide, Section 6.4):
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -1562,7 +1562,7 @@ The February 18, 2026 test run confirms the full migration pipeline is productio
 | `sql/create_audit_log_table.sql` | SQL | Audit log schema + stored procs |
 | `sql/monitoring_queries.sql` | SQL | Monitoring views and queries |
 | `sql/insert_test_data.sql` | SQL | Test data for validation testing |
-| `sql/03_production_schema_updates.sql` | SQL | Production schema updates (DeltaLink, DriveId) |
+| `sql/migration_progress_queries.sql` | SQL | 25+ monitoring and dashboard queries |
 | `scripts/Setup-AzureResources.ps1` | PowerShell | Azure resource provisioning |
 | `scripts/Register-SharePointApp.ps1` | PowerShell | SharePoint app registration |
 | `scripts/Monitor-Migration.ps1` | PowerShell | Migration monitoring |

@@ -9,6 +9,38 @@ Description: Collection of useful queries for monitoring migration progress,
 Author:      Microsoft Azure Data Engineering Team
 Created:     2024
 Project:     Hydro One SharePoint Migration POC
+
+TABLE OF CONTENTS
+=================
+Line   Section
+----   -------
+ 19    DASHBOARD QUERIES
+         - Overall Migration Progress Summary
+         - Overall File Migration Progress
+ 49    PROGRESS TRACKING QUERIES
+         - Migration Progress by Site
+         - Size Migrated Per Day
+         - Hourly Migration Rate
+ 93    ESTIMATED COMPLETION TIME
+         - Calculate estimated completion based on average rate
+133    FAILED FILES QUERIES
+         - Summary of Failed Files by Error Code
+         - Failed Files Detail (top 100)
+         - Failed Libraries with Retry Count
+         - Files That Failed Multiple Times
+194    THROTTLING ANALYSIS
+         - 429 Errors by Hour
+209    VALIDATION QUERIES
+         - Libraries with Validation Discrepancies
+         - Checksum Mismatches
+244    BATCH ANALYSIS
+         - Batch Performance Summary
+265    FILE SIZE DISTRIBUTION
+         - File Size Distribution Analysis
+         - Large Files (top 50)
+305    INCREMENTAL SYNC MONITORING
+         - Recent Incremental Sync Activity
+         - Incremental Sync Summary by Day
 ================================================================================
 */
 

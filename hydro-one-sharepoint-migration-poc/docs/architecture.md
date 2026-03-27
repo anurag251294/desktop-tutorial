@@ -97,6 +97,8 @@ graph TB
 
 ### Orchestration: Azure Data Factory
 
+> For detailed per-pipeline activity flows, parameters, and variables, see [pipeline-documentation.md](pipeline-documentation.md).
+
 | Pipeline | Purpose |
 |----------|---------|
 | `PL_Master_Migration_Orchestrator` | Master pipeline reading from control table, iterating through libraries |
@@ -359,6 +361,8 @@ If SharePoint is behind Conditional Access policies:
 | Batch Size | 10-20 libraries |
 
 ## Error Handling Strategy
+
+> For step-by-step troubleshooting with resolution commands, see [debugging.md](debugging.md). For operational error recovery procedures, see [runbook.md](runbook.md#error-handling--recovery).
 
 ### Error Categories
 

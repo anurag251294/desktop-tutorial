@@ -695,15 +695,24 @@ Execute the contents of `sql/create_audit_log_table.sql`. This creates:
 | `dbo.usp_LogFileAudit` | Stored Procedure | Log individual file migration |
 | `dbo.usp_BulkLogFileAudit` | Stored Procedure | Bulk insert file audit records |
 
-### 6.4 Run Production Schema Updates
+### 6.4 Add Production Schema Columns
 
-Execute `sql/03_production_schema_updates.sql`. This adds:
+If the `IncrementalWatermark` table does not yet have `DeltaLink` and `DriveId` columns, add them manually:
 
-| Object | Type | Purpose |
+```sql
+-- Add DeltaLink column for storing Graph API @odata.deltaLink URL
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.IncrementalWatermark') AND name = 'DeltaLink')
+    ALTER TABLE dbo.IncrementalWatermark ADD DeltaLink NVARCHAR(2000) NULL;
+
+-- Add DriveId column for caching Graph drive ID
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.IncrementalWatermark') AND name = 'DriveId')
+    ALTER TABLE dbo.IncrementalWatermark ADD DriveId NVARCHAR(100) NULL;
+```
+
+| Column | Type | Purpose |
 |--------|------|---------|
-| `IncrementalWatermark.DeltaLink` | Column (NVARCHAR 2000) | Stores Graph API deltaLink for true incremental sync |
-| `IncrementalWatermark.DriveId` | Column (NVARCHAR 100) | Caches Graph drive ID to avoid redundant resolution |
-| `dbo.usp_UpdateWatermark` | Updated Stored Proc | Now accepts @DeltaLink and @DriveId parameters |
+| `DeltaLink` | NVARCHAR(2000) | Stores Graph API `@odata.deltaLink` URL for true incremental sync |
+| `DriveId` | NVARCHAR(100) | Caches Graph drive ID to avoid redundant resolution |
 
 ### 6.5 Run Monitoring Queries Script
 

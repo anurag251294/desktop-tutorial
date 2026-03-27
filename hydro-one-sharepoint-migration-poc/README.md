@@ -122,7 +122,14 @@ hydro-one-sharepoint-migration-poc/
 │   ├── deployment-guide.md         # 10-phase step-by-step deployment guide
 │   ├── runbook.md                  # Operational runbook with troubleshooting
 │   ├── migration-plan.md           # Phased migration plan with timeline and risk register
-│   └── pipeline-documentation.md   # Technical reference for all pipelines, datasets, and scripts
+│   ├── pipeline-documentation.md   # Technical reference for all pipelines, datasets, and scripts
+│   ├── debugging.md                # Troubleshooting guide organized by error code
+│   ├── scripts-reference.md        # Central reference for all automation scripts
+│   ├── terraform-private-endpoints.md  # Private endpoints deployment guide
+│   ├── architecture-decisions.md   # Architecture Decision Records (ADRs)
+│   ├── sql-schema.md               # SQL database schema with ER diagram
+│   ├── faq.md                      # Frequently asked questions
+│   └── changelog.md                # Version history
 ├── _archived/                      # Deprecated earlier iterations (for reference only)
 └── README.md                       # This file
 ```
@@ -626,13 +633,27 @@ For the detailed week-by-week plan, task assignments, risk register, and RACI ma
 
 ## Documentation
 
+### Core Documentation
+
 | Document | Description |
 |----------|-------------|
-| [Architecture Overview](docs/architecture.md) | Full architecture deep-dive with Mermaid diagrams, authentication flows, data flows, throttling strategy, error handling, and verified test results |
+| [Architecture Overview](docs/architecture.md) | Solution architecture with Mermaid diagrams, authentication flows, data flows, throttling strategy, and verified test results |
 | [Deployment Guide](docs/deployment-guide.md) | 10-phase step-by-step deployment guide with CLI commands, checklists, and network configuration |
 | [Operational Runbook](docs/runbook.md) | Day-to-day operational procedures, prerequisites checklist, throttling management, error handling, and rollback plan |
 | [Migration Plan](docs/migration-plan.md) | Phased 10-week migration plan with timeline, risk register, RACI matrix, and communication plan |
 | [Pipeline Documentation](docs/pipeline-documentation.md) | Technical reference for all 6 pipelines, linked services, datasets, SQL schema, scripts, and ARM templates |
+
+### Reference Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Troubleshooting Guide](docs/debugging.md) | Error-code-indexed troubleshooting guide with symptoms, root causes, resolution steps, and diagnostic queries |
+| [Scripts Reference](docs/scripts-reference.md) | Central reference for all 6 automation scripts with execution order, parameters, and prerequisites |
+| [Private Endpoints (Terraform)](docs/terraform-private-endpoints.md) | Guide for adding private networking to production using the Terraform configurations |
+| [Architecture Decision Records](docs/architecture-decisions.md) | Records of key technical decisions (Graph API, delta query, child pipeline pattern, etc.) with rationale |
+| [SQL Schema Reference](docs/sql-schema.md) | ER diagram, table descriptions, stored procedures, computed columns, and indexes |
+| [FAQ](docs/faq.md) | Frequently asked questions covering migration operations, troubleshooting, and security |
+| [Changelog](docs/changelog.md) | Version history documenting the evolution from v1.0 to the current production-ready POC |
 
 ---
 

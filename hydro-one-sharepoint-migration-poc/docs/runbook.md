@@ -12,16 +12,34 @@
 
 ---
 
-## Environment Details
+## Environment Configuration
 
-| Resource | Name | Region |
-|----------|------|--------|
-| Resource Group | rg-hydroone-migration-test | Canada Central |
-| SharePoint Tenant | https://m365x52073746.sharepoint.com | - |
-| Azure Data Factory | adf-hydroone-migration-test | Canada Central |
-| Storage Account (ADLS Gen2) | sthydroonemigtest | Canada Central |
-| SQL Server | sql-hydroone-migration-test | Canada Central |
-| Key Vault | kv-hydroone-test2 | Canada Central |
+> **Important:** This runbook uses **test environment** values throughout. For production, substitute the values from the **Production** column below. All commands and queries in this document reference these resource names — update them for your target environment before executing.
+
+| Resource | Test (POC) | Production | Naming Pattern |
+|----------|-----------|------------|----------------|
+| Resource Group | `rg-hydroone-migration-test` | `rg-hydroone-migration-prod` | `rg-hydroone-migration-{env}` |
+| SharePoint Tenant | `https://m365x52073746.sharepoint.com` | `https://hydroone.sharepoint.com` | N/A |
+| Azure Data Factory | `adf-hydroone-migration-test` | `adf-hydroone-migration-prod` | `adf-hydroone-migration-{env}` |
+| Storage Account (ADLS Gen2) | `sthydroonemigtest` | `sthydroonemigprod` | `sthydroonemig{env}` |
+| SQL Server | `sql-hydroone-migration-test` | `sql-hydroone-migration-prod` | `sql-hydroone-migration-{env}` |
+| Key Vault | `kv-hydroone-test2` | `kv-hydroone-mig-prod` | `kv-hydroone-mig-{env}` |
+| SQL Database | `MigrationControl` | `MigrationControl` | `MigrationControl` |
+| Region | Canada Central | Canada Central | Canada Central |
+
+### Environment Variable Quick Reference
+
+When running commands from this runbook in production, replace these values:
+
+```
+TEST VALUE                              → PRODUCTION VALUE
+m365x52073746.sharepoint.com            → hydroone.sharepoint.com
+rg-hydroone-migration-test              → rg-hydroone-migration-prod
+adf-hydroone-migration-test             → adf-hydroone-migration-prod
+sthydroonemigtest                       → sthydroonemigprod
+sql-hydroone-migration-test             → sql-hydroone-migration-prod
+kv-hydroone-test2                       → kv-hydroone-mig-prod
+```
 
 ---
 
@@ -308,10 +326,10 @@ sqlcmd -S sql-hydroone-migration-test.database.windows.net \
     -d MigrationControl \
     -i sql/create_audit_log_table.sql
 
-# Run production schema updates (adds DeltaLink and DriveId columns)
+# Add production columns if not already present (DeltaLink and DriveId)
 sqlcmd -S sql-hydroone-migration-test.database.windows.net \
     -d MigrationControl \
-    -i sql/03_production_schema_updates.sql
+    -Q "IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.IncrementalWatermark') AND name = 'DeltaLink') ALTER TABLE dbo.IncrementalWatermark ADD DeltaLink NVARCHAR(2000) NULL; IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.IncrementalWatermark') AND name = 'DriveId') ALTER TABLE dbo.IncrementalWatermark ADD DriveId NVARCHAR(100) NULL;"
 ```
 
 ### Step 5: Populate Control Table
@@ -623,6 +641,8 @@ Invoke-AzDataFactoryV2Pipeline `
 ---
 
 ## Error Handling & Recovery
+
+> For a quick-lookup troubleshooting guide organized by error code, see [debugging.md](debugging.md).
 
 ### Common Errors and Resolutions
 

@@ -38,6 +38,8 @@ The migration uses **Microsoft Graph API** (not SharePoint REST API) for all Sha
 
 ### ADF Pipeline Architecture
 
+> For detailed pipeline activity flows, parameters, and technical reference, see [pipeline-documentation.md](pipeline-documentation.md). For architecture diagrams and data flow, see [architecture.md](architecture.md).
+
 The migration is orchestrated through Azure Data Factory with the following pipelines:
 
 | # | Pipeline | Purpose |
