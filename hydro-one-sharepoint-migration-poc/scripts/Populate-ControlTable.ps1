@@ -24,7 +24,8 @@
 
 .EXAMPLE
     .\Populate-ControlTable.ps1 -SharePointTenantUrl "https://hydroone.sharepoint.com" `
-        -SqlServerName "sql-hydroone-migration-dev" -SqlDatabaseName "MigrationControl"
+        -SqlServerName "sql-hydroone-migration-dev" -SqlDatabaseName "MigrationControl" `
+        -ClientId "your-entra-app-client-id"
 
 .NOTES
     Author: Microsoft Azure Data Engineering Team
@@ -214,15 +215,20 @@ try {
     $adminUrl = $SharePointTenantUrl -replace ".sharepoint.com", "-admin.sharepoint.com"
     Write-Log "Connecting to SharePoint Admin Center: $adminUrl" -Level "INFO"
 
-    if ($UseInteractiveAuth) {
-        Connect-PnPOnline -Url $adminUrl -Interactive
-    }
-    elseif ($ClientId -and $CertificateThumbprint) {
+    if ($ClientId -and $CertificateThumbprint) {
         $tenantId = (Invoke-RestMethod "https://login.microsoftonline.com/$($SharePointTenantUrl.Split('/')[2].Split('.')[0]).onmicrosoft.com/.well-known/openid_configuration").token_endpoint.Split('/')[3]
         Connect-PnPOnline -Url $adminUrl -ClientId $ClientId -Thumbprint $CertificateThumbprint -Tenant $tenantId
     }
+    elseif ($ClientId) {
+        Connect-PnPOnline -Url $adminUrl -Interactive -ClientId $ClientId
+    }
     else {
-        Connect-PnPOnline -Url $adminUrl -Interactive
+        Write-Log "No -ClientId provided. PnP PowerShell requires a registered Entra ID App ClientId for interactive auth." -Level "ERROR"
+        Write-Log "Either:" -Level "ERROR"
+        Write-Log "  1. Pass -ClientId with your own Entra ID app registration" -Level "ERROR"
+        Write-Log "  2. Use the PnP multi-tenant app: -ClientId '31359c7f-bd7e-475c-86db-fdb8c937548e'" -Level "ERROR"
+        Write-Log "     (requires admin consent via Register-PnPManagementShellAccess)" -Level "ERROR"
+        throw "ClientId is required for PnP PowerShell interactive authentication."
     }
 
     Write-Log "Connected to SharePoint Admin Center" -Level "SUCCESS"
@@ -273,7 +279,12 @@ try {
         try {
             # Connect to the site
             Disconnect-PnPOnline -ErrorAction SilentlyContinue
-            Connect-PnPOnline -Url $siteUrl -Interactive
+            if ($ClientId -and $CertificateThumbprint) {
+                Connect-PnPOnline -Url $siteUrl -ClientId $ClientId -Thumbprint $CertificateThumbprint -Tenant $tenantId
+            }
+            else {
+                Connect-PnPOnline -Url $siteUrl -Interactive -ClientId $ClientId
+            }
 
             # Get all document libraries
             $libraries = Get-PnPList | Where-Object {
