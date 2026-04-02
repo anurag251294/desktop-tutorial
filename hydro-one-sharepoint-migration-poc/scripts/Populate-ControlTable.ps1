@@ -193,22 +193,52 @@ function Insert-ControlTableRecord {
 #region Main Script
 Write-Log "========================================" -Level "INFO"
 Write-Log "SharePoint Site Enumeration and Control Table Population" -Level "INFO"
+Write-Log "========================================" -Level "INFO"
+
+# Log environment details for troubleshooting
+Write-Log "PowerShell Version: $($PSVersionTable.PSVersion) ($($PSVersionTable.PSEdition))" -Level "INFO"
+Write-Log "OS: $([System.Runtime.InteropServices.RuntimeInformation]::OSDescription)" -Level "INFO"
+Write-Log ".NET Runtime: $([System.Runtime.InteropServices.RuntimeInformation]::FrameworkDescription)" -Level "INFO"
+Write-Log "Running as: $env:USERNAME on $env:COMPUTERNAME" -Level "INFO"
+Write-Log "Working directory: $(Get-Location)" -Level "INFO"
 Write-Log "SharePoint Tenant: $SharePointTenantUrl" -Level "INFO"
 Write-Log "SQL Server: $SqlServerName" -Level "INFO"
+Write-Log "SQL Database: $SqlDatabaseName" -Level "INFO"
+Write-Log "Site Filter: $SiteFilter" -Level "INFO"
+if ($SpecificSites.Count -gt 0) { Write-Log "Specific Sites: $($SpecificSites -join ', ')" -Level "INFO" }
+if ($ExcludeSites.Count -gt 0) { Write-Log "Excluded Sites: $($ExcludeSites -join ', ')" -Level "INFO" }
+Write-Log "Auth Mode: $(if ($ClientId -and $CertificateThumbprint) { 'Certificate' } elseif ($ClientId) { 'Interactive with ClientId' } else { 'No ClientId (will fail)' })" -Level "INFO"
+Write-Log "ClientId: $(if ($ClientId) { $ClientId } else { '(not provided)' })" -Level "INFO"
 Write-Log "========================================" -Level "INFO"
+
+# Check PowerShell version compatibility
+if ($PSVersionTable.PSVersion.Major -lt 7) {
+    Write-Log "WARNING: PnP.PowerShell 2.x requires PowerShell 7.2+. You are running PowerShell $($PSVersionTable.PSVersion)." -Level "ERROR"
+    Write-Log "Please install PowerShell 7: winget install Microsoft.PowerShell" -Level "ERROR"
+    Write-Log "Then re-run this script using 'pwsh' instead of 'powershell'." -Level "ERROR"
+    throw "PowerShell 7.2+ is required. Current version: $($PSVersionTable.PSVersion)"
+}
 
 # Check for required modules
 $requiredModules = @("PnP.PowerShell", "SqlServer")
 foreach ($module in $requiredModules) {
     if (-not (Get-Module -ListAvailable -Name $module)) {
-        Write-Log "Installing module: $module" -Level "WARNING"
+        Write-Log "Module '$module' not found. Installing..." -Level "WARNING"
         Install-Module -Name $module -Force -AllowClobber -Scope CurrentUser
+        Write-Log "Module '$module' installed successfully." -Level "SUCCESS"
     }
+    else {
+        $moduleVersion = (Get-Module -ListAvailable -Name $module | Sort-Object Version -Descending | Select-Object -First 1).Version
+        Write-Log "Module '$module' found (v$moduleVersion)" -Level "INFO"
+    }
+    Write-Log "Importing module: $module" -Level "INFO"
     Import-Module $module
+    Write-Log "Module '$module' imported successfully." -Level "SUCCESS"
 }
 
 # Build SQL connection string (using Azure AD authentication)
 $sqlConnectionString = "Server=tcp:$SqlServerName.database.windows.net,1433;Initial Catalog=$SqlDatabaseName;Authentication=Active Directory Integrated;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+Write-Log "SQL connection string built (server: $SqlServerName.database.windows.net, db: $SqlDatabaseName, auth: AD Integrated)" -Level "INFO"
 
 try {
     # Connect to SharePoint Admin Center
@@ -216,10 +246,18 @@ try {
     Write-Log "Connecting to SharePoint Admin Center: $adminUrl" -Level "INFO"
 
     if ($ClientId -and $CertificateThumbprint) {
-        $tenantId = (Invoke-RestMethod "https://login.microsoftonline.com/$($SharePointTenantUrl.Split('/')[2].Split('.')[0]).onmicrosoft.com/.well-known/openid_configuration").token_endpoint.Split('/')[3]
+        Write-Log "Auth: Certificate-based (ClientId: $ClientId, Thumbprint: $CertificateThumbprint)" -Level "INFO"
+        $openIdUrl = "https://login.microsoftonline.com/$($SharePointTenantUrl.Split('/')[2].Split('.')[0]).onmicrosoft.com/.well-known/openid_configuration"
+        Write-Log "Resolving tenant ID from: $openIdUrl" -Level "INFO"
+        $tenantId = (Invoke-RestMethod $openIdUrl).token_endpoint.Split('/')[3]
+        Write-Log "Resolved tenant ID: $tenantId" -Level "INFO"
+        Write-Log "Calling Connect-PnPOnline with certificate auth..." -Level "INFO"
         Connect-PnPOnline -Url $adminUrl -ClientId $ClientId -Thumbprint $CertificateThumbprint -Tenant $tenantId
     }
     elseif ($ClientId) {
+        Write-Log "Auth: Interactive with ClientId: $ClientId" -Level "INFO"
+        Write-Log "Calling Connect-PnPOnline -Interactive -ClientId $ClientId -Url $adminUrl" -Level "INFO"
+        Write-Log "A browser window should open for authentication..." -Level "INFO"
         Connect-PnPOnline -Url $adminUrl -Interactive -ClientId $ClientId
     }
     else {
@@ -231,18 +269,34 @@ try {
         throw "ClientId is required for PnP PowerShell interactive authentication."
     }
 
-    Write-Log "Connected to SharePoint Admin Center" -Level "SUCCESS"
+    Write-Log "Connected to SharePoint Admin Center successfully!" -Level "SUCCESS"
+
+    # Verify connection
+    try {
+        $ctx = Get-PnPContext
+        Write-Log "PnP context verified - URL: $($ctx.Url)" -Level "SUCCESS"
+    }
+    catch {
+        Write-Log "Warning: Could not verify PnP context: $_" -Level "WARNING"
+    }
 
     # Get all site collections
     Write-Log "Enumerating site collections..." -Level "INFO"
 
     if ($SpecificSites.Count -gt 0) {
+        Write-Log "Using specific sites list ($($SpecificSites.Count) sites)" -Level "INFO"
         $sites = $SpecificSites | ForEach-Object {
-            Get-PnPTenantSite -Url "$SharePointTenantUrl$_"
+            $targetUrl = "$SharePointTenantUrl$_"
+            Write-Log "  Fetching site: $targetUrl" -Level "INFO"
+            Get-PnPTenantSite -Url $targetUrl
         }
     }
     else {
-        $sites = Get-PnPTenantSite -Filter "Url -like '$SiteFilter'" | Where-Object {
+        Write-Log "Querying all tenant sites with filter: '$SiteFilter'" -Level "INFO"
+        $allSites = Get-PnPTenantSite -Filter "Url -like '$SiteFilter'"
+        Write-Log "Raw site count from tenant: $(($allSites | Measure-Object).Count)" -Level "INFO"
+
+        $sites = $allSites | Where-Object {
             $_.Template -notlike "SRCHCEN*" -and
             $_.Template -notlike "SPSMSITEHOST*" -and
             $_.Template -notlike "APPCATALOG*" -and
@@ -250,22 +304,34 @@ try {
             $_.Template -notlike "EDISC*" -and
             $_.Url -notlike "*-my.sharepoint.com*"
         }
+        Write-Log "After filtering system templates: $(($sites | Measure-Object).Count) sites" -Level "INFO"
     }
 
     # Apply exclusions
     if ($ExcludeSites.Count -gt 0) {
+        $beforeExclusion = ($sites | Measure-Object).Count
         $sites = $sites | Where-Object {
             $siteUrl = $_.Url
             -not ($ExcludeSites | Where-Object { $siteUrl -like "*$_*" })
         }
+        $afterExclusion = ($sites | Measure-Object).Count
+        Write-Log "Applied exclusions: $beforeExclusion -> $afterExclusion sites ($($beforeExclusion - $afterExclusion) excluded)" -Level "INFO"
     }
 
     $siteCount = ($sites | Measure-Object).Count
-    Write-Log "Found $siteCount site collections to process" -Level "INFO"
+    Write-Log "Total sites to process: $siteCount" -Level "INFO"
+
+    if ($siteCount -eq 0) {
+        Write-Log "No sites found to process. Check your SharePointTenantUrl, SiteFilter, or SpecificSites parameters." -Level "WARNING"
+    }
+
+    # List all sites that will be processed
+    $sites | ForEach-Object { Write-Log "  Site queued: $($_.Url) (Template: $($_.Template), Storage: $([math]::Round($_.StorageUsageCurrent / 1024, 2)) GB)" -Level "INFO" }
 
     $totalLibraries = 0
     $totalFiles = 0
     $totalSizeGB = 0
+    $failedSites = @()
 
     # Process each site
     $siteIndex = 0
@@ -273,32 +339,58 @@ try {
         $siteIndex++
         $siteUrl = $site.Url
         $siteRelativeUrl = $siteUrl.Replace($SharePointTenantUrl, "")
+        $siteStartTime = Get-Date
 
-        Write-Log "[$siteIndex/$siteCount] Processing site: $siteRelativeUrl" -Level "INFO"
+        Write-Log "----------------------------------------" -Level "INFO"
+        Write-Log "[$siteIndex/$siteCount] Processing site: $siteRelativeUrl ($siteUrl)" -Level "INFO"
+        Write-Log "  Site Title: $($site.Title)" -Level "INFO"
+        Write-Log "  Template: $($site.Template)" -Level "INFO"
+        Write-Log "  Storage Used: $([math]::Round($site.StorageUsageCurrent / 1024, 2)) GB" -Level "INFO"
 
         try {
             # Connect to the site
+            Write-Log "  Disconnecting previous PnP session..." -Level "INFO"
             Disconnect-PnPOnline -ErrorAction SilentlyContinue
+            Write-Log "  Connecting to site: $siteUrl" -Level "INFO"
             if ($ClientId -and $CertificateThumbprint) {
                 Connect-PnPOnline -Url $siteUrl -ClientId $ClientId -Thumbprint $CertificateThumbprint -Tenant $tenantId
             }
             else {
                 Connect-PnPOnline -Url $siteUrl -Interactive -ClientId $ClientId
             }
+            Write-Log "  Connected to site successfully." -Level "SUCCESS"
 
             # Get all document libraries
-            $libraries = Get-PnPList | Where-Object {
+            Write-Log "  Fetching document libraries (BaseTemplate=101, non-hidden)..." -Level "INFO"
+            $allLists = Get-PnPList
+            Write-Log "  Total lists/libraries in site: $(($allLists | Measure-Object).Count)" -Level "INFO"
+
+            $libraries = $allLists | Where-Object {
                 $_.BaseTemplate -eq 101 -and  # Document Library
                 $_.Hidden -eq $false -and
                 $_.Title -notin $excludeLibraries -and
                 $_.Title -notlike "Preservation*"
             }
 
+            $libCount = ($libraries | Measure-Object).Count
+            Write-Log "  Document libraries found (after exclusions): $libCount" -Level "INFO"
+
+            if ($libCount -eq 0) {
+                Write-Log "  No document libraries found in this site, skipping." -Level "WARNING"
+                continue
+            }
+
+            $libIndex = 0
             foreach ($library in $libraries) {
-                Write-Log "  Processing library: $($library.Title)" -Level "INFO"
+                $libIndex++
+                $libStartTime = Get-Date
+                Write-Log "  [$libIndex/$libCount] Processing library: '$($library.Title)' (ItemCount: $($library.ItemCount))" -Level "INFO"
 
                 # Get library statistics
+                Write-Log "    Fetching library stats (enumerating all items with PageSize=5000)..." -Level "INFO"
                 $stats = Get-LibraryStats -SiteUrl $siteUrl -LibraryName $library.Title
+                $libDuration = ((Get-Date) - $libStartTime).TotalSeconds
+                Write-Log "    Stats retrieved in $([math]::Round($libDuration, 1))s - Files: $($stats.FileCount), Folders: $($stats.FolderCount), Size: $([math]::Round($stats.TotalSize / 1MB, 2)) MB, Largest: $([math]::Round($stats.LargestFile / 1MB, 2)) MB" -Level "INFO"
 
                 if ($stats.FileCount -gt 0) {
                     # Calculate priority based on size (smaller = higher priority for faster initial results)
@@ -308,6 +400,7 @@ try {
                         { $_ -lt 10737418240 } { 100 }  # < 10 GB
                         default { 200 }                  # > 10 GB
                     }
+                    Write-Log "    Assigned priority: $priority (based on size $([math]::Round($stats.TotalSize / 1GB, 2)) GB)" -Level "INFO"
 
                     # Create record
                     $record = @{
@@ -324,24 +417,34 @@ try {
 
                     # Insert into SQL
                     try {
+                        Write-Log "    Upserting record into SQL MigrationControl table..." -Level "INFO"
                         Insert-ControlTableRecord -ConnectionString $sqlConnectionString -Record $record
                         $totalLibraries++
                         $totalFiles += $stats.FileCount
                         $totalSizeGB += ($stats.TotalSize / 1GB)
 
-                        Write-Log "    Files: $($stats.FileCount), Size: $([math]::Round($stats.TotalSize / 1GB, 2)) GB" -Level "SUCCESS"
+                        Write-Log "    SQL upsert successful - Files: $($stats.FileCount), Size: $([math]::Round($stats.TotalSize / 1GB, 2)) GB" -Level "SUCCESS"
                     }
                     catch {
-                        Write-Log "    Error inserting record: $_" -Level "ERROR"
+                        Write-Log "    SQL upsert FAILED: $_" -Level "ERROR"
+                        Write-Log "    Exception type: $($_.Exception.GetType().FullName)" -Level "ERROR"
+                        Write-Log "    Connection string (redacted): Server=$SqlServerName.database.windows.net, DB=$SqlDatabaseName" -Level "ERROR"
                     }
                 }
                 else {
-                    Write-Log "    Empty library, skipping" -Level "INFO"
+                    Write-Log "    Empty library (0 files), skipping SQL insert." -Level "INFO"
                 }
             }
+
+            $siteDuration = ((Get-Date) - $siteStartTime).TotalSeconds
+            Write-Log "  Site '$siteRelativeUrl' completed in $([math]::Round($siteDuration, 1))s" -Level "SUCCESS"
         }
         catch {
-            Write-Log "Error processing site $siteUrl : $_" -Level "ERROR"
+            $failedSites += $siteUrl
+            Write-Log "ERROR processing site $siteUrl" -Level "ERROR"
+            Write-Log "  Error message: $_" -Level "ERROR"
+            Write-Log "  Exception type: $($_.Exception.GetType().FullName)" -Level "ERROR"
+            Write-Log "  Stack trace: $($_.ScriptStackTrace)" -Level "ERROR"
             continue
         }
     }
@@ -351,19 +454,32 @@ try {
     Write-Log "ENUMERATION SUMMARY" -Level "SUCCESS"
     Write-Log "========================================" -Level "INFO"
     Write-Log "Sites Processed:     $siteCount" -Level "INFO"
+    Write-Log "Sites Failed:        $($failedSites.Count)" -Level $(if ($failedSites.Count -gt 0) { "ERROR" } else { "INFO" })
     Write-Log "Libraries Added:     $totalLibraries" -Level "INFO"
     Write-Log "Total Files:         $totalFiles" -Level "INFO"
     Write-Log "Total Size:          $([math]::Round($totalSizeGB, 2)) GB ($([math]::Round($totalSizeGB / 1024, 2)) TB)" -Level "INFO"
+    if ($failedSites.Count -gt 0) {
+        Write-Log "Failed sites:" -Level "ERROR"
+        $failedSites | ForEach-Object { Write-Log "  - $_" -Level "ERROR" }
+    }
     Write-Log "========================================" -Level "INFO"
 
     Write-Log "Control table population completed!" -Level "SUCCESS"
 }
 catch {
-    Write-Log "Error: $_" -Level "ERROR"
-    Write-Log $_.Exception.Message -Level "ERROR"
+    Write-Log "FATAL ERROR: $_" -Level "ERROR"
+    Write-Log "Exception type: $($_.Exception.GetType().FullName)" -Level "ERROR"
+    Write-Log "Exception message: $($_.Exception.Message)" -Level "ERROR"
+    Write-Log "Stack trace: $($_.ScriptStackTrace)" -Level "ERROR"
+    if ($_.Exception.InnerException) {
+        Write-Log "Inner exception: $($_.Exception.InnerException.Message)" -Level "ERROR"
+        Write-Log "Inner exception type: $($_.Exception.InnerException.GetType().FullName)" -Level "ERROR"
+    }
     exit 1
 }
 finally {
+    Write-Log "Cleaning up PnP connection..." -Level "INFO"
     Disconnect-PnPOnline -ErrorAction SilentlyContinue
+    Write-Log "Done." -Level "INFO"
 }
 #endregion
