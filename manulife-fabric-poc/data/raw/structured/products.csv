@@ -4,14 +4,14 @@ PRD-0002,Term Life 20,Insurance,Life Insurance,20-year term life insurance,50000
 PRD-0003,Whole Life,Insurance,Life Insurance,Permanent whole life coverage,100000,5000000,0.0035,2016-02-14,TRUE,Low
 PRD-0004,Universal Life,Insurance,Life Insurance,Flexible universal life policy,100000,5000000,0.0028,2020-09-03,TRUE,Medium
 PRD-0005,Critical Illness,Insurance,Health Insurance,Lump sum on critical illness diagnosis,25000,1000000,0.0022,2015-10-09,TRUE,Medium
-PRD-0006,Health Plus,Insurance,Health Insurance,Extended health and dental,0,0,0.0,2018-03-13,TRUE,High
-PRD-0007,Disability Income,Insurance,Health Insurance,Monthly income during disability,0,0,0.0,2022-11-21,TRUE,High
-PRD-0008,Auto Standard,Insurance,Auto Insurance,Standard auto coverage,0,0,0.0,2020-12-06,TRUE,High
-PRD-0009,Auto Premium,Insurance,Auto Insurance,Premium auto with collision,0,0,0.0,2018-05-11,FALSE,Low
+PRD-0006,Health Plus,Insurance,Health Insurance,Extended health and dental,0,100000,0.0045,2018-03-13,TRUE,High
+PRD-0007,Disability Income,Insurance,Health Insurance,Monthly income during disability,0,150000,0.0038,2022-11-21,TRUE,High
+PRD-0008,Auto Standard,Insurance,Auto Insurance,Standard auto coverage,0,500000,0.0055,2020-12-06,TRUE,High
+PRD-0009,Auto Premium,Insurance,Auto Insurance,Premium auto with collision,0,1000000,0.0072,2018-05-11,FALSE,Low
 PRD-0010,Home Standard,Insurance,Home Insurance,Standard homeowner policy,100000,2000000,0.003,2016-07-04,TRUE,Low
 PRD-0011,Home Premium,Insurance,Home Insurance,Premium homeowner with riders,200000,5000000,0.004,2023-04-29,TRUE,Medium
-PRD-0012,Travel Basic,Insurance,Travel Insurance,Basic travel medical,0,0,0.0,2018-02-28,TRUE,High
-PRD-0013,Travel Comprehensive,Insurance,Travel Insurance,Comprehensive travel package,0,0,0.0,2018-11-05,TRUE,High
+PRD-0012,Travel Basic,Insurance,Travel Insurance,Basic travel medical,0,50000,0.0015,2018-02-28,TRUE,High
+PRD-0013,Travel Comprehensive,Insurance,Travel Insurance,Comprehensive travel package,0,200000,0.0025,2018-11-05,TRUE,High
 PRD-0014,Canadian Equity Fund,Investment,Equity Funds,Diversified Canadian equities,5000,2000000,0.015,2017-12-17,TRUE,Medium
 PRD-0015,US Equity Growth,Investment,Equity Funds,US large-cap growth fund,5000,2000000,0.018,2015-07-28,TRUE,Medium
 PRD-0016,Global Equity Fund,Investment,Equity Funds,Global diversified equities,5000,2000000,0.02,2018-02-07,TRUE,Medium
