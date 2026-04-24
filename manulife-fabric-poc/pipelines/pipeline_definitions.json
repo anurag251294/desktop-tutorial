@@ -1,0 +1,242 @@
+{
+    "_description": "Manulife Fabric POC - Pipeline Definitions. This is a reference document for manually creating pipelines in Microsoft Fabric. It describes the pipeline structure, activities, dependencies, and schedules.",
+    "_version": "1.0",
+    "_created": "2026-04-24",
+
+    "pipelines": {
+        "PL_Master_Orchestrator": {
+            "description": "Master pipeline that runs the full data processing workflow: Bronze ingestion -> Silver transformation -> Gold curated layer -> Document processing -> Data validation.",
+            "parameters": {
+                "run_mode": {
+                    "type": "String",
+                    "defaultValue": "full",
+                    "description": "Execution mode: 'full' runs all notebooks, 'data_only' skips document processing"
+                },
+                "batch_id": {
+                    "type": "String",
+                    "defaultValue": "",
+                    "description": "Optional batch ID override. If empty, notebooks generate their own."
+                }
+            },
+            "activities": [
+                {
+                    "name": "Run_01_Bronze_Ingestion",
+                    "type": "NotebookActivity",
+                    "notebook": "01_bronze_ingestion",
+                    "lakehouse": "manulife_lakehouse",
+                    "parameters": {},
+                    "dependsOn": [],
+                    "timeout": "01:00:00",
+                    "retryCount": 1,
+                    "retryInterval": 300
+                },
+                {
+                    "name": "Run_02_Silver_Transformation",
+                    "type": "NotebookActivity",
+                    "notebook": "02_silver_transformation",
+                    "lakehouse": "manulife_lakehouse",
+                    "parameters": {},
+                    "dependsOn": [
+                        {
+                            "activity": "Run_01_Bronze_Ingestion",
+                            "dependencyConditions": ["Succeeded"]
+                        }
+                    ],
+                    "timeout": "01:00:00",
+                    "retryCount": 1,
+                    "retryInterval": 300
+                },
+                {
+                    "name": "Run_03_Gold_Curated_Layer",
+                    "type": "NotebookActivity",
+                    "notebook": "03_gold_curated_layer",
+                    "lakehouse": "manulife_lakehouse",
+                    "parameters": {},
+                    "dependsOn": [
+                        {
+                            "activity": "Run_02_Silver_Transformation",
+                            "dependencyConditions": ["Succeeded"]
+                        }
+                    ],
+                    "timeout": "01:00:00",
+                    "retryCount": 1,
+                    "retryInterval": 300
+                },
+                {
+                    "name": "Run_04_Document_Processing",
+                    "type": "NotebookActivity",
+                    "notebook": "04_document_processing",
+                    "lakehouse": "manulife_lakehouse",
+                    "parameters": {},
+                    "dependsOn": [
+                        {
+                            "activity": "Run_01_Bronze_Ingestion",
+                            "dependencyConditions": ["Succeeded"]
+                        }
+                    ],
+                    "timeout": "00:30:00",
+                    "retryCount": 1,
+                    "retryInterval": 300,
+                    "_note": "Runs in parallel with Silver/Gold since it reads from raw files, not Bronze tables. Gated by run_mode parameter in practice."
+                },
+                {
+                    "name": "Run_05_Data_Validation",
+                    "type": "NotebookActivity",
+                    "notebook": "05_data_validation",
+                    "lakehouse": "manulife_lakehouse",
+                    "parameters": {},
+                    "dependsOn": [
+                        {
+                            "activity": "Run_03_Gold_Curated_Layer",
+                            "dependencyConditions": ["Succeeded"]
+                        },
+                        {
+                            "activity": "Run_04_Document_Processing",
+                            "dependencyConditions": ["Succeeded", "Skipped"]
+                        }
+                    ],
+                    "timeout": "00:30:00",
+                    "retryCount": 0,
+                    "retryInterval": 0
+                }
+            ],
+            "schedule": {
+                "frequency": "Daily",
+                "time": "02:00 UTC",
+                "timezone": "Eastern Standard Time",
+                "description": "Runs daily at 2:00 AM UTC (10:00 PM ET) for overnight processing"
+            },
+            "alerts": {
+                "onFailure": true,
+                "recipients": ["data-engineering@manulife.com"]
+            }
+        },
+
+        "PL_Incremental_Refresh": {
+            "description": "Incremental pipeline that re-runs Silver and Gold layers only. Used when Bronze data has already been loaded (e.g., after a schema change or transformation fix).",
+            "parameters": {
+                "target_tables": {
+                    "type": "String",
+                    "defaultValue": "all",
+                    "description": "Comma-separated list of tables to refresh, or 'all'"
+                }
+            },
+            "activities": [
+                {
+                    "name": "Run_02_Silver_Transformation",
+                    "type": "NotebookActivity",
+                    "notebook": "02_silver_transformation",
+                    "lakehouse": "manulife_lakehouse",
+                    "parameters": {},
+                    "dependsOn": [],
+                    "timeout": "01:00:00",
+                    "retryCount": 1,
+                    "retryInterval": 300
+                },
+                {
+                    "name": "Run_03_Gold_Curated_Layer",
+                    "type": "NotebookActivity",
+                    "notebook": "03_gold_curated_layer",
+                    "lakehouse": "manulife_lakehouse",
+                    "parameters": {},
+                    "dependsOn": [
+                        {
+                            "activity": "Run_02_Silver_Transformation",
+                            "dependencyConditions": ["Succeeded"]
+                        }
+                    ],
+                    "timeout": "01:00:00",
+                    "retryCount": 1,
+                    "retryInterval": 300
+                }
+            ],
+            "schedule": {
+                "frequency": "Manual",
+                "description": "Triggered manually or via API when incremental refresh is needed"
+            }
+        },
+
+        "PL_Document_Reindex": {
+            "description": "Re-processes unstructured documents. Used when new documents are uploaded or chunking parameters change.",
+            "parameters": {
+                "chunk_size": {
+                    "type": "Int",
+                    "defaultValue": 500,
+                    "description": "Token count per chunk"
+                },
+                "chunk_overlap": {
+                    "type": "Int",
+                    "defaultValue": 50,
+                    "description": "Token overlap between chunks"
+                },
+                "use_real_embeddings": {
+                    "type": "Bool",
+                    "defaultValue": false,
+                    "description": "If true, calls Azure OpenAI for real embeddings"
+                }
+            },
+            "activities": [
+                {
+                    "name": "Run_04_Document_Processing",
+                    "type": "NotebookActivity",
+                    "notebook": "04_document_processing",
+                    "lakehouse": "manulife_lakehouse",
+                    "parameters": {
+                        "CHUNK_SIZE": {
+                            "value": {
+                                "type": "Expression",
+                                "value": "@pipeline().parameters.chunk_size"
+                            }
+                        },
+                        "CHUNK_OVERLAP": {
+                            "value": {
+                                "type": "Expression",
+                                "value": "@pipeline().parameters.chunk_overlap"
+                            }
+                        },
+                        "USE_REAL_EMBEDDINGS": {
+                            "value": {
+                                "type": "Expression",
+                                "value": "@pipeline().parameters.use_real_embeddings"
+                            }
+                        }
+                    },
+                    "dependsOn": [],
+                    "timeout": "00:30:00",
+                    "retryCount": 1,
+                    "retryInterval": 300
+                }
+            ],
+            "schedule": {
+                "frequency": "Manual",
+                "description": "Triggered manually when documents are added or chunking parameters need updating"
+            }
+        }
+    },
+
+    "execution_order_reference": {
+        "full_run": [
+            "01_bronze_ingestion",
+            "02_silver_transformation (depends on 01)",
+            "03_gold_curated_layer (depends on 02)",
+            "04_document_processing (depends on 01, parallel with 02/03)",
+            "05_data_validation (depends on 03 and 04)"
+        ],
+        "incremental_refresh": [
+            "02_silver_transformation",
+            "03_gold_curated_layer (depends on 02)"
+        ],
+        "document_reindex": [
+            "04_document_processing"
+        ]
+    },
+
+    "fabric_setup_notes": {
+        "lakehouse": "Create a Fabric Lakehouse named 'manulife_lakehouse'",
+        "upload_data": "Upload CSV files to Files/raw/structured/ in the lakehouse",
+        "upload_docs": "Upload markdown/text files to Files/raw/unstructured/ in the lakehouse",
+        "notebooks": "Import each .py notebook into the Fabric workspace and attach to the lakehouse",
+        "pipelines": "Create Data Factory pipelines in Fabric matching the definitions above",
+        "permissions": "Ensure the pipeline service principal has read/write access to the lakehouse"
+    }
+}

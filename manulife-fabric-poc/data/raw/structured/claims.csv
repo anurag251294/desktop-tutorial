@@ -1,0 +1,301 @@
+claim_id,policy_id,customer_id,claim_number,claim_date,claim_type,claim_amount,approved_amount,status,adjuster_name,resolution_date,denial_reason,notes
+CLM-00001,POL-00052,CUS-0029,CN-476215,2025-04-03,Storm Damage,61426.73,0.0,Denied,Sharon Fortin,2025-04-16,Pre-existing condition,Complex case - senior adjuster assigned
+CLM-00002,POL-00183,CUS-0098,CN-551538,2022-07-09,Theft,41483.46,37476.48,Approved,Susan Robinson,2022-08-26,,Customer escalation
+CLM-00003,POL-00117,CUS-0065,CN-906747,2025-09-30,Hospital Stay,11359.96,0.0,Denied,Lisa Hall,2025-11-19,Fraud suspected,Large loss - management review
+CLM-00004,POL-00137,CUS-0074,CN-937798,2025-07-23,Death Benefit,438110.88,373797.28,Approved,Linda Campbell,2025-09-22,,Expedited review requested
+CLM-00005,POL-00055,CUS-0030,CN-275160,2026-03-24,Liability,156649.1,81611.79,Closed,Justin Lopez,2026-04-11,,Expedited review requested
+CLM-00006,POL-00106,CUS-0058,CN-204117,2024-05-04,Theft,145941.51,109338.72,Closed,Sandra Lewis,2024-08-28,,
+CLM-00007,POL-00187,CUS-0100,CN-357232,2024-11-06,Vandalism,6587.68,0.0,Denied,Edward Lee,2025-01-05,Pre-existing condition,Routine claim
+CLM-00008,POL-00175,CUS-0094,CN-760016,2025-05-12,Theft,35081.1,0.0,Denied,Justin Lopez,2025-07-11,Fraud suspected,Awaiting additional information
+CLM-00009,POL-00078,CUS-0044,CN-529191,2025-10-11,Glass Damage,39467.18,0.0,Denied,Sharon Fortin,2025-12-11,Coverage limit exceeded,Routine claim
+CLM-00010,POL-00265,CUS-0138,CN-188896,2023-03-15,Theft,89073.16,80444.06,Closed,Paul Nguyen,2023-03-28,,Multiple parties involved
+CLM-00011,POL-00206,CUS-0110,CN-702466,2025-03-07,Trip Cancellation,1724.41,1657.61,Closed,Lisa Hall,2025-03-31,,
+CLM-00012,POL-00366,CUS-0188,CN-856601,2024-10-21,Glass Damage,21255.61,16511.47,Closed,Brenda Lavoie,2024-12-03,,Multiple parties involved
+CLM-00013,POL-00177,CUS-0095,CN-775156,2024-02-12,Water Damage,180141.5,153146.85,Approved,Stephanie Baker,2024-04-14,,Large loss - management review
+CLM-00014,POL-00320,CUS-0164,CN-416178,2026-04-09,Terminal Illness,226650.47,159165.94,Closed,Susan Robinson,2026-05-09,,Standard processing
+CLM-00015,POL-00276,CUS-0143,CN-397719,2024-06-05,Accidental Death,365298.35,277712.54,Approved,Stephanie Baker,2024-08-18,,Expedited review requested
+CLM-00016,POL-00262,CUS-0137,CN-666160,2025-04-24,Lost Luggage,8649.58,4445.41,Approved,Cynthia Clark,2025-08-08,,Complex case - senior adjuster assigned
+CLM-00017,POL-00124,CUS-0068,CN-372374,2024-12-16,Accidental Death,217145.48,115081.21,Closed,Justin Lopez,2025-02-06,,Large loss - management review
+CLM-00018,POL-00182,CUS-0097,CN-105466,2024-02-28,Death Benefit,380714.37,247076.22,Paid,Linda Campbell,2024-06-06,,Multiple parties involved
+CLM-00019,POL-00121,CUS-0067,CN-345196,2026-01-22,Glass Damage,35875.03,27503.39,Closed,Paul Nguyen,2026-04-13,,Complex case - senior adjuster assigned
+CLM-00020,POL-00146,CUS-0079,CN-873337,2026-02-05,Terminal Illness,409388.82,350918.06,Approved,Stephanie Baker,2026-04-17,,Expedited review requested
+CLM-00021,POL-00168,CUS-0090,CN-546370,2025-10-10,Vision,9789.25,5374.24,Paid,Edward Lee,2026-01-14,,Follow-up required
+CLM-00022,POL-00042,CUS-0023,CN-181865,2025-02-05,Collision,21531.89,0.0,Denied,Paul Nguyen,2025-03-11,Late filing,
+CLM-00023,POL-00270,CUS-0140,CN-543990,2025-10-23,Accidental Death,283894.54,224887.6,Paid,Linda Campbell,2026-01-17,,Routine claim
+CLM-00024,POL-00375,CUS-0194,CN-838747,2025-08-14,Dental,8309.57,7109.46,Paid,Lisa Lee,2025-09-04,,Large loss - management review
+CLM-00025,POL-00061,CUS-0032,CN-730823,2025-04-16,Theft,23931.1,16384.81,Closed,Edward Lee,2025-05-06,,Follow-up required
+CLM-00026,POL-00057,CUS-0030,CN-223461,2024-07-16,Medical Emergency,14379.77,,Submitted,Paul Nguyen,,,Complex case - senior adjuster assigned
+CLM-00027,POL-00192,CUS-0102,CN-151014,2023-08-27,Accidental Death,248103.51,221282.59,Approved,Sharon Fortin,2023-10-24,,Complex case - senior adjuster assigned
+CLM-00028,POL-00146,CUS-0079,CN-146852,2024-05-30,Death Benefit,411371.28,318306.2,Approved,Christine Roberts,2024-06-12,,Routine claim
+CLM-00029,POL-00294,CUS-0152,CN-974180,2026-02-28,Accidental Death,231663.47,170878.17,Paid,Cynthia Clark,2026-06-05,,Documentation complete
+CLM-00030,POL-00391,CUS-0200,CN-863220,2026-01-05,Surgery,31895.72,23109.64,Closed,Paul Nguyen,2026-04-30,,Expedited review requested
+CLM-00031,POL-00320,CUS-0164,CN-667273,2026-03-11,Terminal Illness,210717.88,0.0,Denied,Lisa Hall,2026-05-07,Fraud suspected,
+CLM-00032,POL-00227,CUS-0120,CN-688297,2025-11-02,Vandalism,4882.23,0.0,Denied,Justin Lopez,2025-11-12,Waiting period not met,Expedited review requested
+CLM-00033,POL-00330,CUS-0170,CN-647098,2024-02-24,Vision,9782.85,8597.24,Closed,Stephanie Baker,2024-05-11,,Routine claim
+CLM-00034,POL-00258,CUS-0135,CN-357201,2025-12-12,Water Damage,131992.63,84142.83,Approved,Edward Lee,2026-01-12,,Customer escalation
+CLM-00035,POL-00228,CUS-0121,CN-456470,2025-05-11,Hospital Stay,30421.37,22686.33,Approved,Christine Roberts,2025-05-18,,Documentation complete
+CLM-00036,POL-00213,CUS-0112,CN-668096,2026-02-24,Hospital Stay,26489.51,14763.19,Approved,Sandra Lewis,2026-03-13,,Complex case - senior adjuster assigned
+CLM-00037,POL-00074,CUS-0041,CN-161775,2023-06-22,Fire,153892.63,0.0,Denied,Cynthia Clark,2023-08-20,Insufficient documentation,Multiple parties involved
+CLM-00038,POL-00093,CUS-0052,CN-439966,2025-01-28,Death Benefit,38665.87,22087.12,Paid,Sharon Gauthier,2025-05-27,,Follow-up required
+CLM-00039,POL-00062,CUS-0033,CN-628924,2022-03-01,Hospital Stay,12133.22,9057.32,Approved,Christine Roberts,2022-06-10,,Expedited review requested
+CLM-00040,POL-00138,CUS-0075,CN-345094,2023-06-03,Medical Emergency,11727.62,6033.31,Paid,Sharon Fortin,2023-08-28,,Standard processing
+CLM-00041,POL-00138,CUS-0075,CN-567646,2023-01-07,Medical Emergency,19121.86,12473.31,Approved,Susan Robinson,2023-03-05,,
+CLM-00042,POL-00257,CUS-0135,CN-544336,2026-02-18,Trip Cancellation,24204.21,21566.24,Approved,Sharon Fortin,2026-05-02,,Large loss - management review
+CLM-00043,POL-00232,CUS-0123,CN-100569,2024-02-13,Water Damage,162716.1,104890.82,Closed,Lisa Hall,2024-03-10,,Routine claim
+CLM-00044,POL-00140,CUS-0076,CN-713583,2023-09-28,Liability,168058.06,154818.33,Paid,Edward Lee,2023-10-30,,Large loss - management review
+CLM-00045,POL-00145,CUS-0078,CN-228950,2024-09-08,Medical Emergency,18531.74,10097.16,Paid,Edward Lee,2024-12-11,,Documentation complete
+CLM-00046,POL-00372,CUS-0192,CN-815234,2025-07-21,Terminal Illness,440356.85,0.0,Denied,Paul Nguyen,2025-09-30,Fraud suspected,
+CLM-00047,POL-00134,CUS-0072,CN-728635,2026-02-09,Terminal Illness,143776.44,96447.38,Paid,Paul Nguyen,2026-04-13,,Standard processing
+CLM-00048,POL-00355,CUS-0182,CN-281965,2026-03-30,Death Benefit,461906.31,439144.72,Approved,Christine Roberts,2026-06-29,,Large loss - management review
+CLM-00049,POL-00357,CUS-0183,CN-132450,2025-04-04,Therapy,38170.77,31515.06,Closed,Sharon Fortin,2025-06-16,,
+CLM-00050,POL-00228,CUS-0121,CN-979908,2023-01-22,Therapy,17779.14,12071.73,Closed,Paul Thompson,2023-02-18,,Standard processing
+CLM-00051,POL-00064,CUS-0034,CN-394790,2023-05-07,Flight Delay,23418.95,20411.31,Approved,Justin Lopez,2023-08-17,,Multiple parties involved
+CLM-00052,POL-00099,CUS-0054,CN-480632,2025-11-14,Death Benefit,316365.91,195238.57,Approved,Lisa Hall,2026-01-21,,Complex case - senior adjuster assigned
+CLM-00053,POL-00253,CUS-0132,CN-696746,2025-05-31,Trip Cancellation,5062.95,2812.33,Paid,Lisa Lee,2025-07-10,,Routine claim
+CLM-00054,POL-00088,CUS-0050,CN-168535,2025-08-22,Glass Damage,33162.0,26578.89,Closed,Cynthia Clark,2025-09-18,,Documentation complete
+CLM-00055,POL-00382,CUS-0196,CN-920251,2025-05-14,Medical Emergency,6638.69,6243.7,Approved,Sharon Gauthier,2025-08-20,,Awaiting additional information
+CLM-00056,POL-00348,CUS-0180,CN-772101,2026-02-06,Death Benefit,311083.71,155845.93,Paid,Justin Lopez,2026-04-06,,
+CLM-00057,POL-00027,CUS-0016,CN-619647,2025-04-08,Lost Luggage,21139.67,17759.16,Approved,Paul Nguyen,2025-06-11,,Large loss - management review
+CLM-00058,POL-00389,CUS-0199,CN-510893,2025-06-20,Water Damage,10345.96,7494.93,Closed,Stephanie Baker,2025-06-25,,Multiple parties involved
+CLM-00059,POL-00042,CUS-0023,CN-362127,2026-02-22,Glass Damage,1755.91,1250.05,Closed,Stephanie Baker,2026-03-08,,Documentation complete
+CLM-00060,POL-00169,CUS-0090,CN-552931,2021-08-11,Accidental Death,316737.4,,Under Review,Paul Thompson,,,Standard processing
+CLM-00061,POL-00304,CUS-0156,CN-449792,2023-01-01,Lost Luggage,6329.41,5799.38,Paid,Lisa Lee,2023-04-21,,Awaiting additional information
+CLM-00062,POL-00038,CUS-0020,CN-134963,2025-06-07,Glass Damage,38322.88,21553.29,Closed,Christine Roberts,2025-06-19,,Multiple parties involved
+CLM-00063,POL-00356,CUS-0183,CN-756602,2025-11-18,Medical Emergency,3362.89,1773.57,Paid,Christine Roberts,2026-02-09,,Expedited review requested
+CLM-00064,POL-00053,CUS-0029,CN-200485,2024-02-08,Terminal Illness,284036.45,0.0,Denied,Cynthia Clark,2024-04-03,Coverage limit exceeded,Follow-up required
+CLM-00065,POL-00120,CUS-0066,CN-206197,2020-08-26,Liability,91228.84,85752.29,Paid,Paul Nguyen,2020-11-18,,
+CLM-00066,POL-00346,CUS-0178,CN-847948,2025-03-19,Death Benefit,263434.32,145243.15,Approved,Susan Robinson,2025-06-08,,Customer escalation
+CLM-00067,POL-00100,CUS-0055,CN-859822,2023-04-14,Terminal Illness,322308.23,0.0,Denied,Cynthia Clark,2023-06-13,Late filing,Routine claim
+CLM-00068,POL-00096,CUS-0053,CN-712916,2021-09-16,Death Benefit,400542.54,,Under Review,Christine Roberts,,,Large loss - management review
+CLM-00069,POL-00334,CUS-0172,CN-732636,2024-09-04,Vandalism,29391.46,16862.01,Approved,Paul Nguyen,2024-10-18,,Complex case - senior adjuster assigned
+CLM-00070,POL-00189,CUS-0101,CN-975744,2024-11-27,Death Benefit,297355.56,183972.01,Approved,Lisa Lee,2025-03-16,,Standard processing
+CLM-00071,POL-00217,CUS-0115,CN-298553,2025-07-11,Lost Luggage,24417.47,21795.81,Approved,Justin Lopez,2025-08-28,,Routine claim
+CLM-00072,POL-00356,CUS-0183,CN-414186,2024-11-09,Flight Delay,17371.86,17051.04,Closed,Christine Roberts,2025-01-31,,Multiple parties involved
+CLM-00073,POL-00084,CUS-0046,CN-769795,2025-04-28,Medical Emergency,21927.42,13369.21,Paid,Stephanie Baker,2025-05-03,,Awaiting additional information
+CLM-00074,POL-00239,CUS-0125,CN-315289,2024-06-10,Terminal Illness,127119.33,114869.56,Paid,Christine Roberts,2024-08-02,,Documentation complete
+CLM-00075,POL-00004,CUS-0003,CN-249319,2021-07-24,Accidental Death,46128.27,,Submitted,Sharon Gauthier,,,Routine claim
+CLM-00076,POL-00100,CUS-0055,CN-282605,2025-11-10,Terminal Illness,457227.29,274135.85,Approved,Stephanie Baker,2025-12-21,,Complex case - senior adjuster assigned
+CLM-00077,POL-00369,CUS-0191,CN-284630,2023-07-25,Death Benefit,425291.75,0.0,Denied,Edward Lee,2023-08-26,Pre-existing condition,Complex case - senior adjuster assigned
+CLM-00078,POL-00052,CUS-0029,CN-419891,2026-03-15,Water Damage,135813.02,90884.94,Approved,Linda Campbell,2026-04-15,,Awaiting additional information
+CLM-00079,POL-00190,CUS-0101,CN-845476,2025-07-17,Lost Luggage,4449.72,4186.44,Closed,Susan Robinson,2025-11-11,,Expedited review requested
+CLM-00080,POL-00074,CUS-0041,CN-767044,2022-09-25,Fire,39144.58,25795.33,Paid,Stephanie Baker,2022-11-23,,Standard processing
+CLM-00081,POL-00391,CUS-0200,CN-760035,2026-02-16,Vision,9617.29,6384.34,Approved,Paul Thompson,2026-02-27,,Complex case - senior adjuster assigned
+CLM-00082,POL-00065,CUS-0034,CN-929420,2026-01-24,Terminal Illness,112526.41,,Under Review,Justin Lopez,,,Customer escalation
+CLM-00083,POL-00034,CUS-0019,CN-586819,2026-03-20,Death Benefit,200176.76,137548.07,Closed,Sandra Lewis,2026-05-30,,Multiple parties involved
+CLM-00084,POL-00365,CUS-0188,CN-520422,2025-12-26,Prescription,34786.58,25633.5,Paid,Justin Lopez,2026-03-15,,Customer escalation
+CLM-00085,POL-00333,CUS-0172,CN-329212,2024-02-17,Death Benefit,117567.88,0.0,Denied,Sharon Gauthier,2024-03-25,Coverage limit exceeded,Follow-up required
+CLM-00086,POL-00194,CUS-0104,CN-188109,2025-04-22,Glass Damage,46807.2,25387.26,Closed,Sharon Gauthier,2025-08-01,,Routine claim
+CLM-00087,POL-00266,CUS-0139,CN-590262,2024-08-31,Theft,117208.48,78317.18,Closed,Christine Roberts,2024-11-01,,Follow-up required
+CLM-00088,POL-00189,CUS-0101,CN-345147,2023-10-13,Accidental Death,143779.54,,Under Review,Sharon Gauthier,,,
+CLM-00089,POL-00039,CUS-0021,CN-924047,2026-02-14,Theft,17401.28,13456.86,Closed,Sharon Gauthier,2026-03-01,,Awaiting additional information
+CLM-00090,POL-00051,CUS-0028,CN-362168,2025-10-17,Medical Emergency,9133.87,5465.01,Paid,Sharon Gauthier,2025-12-03,,
+CLM-00091,POL-00141,CUS-0076,CN-108948,2026-04-06,Theft,49900.79,43409.22,Closed,Paul Thompson,2026-05-14,,Complex case - senior adjuster assigned
+CLM-00092,POL-00145,CUS-0078,CN-637549,2025-05-14,Lost Luggage,23656.21,11968.75,Closed,Paul Thompson,2025-08-10,,Documentation complete
+CLM-00093,POL-00204,CUS-0110,CN-715517,2025-08-21,Theft,36305.13,0.0,Denied,Paul Thompson,2025-09-26,Not covered under policy terms,Large loss - management review
+CLM-00094,POL-00388,CUS-0199,CN-549622,2026-04-19,Liability,40812.69,26795.06,Approved,Paul Thompson,2026-05-18,,Follow-up required
+CLM-00095,POL-00108,CUS-0059,CN-705561,2025-06-27,Liability,42720.73,,Submitted,Edward Lee,,,Documentation complete
+CLM-00096,POL-00157,CUS-0085,CN-819074,2025-09-18,Collision,40614.87,24886.57,Paid,Paul Thompson,2025-11-16,,Follow-up required
+CLM-00097,POL-00391,CUS-0200,CN-261156,2026-01-22,Therapy,15121.93,13499.03,Closed,Paul Nguyen,2026-02-13,,Customer escalation
+CLM-00098,POL-00323,CUS-0165,CN-213915,2025-08-19,Flight Delay,5264.27,3649.28,Closed,Paul Nguyen,2025-10-23,,Customer escalation
+CLM-00099,POL-00232,CUS-0123,CN-732672,2024-05-17,Theft,35113.31,18119.51,Approved,Linda Campbell,2024-08-18,,Standard processing
+CLM-00100,POL-00096,CUS-0053,CN-649868,2021-04-30,Death Benefit,456559.2,281477.75,Approved,Susan Robinson,2021-07-28,,Routine claim
+CLM-00101,POL-00030,CUS-0017,CN-235410,2024-03-23,Theft,3198.37,2224.63,Paid,Lisa Lee,2024-04-11,,Follow-up required
+CLM-00102,POL-00245,CUS-0128,CN-424803,2024-10-20,Terminal Illness,200606.52,113335.89,Approved,Christine Roberts,2024-11-20,,
+CLM-00103,POL-00244,CUS-0128,CN-581250,2025-07-27,Death Benefit,291794.78,219207.18,Approved,Sharon Gauthier,2025-10-27,,Awaiting additional information
+CLM-00104,POL-00004,CUS-0003,CN-614807,2024-01-02,Death Benefit,41345.32,31543.51,Approved,Linda Campbell,2024-03-19,,Routine claim
+CLM-00105,POL-00295,CUS-0152,CN-846216,2025-03-02,Hospital Stay,4736.91,3189.79,Paid,Paul Thompson,2025-06-22,,Complex case - senior adjuster assigned
+CLM-00106,POL-00201,CUS-0108,CN-580067,2023-02-24,Vision,20869.63,0.0,Denied,Christine Roberts,2023-05-21,Coverage limit exceeded,
+CLM-00107,POL-00094,CUS-0052,CN-387075,2021-01-30,Terminal Illness,202840.15,191231.79,Approved,Sharon Fortin,2021-02-24,,
+CLM-00108,POL-00276,CUS-0143,CN-898868,2020-10-20,Accidental Death,352041.56,335977.28,Approved,Lisa Lee,2020-12-16,,Expedited review requested
+CLM-00109,POL-00189,CUS-0101,CN-365045,2026-03-29,Death Benefit,61560.03,43402.78,Paid,Stephanie Baker,2026-04-24,,Large loss - management review
+CLM-00110,POL-00023,CUS-0014,CN-882193,2020-06-15,Dental,3845.14,2810.61,Closed,Christine Roberts,2020-08-02,,Awaiting additional information
+CLM-00111,POL-00204,CUS-0110,CN-586796,2025-05-02,Collision,12904.98,8563.17,Approved,Linda Campbell,2025-08-10,,Routine claim
+CLM-00112,POL-00035,CUS-0019,CN-392701,2025-09-18,Death Benefit,331941.08,189248.86,Paid,Edward Lee,2026-01-06,,Documentation complete
+CLM-00113,POL-00088,CUS-0050,CN-276636,2026-03-21,Collision,5475.5,0.0,Denied,Susan Robinson,2026-06-04,Coverage limit exceeded,
+CLM-00114,POL-00391,CUS-0200,CN-807835,2026-04-03,Hospital Stay,13807.96,8399.88,Approved,Lisa Lee,2026-04-12,,Awaiting additional information
+CLM-00115,POL-00227,CUS-0120,CN-509593,2025-10-22,Collision,40669.84,33756.79,Closed,Brenda Lavoie,2025-11-09,,Complex case - senior adjuster assigned
+CLM-00116,POL-00228,CUS-0121,CN-350127,2025-09-21,Hospital Stay,432.35,416.96,Approved,Stephanie Baker,2025-11-12,,Expedited review requested
+CLM-00117,POL-00009,CUS-0006,CN-331282,2021-03-03,Dental,49466.67,41551.0,Approved,Sharon Fortin,2021-03-16,,Expedited review requested
+CLM-00118,POL-00341,CUS-0175,CN-298754,2023-03-21,Fire,9758.49,6453.68,Paid,Cynthia Clark,2023-06-14,,Awaiting additional information
+CLM-00119,POL-00278,CUS-0144,CN-282055,2024-12-22,Accidental Death,69193.94,0.0,Denied,Lisa Hall,2025-02-12,Fraud suspected,Follow-up required
+CLM-00120,POL-00335,CUS-0173,CN-781516,2023-04-16,Accidental Death,200701.46,166377.67,Approved,Cynthia Clark,2023-05-26,,Multiple parties involved
+CLM-00121,POL-00023,CUS-0014,CN-847143,2022-08-10,Hospital Stay,20672.62,20497.96,Paid,Lisa Lee,2022-08-28,,Customer escalation
+CLM-00122,POL-00088,CUS-0050,CN-827418,2025-07-02,Vandalism,30193.42,20962.77,Closed,Sandra Lewis,2025-10-13,,Multiple parties involved
+CLM-00123,POL-00090,CUS-0050,CN-500945,2025-08-12,Theft,14435.18,,Under Review,Lisa Lee,,,
+CLM-00124,POL-00380,CUS-0195,CN-230082,2026-03-11,Death Benefit,297859.59,152089.1,Approved,Sharon Gauthier,2026-06-21,,Awaiting additional information
+CLM-00125,POL-00378,CUS-0194,CN-492716,2026-04-02,Flight Delay,6239.93,,Submitted,Linda Campbell,,,Complex case - senior adjuster assigned
+CLM-00126,POL-00104,CUS-0056,CN-875165,2026-01-17,Theft,10617.07,,Under Review,Sharon Fortin,,,Multiple parties involved
+CLM-00127,POL-00069,CUS-0038,CN-779525,2024-01-26,Lost Luggage,16161.33,14478.77,Closed,Edward Lee,2024-03-24,,Complex case - senior adjuster assigned
+CLM-00128,POL-00385,CUS-0198,CN-797309,2025-10-11,Medical Emergency,21203.98,12784.06,Approved,Stephanie Baker,2025-10-22,,
+CLM-00129,POL-00357,CUS-0183,CN-106336,2023-10-06,Therapy,30481.55,18038.15,Paid,Susan Robinson,2023-12-30,,Routine claim
+CLM-00130,POL-00036,CUS-0019,CN-196216,2022-02-28,Surgery,31791.47,0.0,Denied,Sandra Lewis,2022-04-02,Insufficient documentation,Customer escalation
+CLM-00131,POL-00282,CUS-0146,CN-307131,2022-01-27,Death Benefit,258638.03,169597.1,Paid,Stephanie Baker,2022-05-04,,Follow-up required
+CLM-00132,POL-00091,CUS-0051,CN-919240,2022-12-29,Vision,15294.42,9187.37,Closed,Linda Campbell,2023-04-23,,Expedited review requested
+CLM-00133,POL-00185,CUS-0099,CN-897257,2024-09-14,Flight Delay,4360.6,3508.96,Closed,Sandra Lewis,2024-11-13,,Routine claim
+CLM-00134,POL-00011,CUS-0008,CN-679707,2025-10-27,Dental,42731.3,34082.13,Paid,Brenda Lavoie,2025-11-20,,Documentation complete
+CLM-00135,POL-00132,CUS-0072,CN-175434,2025-12-31,Flight Delay,7785.01,0.0,Denied,Paul Nguyen,2026-03-19,Late filing,Documentation complete
+CLM-00136,POL-00367,CUS-0189,CN-865847,2025-10-13,Flight Delay,4037.17,0.0,Denied,Brenda Lavoie,2025-10-21,Not covered under policy terms,Multiple parties involved
+CLM-00137,POL-00252,CUS-0132,CN-772188,2024-09-14,Dental,47026.19,32543.0,Paid,Cynthia Clark,2024-10-28,,Expedited review requested
+CLM-00138,POL-00210,CUS-0111,CN-367657,2026-04-02,Hospital Stay,6398.98,3820.92,Approved,Paul Thompson,2026-06-01,,Multiple parties involved
+CLM-00139,POL-00261,CUS-0136,CN-871399,2026-02-23,Terminal Illness,321140.08,265086.1,Approved,Stephanie Baker,2026-04-23,,Awaiting additional information
+CLM-00140,POL-00245,CUS-0128,CN-374025,2025-08-16,Death Benefit,319166.83,265814.21,Closed,Cynthia Clark,2025-09-08,,Routine claim
+CLM-00141,POL-00349,CUS-0180,CN-222400,2023-03-29,Fire,50235.55,46254.78,Closed,Paul Thompson,2023-04-04,,Expedited review requested
+CLM-00142,POL-00330,CUS-0170,CN-543489,2024-12-26,Therapy,20003.81,15188.26,Approved,Sandra Lewis,2025-01-24,,Follow-up required
+CLM-00143,POL-00130,CUS-0071,CN-531603,2026-04-12,Theft,193569.0,153507.94,Paid,Paul Thompson,2026-07-19,,Expedited review requested
+CLM-00144,POL-00056,CUS-0030,CN-832964,2024-06-11,Liability,163031.38,0.0,Denied,Sharon Gauthier,2024-07-14,Coverage limit exceeded,Standard processing
+CLM-00145,POL-00087,CUS-0049,CN-402346,2023-02-27,Liability,5295.1,4037.41,Paid,Brenda Lavoie,2023-05-26,,Follow-up required
+CLM-00146,POL-00088,CUS-0050,CN-627028,2025-11-22,Theft,9726.8,0.0,Denied,Susan Robinson,2026-01-30,Insufficient documentation,Routine claim
+CLM-00147,POL-00291,CUS-0151,CN-528649,2025-03-15,Death Benefit,108461.02,68295.3,Approved,Linda Campbell,2025-07-13,,
+CLM-00148,POL-00320,CUS-0164,CN-390206,2026-03-24,Death Benefit,91401.8,0.0,Denied,Susan Robinson,2026-05-18,Policy lapsed,Multiple parties involved
+CLM-00149,POL-00016,CUS-0011,CN-888318,2025-08-30,Liability,96101.53,48507.56,Approved,Lisa Hall,2025-10-08,,
+CLM-00150,POL-00299,CUS-0154,CN-378749,2022-11-15,Death Benefit,113423.5,90908.08,Paid,Sharon Fortin,2023-02-25,,Routine claim
+CLM-00151,POL-00243,CUS-0128,CN-351235,2025-06-18,Prescription,16960.2,16955.49,Paid,Paul Nguyen,2025-10-05,,
+CLM-00152,POL-00205,CUS-0110,CN-832229,2021-04-08,Dental,48770.19,24460.31,Approved,Christine Roberts,2021-08-02,,Documentation complete
+CLM-00153,POL-00014,CUS-0010,CN-573870,2022-05-15,Terminal Illness,435812.59,0.0,Denied,Cynthia Clark,2022-06-22,Fraud suspected,
+CLM-00154,POL-00338,CUS-0174,CN-117438,2024-11-28,Liability,20949.77,0.0,Denied,Justin Lopez,2025-02-24,Fraud suspected,Multiple parties involved
+CLM-00155,POL-00024,CUS-0014,CN-875112,2025-04-28,Therapy,33960.89,0.0,Denied,Cynthia Clark,2025-07-06,Coverage limit exceeded,Expedited review requested
+CLM-00156,POL-00179,CUS-0096,CN-736667,2024-06-10,Storm Damage,197387.42,171162.3,Approved,Stephanie Baker,2024-07-22,,Documentation complete
+CLM-00157,POL-00267,CUS-0139,CN-415986,2026-03-28,Glass Damage,42911.73,32139.28,Approved,Edward Lee,2026-04-13,,
+CLM-00158,POL-00281,CUS-0145,CN-355177,2022-07-01,Dental,44841.15,37277.39,Paid,Stephanie Baker,2022-08-05,,Documentation complete
+CLM-00159,POL-00386,CUS-0198,CN-502118,2025-03-06,Terminal Illness,53821.59,27697.18,Closed,Paul Thompson,2025-04-21,,Complex case - senior adjuster assigned
+CLM-00160,POL-00113,CUS-0063,CN-660509,2025-10-07,Terminal Illness,336307.01,188852.88,Closed,Justin Lopez,2025-10-29,,Routine claim
+CLM-00161,POL-00047,CUS-0026,CN-495323,2025-04-10,Lost Luggage,23308.14,12407.7,Closed,Sharon Fortin,2025-05-28,,Follow-up required
+CLM-00162,POL-00335,CUS-0173,CN-191939,2025-09-02,Terminal Illness,406139.27,0.0,Denied,Susan Robinson,2025-09-23,Waiting period not met,Expedited review requested
+CLM-00163,POL-00175,CUS-0094,CN-994781,2024-06-21,Liability,149178.93,0.0,Denied,Paul Nguyen,2024-08-14,Insufficient documentation,Follow-up required
+CLM-00164,POL-00296,CUS-0153,CN-908746,2022-09-20,Water Damage,13315.1,13180.95,Paid,Paul Nguyen,2022-11-04,,
+CLM-00165,POL-00065,CUS-0034,CN-431272,2024-07-26,Terminal Illness,62227.1,,Under Review,Sandra Lewis,,,Complex case - senior adjuster assigned
+CLM-00166,POL-00113,CUS-0063,CN-423896,2026-01-17,Accidental Death,82238.43,0.0,Denied,Lisa Lee,2026-01-28,Fraud suspected,Expedited review requested
+CLM-00167,POL-00141,CUS-0076,CN-161669,2026-03-05,Glass Damage,31738.32,0.0,Denied,Paul Thompson,2026-04-18,Coverage limit exceeded,Multiple parties involved
+CLM-00168,POL-00079,CUS-0044,CN-913735,2023-05-20,Terminal Illness,425554.27,361807.82,Approved,Sandra Lewis,2023-05-31,,Routine claim
+CLM-00169,POL-00373,CUS-0193,CN-511341,2024-06-24,Liability,49227.28,49007.31,Approved,Paul Nguyen,2024-09-07,,Follow-up required
+CLM-00170,POL-00348,CUS-0180,CN-830203,2025-01-24,Accidental Death,381279.95,329188.45,Closed,Sharon Fortin,2025-03-06,,Awaiting additional information
+CLM-00171,POL-00359,CUS-0184,CN-991090,2025-08-21,Vision,5046.51,4708.03,Closed,Sharon Fortin,2025-09-01,,Complex case - senior adjuster assigned
+CLM-00172,POL-00235,CUS-0123,CN-328732,2026-02-24,Theft,7309.27,6933.64,Paid,Paul Thompson,2026-03-27,,Awaiting additional information
+CLM-00173,POL-00377,CUS-0194,CN-254775,2025-10-02,Therapy,18238.84,15305.28,Approved,Christine Roberts,2026-01-24,,Follow-up required
+CLM-00174,POL-00348,CUS-0180,CN-640472,2023-06-06,Death Benefit,57063.39,55495.95,Approved,Justin Lopez,2023-06-26,,Multiple parties involved
+CLM-00175,POL-00304,CUS-0156,CN-612361,2021-11-10,Flight Delay,15748.92,8809.97,Approved,Sharon Gauthier,2022-01-04,,Customer escalation
+CLM-00176,POL-00089,CUS-0050,CN-586197,2025-09-08,Terminal Illness,193932.1,160820.02,Closed,Edward Lee,2025-12-21,,
+CLM-00177,POL-00196,CUS-0105,CN-612982,2025-07-16,Accidental Death,189988.3,0.0,Denied,Justin Lopez,2025-08-02,Policy lapsed,
+CLM-00178,POL-00261,CUS-0136,CN-199146,2024-11-03,Death Benefit,297556.74,189502.7,Paid,Paul Thompson,2025-02-11,,Customer escalation
+CLM-00179,POL-00093,CUS-0052,CN-441027,2023-10-17,Accidental Death,499977.55,392838.14,Paid,Susan Robinson,2023-11-03,,Large loss - management review
+CLM-00180,POL-00095,CUS-0052,CN-977809,2022-09-06,Dental,19811.07,14745.02,Closed,Cynthia Clark,2022-11-16,,Large loss - management review
+CLM-00181,POL-00366,CUS-0188,CN-288678,2024-04-23,Collision,48301.21,44968.51,Approved,Lisa Hall,2024-07-25,,Large loss - management review
+CLM-00182,POL-00229,CUS-0121,CN-369232,2022-02-04,Theft,8789.49,5103.22,Closed,Edward Lee,2022-04-21,,Standard processing
+CLM-00183,POL-00044,CUS-0025,CN-100089,2026-01-05,Hospital Stay,15069.18,10722.11,Approved,Stephanie Baker,2026-04-04,,Complex case - senior adjuster assigned
+CLM-00184,POL-00024,CUS-0014,CN-648055,2025-02-21,Vision,33026.05,24611.72,Closed,Sharon Fortin,2025-04-07,,Multiple parties involved
+CLM-00185,POL-00311,CUS-0160,CN-297209,2023-02-04,Trip Cancellation,16632.9,,Submitted,Sandra Lewis,,,Complex case - senior adjuster assigned
+CLM-00186,POL-00111,CUS-0062,CN-542514,2025-07-04,Trip Cancellation,13891.35,7838.14,Paid,Susan Robinson,2025-09-26,,Large loss - management review
+CLM-00187,POL-00131,CUS-0071,CN-366526,2025-09-09,Prescription,32558.49,0.0,Denied,Justin Lopez,2025-11-13,Policy lapsed,Follow-up required
+CLM-00188,POL-00356,CUS-0183,CN-776930,2024-07-01,Trip Cancellation,5253.32,5241.13,Paid,Stephanie Baker,2024-10-03,,Multiple parties involved
+CLM-00189,POL-00289,CUS-0150,CN-359520,2025-10-15,Trip Cancellation,20574.88,14185.78,Paid,Susan Robinson,2026-01-05,,Complex case - senior adjuster assigned
+CLM-00190,POL-00064,CUS-0034,CN-480443,2025-02-07,Medical Emergency,13799.55,,Submitted,Sharon Fortin,,,Multiple parties involved
+CLM-00191,POL-00140,CUS-0076,CN-497024,2023-08-08,Fire,55455.71,,Submitted,Susan Robinson,,,Expedited review requested
+CLM-00192,POL-00090,CUS-0050,CN-699951,2023-08-24,Liability,118176.58,90343.64,Approved,Edward Lee,2023-11-26,,Complex case - senior adjuster assigned
+CLM-00193,POL-00283,CUS-0146,CN-888395,2025-10-04,Lost Luggage,2656.84,,Under Review,Christine Roberts,,,Documentation complete
+CLM-00194,POL-00177,CUS-0095,CN-109958,2025-08-22,Liability,119328.78,95004.21,Paid,Justin Lopez,2025-09-29,,Large loss - management review
+CLM-00195,POL-00366,CUS-0188,CN-770242,2023-11-09,Theft,7562.17,3980.97,Paid,Paul Nguyen,2024-02-14,,Awaiting additional information
+CLM-00196,POL-00348,CUS-0180,CN-626625,2025-06-16,Terminal Illness,356325.51,0.0,Denied,Sharon Gauthier,2025-08-07,Late filing,Complex case - senior adjuster assigned
+CLM-00197,POL-00220,CUS-0117,CN-191165,2026-04-17,Terminal Illness,362048.74,236270.73,Approved,Sharon Gauthier,2026-08-09,,Follow-up required
+CLM-00198,POL-00161,CUS-0087,CN-188693,2024-08-16,Medical Emergency,2170.98,1264.72,Approved,Brenda Lavoie,2024-08-28,,Complex case - senior adjuster assigned
+CLM-00199,POL-00284,CUS-0147,CN-602955,2025-06-19,Liability,48127.23,46501.53,Closed,Linda Campbell,2025-07-11,,Large loss - management review
+CLM-00200,POL-00351,CUS-0181,CN-836720,2024-11-29,Medical Emergency,544.73,0.0,Denied,Lisa Lee,2024-12-06,Coverage limit exceeded,Multiple parties involved
+CLM-00201,POL-00126,CUS-0069,CN-283305,2024-04-19,Medical Emergency,11326.57,0.0,Denied,Susan Robinson,2024-07-02,Exclusion clause,Multiple parties involved
+CLM-00202,POL-00069,CUS-0038,CN-812049,2021-01-29,Lost Luggage,10683.51,10521.81,Paid,Stephanie Baker,2021-03-18,,Large loss - management review
+CLM-00203,POL-00061,CUS-0032,CN-328026,2024-11-07,Vandalism,24414.67,0.0,Denied,Sharon Fortin,2024-11-14,Coverage limit exceeded,Complex case - senior adjuster assigned
+CLM-00204,POL-00330,CUS-0170,CN-473024,2026-03-23,Vision,44692.21,41303.46,Closed,Lisa Hall,2026-04-04,,Customer escalation
+CLM-00205,POL-00236,CUS-0124,CN-521598,2024-08-04,Prescription,17823.86,,Submitted,Paul Nguyen,,,Standard processing
+CLM-00206,POL-00052,CUS-0029,CN-107246,2025-04-01,Storm Damage,40311.34,28433.99,Approved,Sandra Lewis,2025-06-07,,
+CLM-00207,POL-00129,CUS-0070,CN-662484,2025-09-09,Theft,20070.26,0.0,Denied,Paul Thompson,2025-11-09,Insufficient documentation,Complex case - senior adjuster assigned
+CLM-00208,POL-00056,CUS-0030,CN-106092,2026-03-12,Storm Damage,168032.13,0.0,Denied,Paul Nguyen,2026-05-03,Coverage limit exceeded,Awaiting additional information
+CLM-00209,POL-00057,CUS-0030,CN-268099,2024-04-20,Trip Cancellation,1198.36,797.64,Closed,Justin Lopez,2024-04-29,,Awaiting additional information
+CLM-00210,POL-00246,CUS-0128,CN-233624,2023-08-13,Terminal Illness,68208.23,61381.27,Paid,Paul Nguyen,2023-11-17,,Follow-up required
+CLM-00211,POL-00257,CUS-0135,CN-263097,2025-03-22,Flight Delay,2921.37,0.0,Denied,Paul Nguyen,2025-03-31,Insufficient documentation,Large loss - management review
+CLM-00212,POL-00007,CUS-0005,CN-108418,2025-06-13,Terminal Illness,35499.52,35081.31,Paid,Christine Roberts,2025-09-20,,Routine claim
+CLM-00213,POL-00149,CUS-0081,CN-295937,2025-12-15,Prescription,4314.22,2486.06,Closed,Stephanie Baker,2026-02-23,,Complex case - senior adjuster assigned
+CLM-00214,POL-00059,CUS-0031,CN-949296,2026-04-02,Accidental Death,131203.64,96690.05,Approved,Susan Robinson,2026-07-16,,Large loss - management review
+CLM-00215,POL-00313,CUS-0161,CN-238722,2022-02-20,Death Benefit,496350.32,285085.28,Closed,Christine Roberts,2022-03-12,,Standard processing
+CLM-00216,POL-00141,CUS-0076,CN-527082,2025-12-10,Theft,21602.0,20136.85,Approved,Lisa Lee,2026-02-01,,Complex case - senior adjuster assigned
+CLM-00217,POL-00359,CUS-0184,CN-154164,2025-05-30,Therapy,11244.41,8488.76,Approved,Sharon Gauthier,2025-08-25,,Expedited review requested
+CLM-00218,POL-00138,CUS-0075,CN-290580,2023-03-18,Lost Luggage,23586.37,15565.13,Approved,Lisa Hall,2023-03-29,,Standard processing
+CLM-00219,POL-00027,CUS-0016,CN-551839,2022-10-18,Lost Luggage,7275.86,0.0,Denied,Sandra Lewis,2023-01-10,Policy lapsed,Complex case - senior adjuster assigned
+CLM-00220,POL-00252,CUS-0132,CN-816137,2023-10-16,Prescription,15356.96,,Submitted,Lisa Lee,,,Documentation complete
+CLM-00221,POL-00170,CUS-0091,CN-389351,2024-04-22,Vandalism,37275.13,25563.14,Closed,Stephanie Baker,2024-07-19,,Customer escalation
+CLM-00222,POL-00197,CUS-0105,CN-786141,2026-01-06,Death Benefit,62119.1,34797.7,Closed,Edward Lee,2026-03-27,,Awaiting additional information
+CLM-00223,POL-00099,CUS-0054,CN-416120,2025-05-26,Terminal Illness,463495.31,,Under Review,Brenda Lavoie,,,Routine claim
+CLM-00224,POL-00390,CUS-0200,CN-538527,2026-03-21,Trip Cancellation,18075.08,,Submitted,Lisa Lee,,,Complex case - senior adjuster assigned
+CLM-00225,POL-00389,CUS-0199,CN-170997,2025-10-24,Liability,179087.69,100058.88,Closed,Linda Campbell,2025-12-23,,Follow-up required
+CLM-00226,POL-00269,CUS-0139,CN-147652,2026-03-10,Liability,5353.1,5266.08,Closed,Cynthia Clark,2026-04-21,,Standard processing
+CLM-00227,POL-00356,CUS-0183,CN-273558,2025-08-24,Trip Cancellation,20400.43,19077.01,Closed,Linda Campbell,2025-09-07,,Large loss - management review
+CLM-00228,POL-00197,CUS-0105,CN-699678,2025-05-31,Terminal Illness,201220.98,119129.49,Approved,Stephanie Baker,2025-06-25,,Customer escalation
+CLM-00229,POL-00357,CUS-0183,CN-331039,2025-05-23,Hospital Stay,22880.96,14401.67,Closed,Sharon Gauthier,2025-09-14,,Complex case - senior adjuster assigned
+CLM-00230,POL-00283,CUS-0146,CN-391248,2023-04-24,Medical Emergency,5753.45,2989.18,Paid,Sharon Fortin,2023-05-17,,Documentation complete
+CLM-00231,POL-00139,CUS-0076,CN-780154,2024-03-08,Death Benefit,494872.77,0.0,Denied,Paul Nguyen,2024-03-29,Pre-existing condition,
+CLM-00232,POL-00310,CUS-0160,CN-528178,2026-02-03,Theft,17565.99,11102.04,Closed,Sharon Fortin,2026-02-25,,Customer escalation
+CLM-00233,POL-00151,CUS-0082,CN-329931,2021-02-11,Lost Luggage,15723.69,,Under Review,Brenda Lavoie,,,Complex case - senior adjuster assigned
+CLM-00234,POL-00091,CUS-0051,CN-821541,2021-09-08,Prescription,26961.96,14915.93,Closed,Christine Roberts,2021-12-17,,
+CLM-00235,POL-00132,CUS-0072,CN-263201,2025-12-20,Trip Cancellation,5671.85,0.0,Denied,Linda Campbell,2026-03-11,Coverage limit exceeded,Awaiting additional information
+CLM-00236,POL-00374,CUS-0193,CN-294015,2024-11-02,Therapy,18558.27,13881.23,Approved,Edward Lee,2025-01-04,,Documentation complete
+CLM-00237,POL-00097,CUS-0053,CN-425226,2024-01-26,Glass Damage,47196.08,0.0,Denied,Sandra Lewis,2024-03-09,Pre-existing condition,Documentation complete
+CLM-00238,POL-00202,CUS-0109,CN-205102,2022-10-08,Trip Cancellation,3759.35,3588.55,Paid,Brenda Lavoie,2022-12-03,,Large loss - management review
+CLM-00239,POL-00071,CUS-0040,CN-966713,2025-10-27,Therapy,40438.04,27982.93,Paid,Lisa Hall,2025-11-15,,
+CLM-00240,POL-00023,CUS-0014,CN-930892,2022-12-10,Surgery,38551.86,0.0,Denied,Lisa Hall,2023-03-07,Pre-existing condition,Expedited review requested
+CLM-00241,POL-00278,CUS-0144,CN-603762,2023-12-22,Terminal Illness,427832.9,,Submitted,Paul Thompson,,,Customer escalation
+CLM-00242,POL-00228,CUS-0121,CN-825657,2024-02-03,Surgery,16721.46,0.0,Denied,Sharon Gauthier,2024-02-17,Not covered under policy terms,
+CLM-00243,POL-00279,CUS-0144,CN-636391,2024-08-08,Medical Emergency,20658.14,0.0,Denied,Sharon Fortin,2024-09-21,Policy lapsed,Follow-up required
+CLM-00244,POL-00073,CUS-0040,CN-336856,2023-08-19,Hospital Stay,1395.24,944.1,Approved,Sharon Fortin,2023-09-29,,
+CLM-00245,POL-00197,CUS-0105,CN-335428,2025-12-31,Terminal Illness,360277.09,210682.67,Paid,Susan Robinson,2026-01-19,,Complex case - senior adjuster assigned
+CLM-00246,POL-00183,CUS-0098,CN-258442,2024-12-28,Collision,17019.38,16130.85,Approved,Sandra Lewis,2025-03-20,,Follow-up required
+CLM-00247,POL-00272,CUS-0142,CN-957276,2025-05-11,Vandalism,9477.59,7995.11,Closed,Sharon Gauthier,2025-08-03,,Multiple parties involved
+CLM-00248,POL-00054,CUS-0029,CN-102284,2025-09-27,Prescription,33154.24,29816.99,Closed,Edward Lee,2026-01-10,,Documentation complete
+CLM-00249,POL-00336,CUS-0173,CN-705912,2024-09-02,Fire,30408.26,27590.17,Paid,Christine Roberts,2024-09-21,,Complex case - senior adjuster assigned
+CLM-00250,POL-00075,CUS-0042,CN-434826,2025-11-30,Medical Emergency,24870.34,0.0,Denied,Linda Campbell,2026-01-25,Fraud suspected,Follow-up required
+CLM-00251,POL-00247,CUS-0129,CN-538996,2025-06-11,Storm Damage,158906.82,152678.06,Closed,Lisa Lee,2025-08-04,,Routine claim
+CLM-00252,POL-00276,CUS-0143,CN-542332,2025-07-30,Terminal Illness,270912.47,146782.78,Paid,Lisa Lee,2025-11-03,,Customer escalation
+CLM-00253,POL-00356,CUS-0183,CN-480002,2025-06-08,Trip Cancellation,2363.81,2356.61,Approved,Lisa Lee,2025-06-15,,Routine claim
+CLM-00254,POL-00069,CUS-0038,CN-975825,2021-03-06,Medical Emergency,22801.78,14760.7,Approved,Edward Lee,2021-03-29,,Large loss - management review
+CLM-00255,POL-00216,CUS-0114,CN-222930,2025-04-17,Fire,165736.54,,Submitted,Brenda Lavoie,,,Documentation complete
+CLM-00256,POL-00194,CUS-0104,CN-177353,2026-01-23,Collision,48263.2,26689.79,Closed,Linda Campbell,2026-04-12,,Customer escalation
+CLM-00257,POL-00081,CUS-0045,CN-113083,2024-01-31,Death Benefit,188969.67,,Submitted,Cynthia Clark,,,Follow-up required
+CLM-00258,POL-00077,CUS-0043,CN-531512,2025-04-27,Death Benefit,374343.39,364753.79,Closed,Brenda Lavoie,2025-07-01,,Multiple parties involved
+CLM-00259,POL-00228,CUS-0121,CN-733521,2026-04-07,Therapy,857.83,0.0,Denied,Paul Thompson,2026-04-21,Pre-existing condition,Documentation complete
+CLM-00260,POL-00258,CUS-0135,CN-370589,2025-11-14,Fire,79881.75,62074.35,Paid,Sharon Fortin,2026-03-05,,Customer escalation
+CLM-00261,POL-00257,CUS-0135,CN-495900,2026-01-12,Lost Luggage,5837.41,5758.96,Paid,Sandra Lewis,2026-03-24,,Awaiting additional information
+CLM-00262,POL-00206,CUS-0110,CN-956223,2024-07-30,Medical Emergency,9928.82,7968.29,Closed,Brenda Lavoie,2024-08-13,,Routine claim
+CLM-00263,POL-00245,CUS-0128,CN-304189,2025-09-29,Accidental Death,415354.3,0.0,Denied,Sharon Gauthier,2025-11-22,Coverage limit exceeded,Expedited review requested
+CLM-00264,POL-00054,CUS-0029,CN-667875,2024-03-17,Hospital Stay,30238.87,18740.99,Approved,Susan Robinson,2024-04-11,,Expedited review requested
+CLM-00265,POL-00109,CUS-0060,CN-352009,2022-07-13,Vision,37874.77,22757.55,Closed,Sharon Gauthier,2022-07-22,,Expedited review requested
+CLM-00266,POL-00292,CUS-0151,CN-423595,2022-01-26,Glass Damage,28405.1,14884.97,Approved,Lisa Hall,2022-02-11,,Multiple parties involved
+CLM-00267,POL-00385,CUS-0198,CN-836789,2026-01-05,Lost Luggage,12605.36,10876.46,Paid,Justin Lopez,2026-01-26,,Expedited review requested
+CLM-00268,POL-00170,CUS-0091,CN-500673,2025-11-25,Liability,5499.64,2814.95,Approved,Linda Campbell,2026-03-11,,Customer escalation
+CLM-00269,POL-00020,CUS-0012,CN-342818,2022-06-11,Accidental Death,84253.53,46056.81,Closed,Sharon Fortin,2022-09-15,,Awaiting additional information
+CLM-00270,POL-00349,CUS-0180,CN-905973,2022-03-12,Fire,198689.91,159820.1,Closed,Paul Nguyen,2022-05-22,,Routine claim
+CLM-00271,POL-00068,CUS-0037,CN-911781,2025-06-18,Prescription,18143.75,9434.87,Paid,Justin Lopez,2025-09-22,,Follow-up required
+CLM-00272,POL-00123,CUS-0068,CN-202137,2026-01-20,Surgery,30422.48,24760.7,Closed,Paul Thompson,2026-03-29,,Standard processing
+CLM-00273,POL-00074,CUS-0041,CN-171472,2021-08-02,Theft,100283.54,96976.99,Approved,Sharon Gauthier,2021-08-27,,Customer escalation
+CLM-00274,POL-00187,CUS-0100,CN-368463,2024-09-17,Vandalism,4021.13,2529.18,Paid,Paul Thompson,2024-11-21,,Routine claim
+CLM-00275,POL-00333,CUS-0172,CN-520415,2026-03-08,Death Benefit,70743.45,48228.36,Approved,Christine Roberts,2026-04-18,,Customer escalation
+CLM-00276,POL-00349,CUS-0180,CN-533265,2025-05-01,Fire,73979.72,50812.35,Paid,Lisa Lee,2025-08-01,,Routine claim
+CLM-00277,POL-00135,CUS-0072,CN-961127,2024-09-30,Therapy,31106.56,27849.56,Closed,Lisa Lee,2025-01-02,,Standard processing
+CLM-00278,POL-00080,CUS-0044,CN-584734,2025-05-10,Water Damage,75788.52,46346.62,Approved,Justin Lopez,2025-09-03,,Expedited review requested
+CLM-00279,POL-00179,CUS-0096,CN-867324,2024-05-25,Storm Damage,128854.41,71457.44,Paid,Susan Robinson,2024-06-22,,Follow-up required
+CLM-00280,POL-00222,CUS-0117,CN-877293,2024-11-24,Surgery,16570.29,12314.17,Closed,Linda Campbell,2025-02-26,,Expedited review requested
+CLM-00281,POL-00143,CUS-0077,CN-695807,2021-12-13,Flight Delay,13718.01,11250.25,Approved,Lisa Hall,2022-01-27,,Customer escalation
+CLM-00282,POL-00195,CUS-0104,CN-124057,2024-08-07,Death Benefit,396883.97,209173.23,Approved,Paul Thompson,2024-12-01,,
+CLM-00283,POL-00217,CUS-0115,CN-387210,2025-08-09,Lost Luggage,15965.04,,Submitted,Christine Roberts,,,Expedited review requested
+CLM-00284,POL-00153,CUS-0083,CN-970893,2026-02-20,Terminal Illness,436931.67,413571.86,Closed,Lisa Hall,2026-03-20,,Expedited review requested
+CLM-00285,POL-00220,CUS-0117,CN-598597,2025-10-06,Accidental Death,155483.44,0.0,Denied,Lisa Lee,2025-12-05,Late filing,Documentation complete
+CLM-00286,POL-00357,CUS-0183,CN-726134,2024-07-03,Dental,45647.37,35625.68,Approved,Stephanie Baker,2024-10-30,,Expedited review requested
+CLM-00287,POL-00371,CUS-0192,CN-868738,2021-11-29,Therapy,16321.88,14223.18,Closed,Paul Nguyen,2022-03-08,,Standard processing
+CLM-00288,POL-00078,CUS-0044,CN-857371,2025-05-24,Liability,25222.56,17736.34,Closed,Lisa Hall,2025-08-03,,Routine claim
+CLM-00289,POL-00065,CUS-0034,CN-540586,2025-11-04,Terminal Illness,323069.03,196849.64,Approved,Brenda Lavoie,2025-12-03,,Large loss - management review
+CLM-00290,POL-00086,CUS-0048,CN-488241,2026-01-20,Terminal Illness,115907.27,0.0,Denied,Edward Lee,2026-02-20,Pre-existing condition,Multiple parties involved
+CLM-00291,POL-00009,CUS-0006,CN-578148,2026-01-15,Prescription,15486.88,13158.56,Approved,Christine Roberts,2026-04-13,,Follow-up required
+CLM-00292,POL-00181,CUS-0097,CN-549192,2025-01-25,Accidental Death,266353.21,256544.6,Approved,Paul Nguyen,2025-03-29,,Documentation complete
+CLM-00293,POL-00284,CUS-0147,CN-764909,2025-09-05,Glass Damage,27366.76,23105.08,Closed,Sharon Gauthier,2025-11-04,,Customer escalation
+CLM-00294,POL-00051,CUS-0028,CN-208711,2025-10-25,Medical Emergency,2423.02,,Under Review,Linda Campbell,,,Customer escalation
+CLM-00295,POL-00279,CUS-0144,CN-322162,2025-10-15,Medical Emergency,12683.37,8180.17,Closed,Stephanie Baker,2025-12-12,,Routine claim
+CLM-00296,POL-00283,CUS-0146,CN-586483,2022-12-29,Flight Delay,5049.89,3410.23,Approved,Christine Roberts,2023-04-14,,
+CLM-00297,POL-00361,CUS-0185,CN-790677,2025-02-25,Therapy,578.74,436.24,Approved,Sharon Gauthier,2025-04-05,,Complex case - senior adjuster assigned
+CLM-00298,POL-00213,CUS-0112,CN-928909,2025-04-13,Therapy,407.05,206.69,Approved,Paul Nguyen,2025-05-07,,Large loss - management review
+CLM-00299,POL-00380,CUS-0195,CN-302019,2025-02-23,Terminal Illness,174194.07,108159.81,Paid,Cynthia Clark,2025-04-19,,
+CLM-00300,POL-00202,CUS-0109,CN-522700,2025-08-14,Medical Emergency,10841.74,10718.99,Paid,Sharon Fortin,2025-09-10,,Multiple parties involved

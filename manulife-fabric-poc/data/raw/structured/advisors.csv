@@ -1,0 +1,31 @@
+advisor_id,first_name,last_name,email,branch_office,region,certification_level,specialization,hire_date,is_active,aum_total
+ADV-0001,Robert,Scott,robert.scott@manulife.com,Ottawa Centre,Quebec,Junior,Health Insurance,2020-03-06,TRUE,138614800.77
+ADV-0002,Jennifer,Brown,jennifer.brown@manulife.com,Ottawa Centre,Ontario,Junior,Life Insurance,2017-08-03,TRUE,164221687.26
+ADV-0003,Sandra,Cote,sandra.cote@manulife.com,Montreal Centre,Atlantic,Principal,Life Insurance,2022-01-08,TRUE,176044151.77
+ADV-0004,Kimberly,Martin,kimberly.martin@manulife.com,Quebec City,Quebec,Senior,Health Insurance,2013-07-10,TRUE,212636119.76
+ADV-0005,Jennifer,Bouchard,jennifer.bouchard@manulife.com,North York,Atlantic,Principal,Group Benefits,2006-10-08,TRUE,208204142.74
+ADV-0006,Pamela,Harris,pamela.harris@manulife.com,North York,Prairies,Junior,Wealth Management,2022-05-04,TRUE,24549034.35
+ADV-0007,Richard,Carter,richard.carter@manulife.com,Burnaby,BC,Senior,Estate Planning,2008-08-25,TRUE,56329222.54
+ADV-0008,Rachel,Martinez,rachel.martinez@manulife.com,Winnipeg Main,Atlantic,Junior,Wealth Management,2008-08-31,TRUE,71137217.56
+ADV-0009,Frank,Adams,frank.adams@manulife.com,Ottawa Centre,Ontario,Principal,Estate Planning,2013-12-31,TRUE,56690796.68
+ADV-0010,Margaret,Bergeron,margaret.bergeron@manulife.com,Kitchener,Alberta,Principal,Commercial Insurance,2008-03-16,TRUE,65423739.39
+ADV-0011,Catherine,Morrison,catherine.morrison@manulife.com,Kitchener,Alberta,Senior,Estate Planning,2009-12-02,FALSE,38891277.5
+ADV-0012,Elizabeth,Miller,elizabeth.miller@manulife.com,Mississauga,Ontario,Senior,Group Benefits,2018-05-18,TRUE,98496725.19
+ADV-0013,Shirley,Allen,shirley.allen@manulife.com,Hamilton,Atlantic,Principal,Health Insurance,2020-04-16,TRUE,188965060.9
+ADV-0014,Jessica,Nguyen,jessica.nguyen@manulife.com,Mississauga,Alberta,Senior,Retirement Planning,2016-03-24,TRUE,129382010.28
+ADV-0015,Samuel,Hill,samuel.hill@manulife.com,Calgary Tower,Prairies,Senior,Property & Casualty,2013-05-22,TRUE,137147862.38
+ADV-0016,Brandon,Adams,brandon.adams@manulife.com,Downtown Toronto,Alberta,Junior,Estate Planning,2023-08-28,TRUE,63665816.03
+ADV-0017,Justin,Hernandez,justin.hernandez@manulife.com,Halifax Waterfront,Ontario,Senior,Health Insurance,2022-01-22,TRUE,35811325.32
+ADV-0018,Brenda,Perez,brenda.perez@manulife.com,Calgary Tower,BC,Principal,Group Benefits,2009-10-02,FALSE,190039973.18
+ADV-0019,Patrick,Flores,patrick.flores@manulife.com,Winnipeg Main,Alberta,Senior,Commercial Insurance,2016-08-10,TRUE,65736875.35
+ADV-0020,Brian,Williams,brian.williams@manulife.com,Calgary Tower,Atlantic,Junior,Wealth Management,2005-02-28,TRUE,159620224.53
+ADV-0021,David,Jones,david.jones@manulife.com,North York,BC,Senior,Retirement Planning,2020-01-03,TRUE,137112313.19
+ADV-0022,Ashley,Morin,ashley.morin@manulife.com,Ottawa Centre,Alberta,Junior,Group Benefits,2012-12-12,TRUE,119421043.67
+ADV-0023,Frank,Gonzalez,frank.gonzalez@manulife.com,Vancouver Downtown,Ontario,Senior,Health Insurance,2010-07-30,TRUE,136390009.71
+ADV-0024,Jeffrey,White,jeffrey.white@manulife.com,Burnaby,BC,Junior,Health Insurance,2014-12-10,TRUE,214711888.65
+ADV-0025,Michael,Belanger,michael.belanger@manulife.com,North York,Ontario,Principal,Wealth Management,2008-09-24,TRUE,122932812.4
+ADV-0026,Linda,Perez,linda.perez@manulife.com,Downtown Toronto,Alberta,Principal,Retirement Planning,2022-08-03,TRUE,74886061.09
+ADV-0027,Karen,Harris,karen.harris@manulife.com,Ottawa Centre,BC,Principal,Life Insurance,2021-10-11,TRUE,17284872.63
+ADV-0028,Angela,Poirier,angela.poirier@manulife.com,Downtown Toronto,Quebec,Principal,Health Insurance,2009-03-03,TRUE,21650411.53
+ADV-0029,Edward,Thomas,edward.thomas@manulife.com,Ottawa Centre,Atlantic,Senior,Life Insurance,2018-11-22,TRUE,166056425.3
+ADV-0030,Dorothy,Clark,dorothy.clark@manulife.com,Halifax Waterfront,Prairies,Senior,Retirement Planning,2013-11-17,TRUE,163147693.27

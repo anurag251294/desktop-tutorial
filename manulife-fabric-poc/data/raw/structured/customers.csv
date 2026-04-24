@@ -1,0 +1,201 @@
+customer_id,first_name,last_name,email,phone,date_of_birth,gender,address_line1,city,province,postal_code,country,customer_segment,registration_date,is_active
+CUS-0001,Heather,Campbell,heather.campbell820@outlook.com,902-281-7755,1968-11-12,Female,407 Oak Dr,Surrey,BC,V5K 5Z6,Canada,High Net Worth,2022-08-27,TRUE
+CUS-0002,Andrew,Lee,andrew.lee228@hotmail.com,613-936-8541,1989-04-27,Male,5729 Bay St,Markham,ON,K1A 3H0,Canada,Retail,2020-06-07,TRUE
+CUS-0003,Barbara,Scott,barbara.scott340@bell.net,416-218-5279,2000-09-13,Female,2926 Laurier Ave,Trois-Rivieres,QC,H2X 4B1,Canada,Retail,2024-06-25,TRUE
+CUS-0004,Sharon,MacKay,sharon.mackay195@bell.net,514-145-8144,1965-05-17,Female,28 Front St,Lethbridge,AB,T2P 8V3,Canada,Retail,2024-04-26,TRUE
+CUS-0005,Helen,Green,helen.green317@bell.net,204-518-6344,1966-03-07,Female,6593 Elgin St,St. John's,NL,A1B 4R2,Canada,Retail,2023-05-15,TRUE
+CUS-0006,Debra,Thompson,debra.thompson854@bell.net,416-411-5700,1981-12-31,Female,3444 College St,Fredericton,NB,E1C 9T5,Canada,Retail,2024-07-21,TRUE
+CUS-0007,Eric,Morin,eric.morin680@bell.net,204-734-6491,1962-08-10,Male,1531 Slater St,Burlington,ON,K1A 3V4,Canada,Retail,2023-03-08,TRUE
+CUS-0008,John,Young,john.young908@hotmail.com,204-689-4185,1961-07-14,Male,6292 University Ave,Edmonton,AB,T2P 6H2,Canada,Retail,2025-02-08,TRUE
+CUS-0009,Tyler,Tremblay,tyler.tremblay52@hotmail.com,403-355-2988,1970-10-12,Male,7479 Maple Ave,Oshawa,ON,K1A 7V8,Canada,Institutional,2025-10-22,TRUE
+CUS-0010,Helen,Pelletier,helen.pelletier461@hotmail.com,514-869-5050,1995-01-02,Female,4544 Slater St,Richmond,BC,V5K 8P3,Canada,Retail,2021-10-13,TRUE
+CUS-0011,Ashley,Wright,ashley.wright142@gmail.com,905-336-7275,1983-09-07,Female,2504 Elgin St,Levis,QC,H2X 3C6,Canada,Retail,2026-01-21,TRUE
+CUS-0012,Linda,Clark,linda.clark390@bell.net,778-106-6763,1989-12-10,Female,4893 Slater St,Surrey,BC,V5K 6N8,Canada,High Net Worth,2020-03-21,TRUE
+CUS-0013,Nicholas,Lewis,nicholas.lewis399@gmail.com,438-784-7624,1994-02-06,Male,2705 Spadina Ave,Laval,QC,H2X 2T8,Canada,Retail,2025-06-12,TRUE
+CUS-0014,William,Tremblay,william.tremblay267@gmail.com,604-435-4467,1996-06-02,Male,7450 Yonge St,Windsor,ON,K1A 5Y6,Canada,Retail,2022-01-14,FALSE
+CUS-0015,Dorothy,Hernandez,dorothy.hernandez975@gmail.com,438-329-2124,1956-09-27,Female,660 Slater St,Edmonton,AB,T2P 0H3,Canada,High Net Worth,2026-01-18,TRUE
+CUS-0016,Thomas,Morin,thomas.morin717@hotmail.com,514-885-7043,1965-04-06,Male,2750 Rideau St,St. John's,NL,A1B 9X1,Canada,High Net Worth,2022-06-11,TRUE
+CUS-0017,Susan,Morrison,susan.morrison965@hotmail.com,306-303-2245,1982-12-27,Female,9701 Elgin St,Ottawa,ON,K1A 3D4,Canada,High Net Worth,2024-03-17,TRUE
+CUS-0018,Justin,Garcia,justin.garcia519@gmail.com,204-449-1207,1993-06-07,Male,6883 University Ave,Trois-Rivieres,QC,H2X 1N5,Canada,Retail,2024-02-26,TRUE
+CUS-0019,Jeffrey,Thompson,jeffrey.thompson477@hotmail.com,604-945-5397,1979-03-26,Male,5281 Pine Rd,Winnipeg,MB,R3C 1I7,Canada,Retail,2026-01-13,TRUE
+CUS-0020,Carol,Brown,carol.brown218@hotmail.com,438-916-5232,1984-02-28,Female,5577 Elm St,Red Deer,AB,T2P 9W4,Canada,Retail,2022-01-14,TRUE
+CUS-0021,William,Walker,william.walker708@outlook.com,778-761-9041,1998-10-31,Male,7343 Main St,Surrey,BC,V5K 1J3,Canada,Retail,2026-03-24,TRUE
+CUS-0022,Kathleen,MacDonald,kathleen.macdonald339@bell.net,438-819-8434,1985-11-03,Female,4439 Bay St,Winnipeg,MB,R3C 4H1,Canada,High Net Worth,2024-10-08,TRUE
+CUS-0023,Anthony,Ramirez,anthony.ramirez290@bell.net,647-952-4180,1979-10-22,Male,4854 Pine Rd,Edmonton,AB,T2P 5F4,Canada,Retail,2025-11-18,TRUE
+CUS-0024,Jennifer,Miller,jennifer.miller106@hotmail.com,709-112-5658,1981-03-17,Female,7691 University Ave,Regina,SK,S4P 7K2,Canada,Institutional,2021-06-01,TRUE
+CUS-0025,Jessica,Rodriguez,jessica.rodriguez645@bell.net,204-154-3485,1999-02-12,Female,2445 Laurier Ave,Burnaby,BC,V5K 4C3,Canada,Retail,2020-10-30,TRUE
+CUS-0026,Tyler,Ouellet,tyler.ouellet881@yahoo.ca,587-539-6003,1995-06-02,Male,9317 Rideau St,Victoria,BC,V5K 0T1,Canada,High Net Worth,2024-12-18,TRUE
+CUS-0027,Paul,Hernandez,paul.hernandez77@bell.net,905-102-7693,1976-07-08,Male,7382 Elgin St,Burlington,ON,K1A 9P4,Canada,Retail,2021-12-12,TRUE
+CUS-0028,Rachel,Bouchard,rachel.bouchard678@bell.net,902-302-7965,1975-12-10,Female,1881 Wellington St,London,ON,K1A 3U2,Canada,High Net Worth,2022-12-19,TRUE
+CUS-0029,Michael,Perez,michael.perez480@gmail.com,306-411-7594,1980-11-22,Male,4461 Front St,Longueuil,QC,H2X 8P7,Canada,Retail,2024-12-03,TRUE
+CUS-0030,Catherine,Adams,catherine.adams235@gmail.com,204-956-1339,1977-06-18,Female,4416 Laurier Ave,Dartmouth,NS,B3H 0Y2,Canada,Retail,2020-04-15,TRUE
+CUS-0031,Nancy,Morrison,nancy.morrison357@hotmail.com,604-441-6260,1999-02-11,Female,1714 Oak Dr,Richmond,BC,V5K 5N7,Canada,Retail,2021-01-08,FALSE
+CUS-0032,Jacob,Lopez,jacob.lopez994@gmail.com,902-513-9431,1977-08-23,Male,19 Somerset St,Sherbrooke,QC,H2X 8O6,Canada,Retail,2023-08-17,TRUE
+CUS-0033,Samantha,Roy,samantha.roy135@bell.net,514-548-8941,1973-04-06,Female,1990 Main St,Hamilton,ON,K1A 9Z3,Canada,High Net Worth,2022-12-29,TRUE
+CUS-0034,Larry,Patel,larry.patel970@hotmail.com,647-763-3522,1975-02-27,Male,8166 Elgin St,Brampton,ON,K1A 4Q4,Canada,Retail,2021-04-09,TRUE
+CUS-0035,Ashley,Bouchard,ashley.bouchard944@outlook.com,587-620-3236,1967-12-23,Female,1144 Elm St,Regina,SK,S4P 6K8,Canada,Retail,2024-04-20,TRUE
+CUS-0036,Emma,Morrison,emma.morrison552@hotmail.com,778-453-6446,1998-12-05,Female,9043 Slater St,St. John's,NL,A1B 8M7,Canada,High Net Worth,2021-08-31,TRUE
+CUS-0037,Justin,Roberts,justin.roberts763@yahoo.ca,778-822-7246,1991-11-08,Male,6326 Somerset St,Oshawa,ON,K1A 2P0,Canada,Retail,2020-06-27,FALSE
+CUS-0038,Susan,Roy,susan.roy420@outlook.com,709-770-3529,1995-12-29,Female,1226 University Ave,Markham,ON,K1A 4K9,Canada,Retail,2020-03-03,TRUE
+CUS-0039,Debra,Levesque,debra.levesque37@bell.net,587-170-4846,1983-05-30,Female,4709 Pine Rd,Victoria,BC,V5K 1N1,Canada,High Net Worth,2025-06-21,TRUE
+CUS-0040,Ryan,Perez,ryan.perez816@yahoo.ca,416-400-6873,1957-08-06,Male,6142 College St,Longueuil,QC,H2X 2H8,Canada,Retail,2020-07-07,TRUE
+CUS-0041,Daniel,Thompson,daniel.thompson935@hotmail.com,587-246-4804,1989-04-27,Male,7556 Bank St,Brampton,ON,K1A 4O4,Canada,Retail,2022-09-13,FALSE
+CUS-0042,Emily,Belanger,emily.belanger602@yahoo.ca,514-754-7951,1961-08-17,Female,4098 Spadina Ave,Burlington,ON,K1A 4G6,Canada,High Net Worth,2024-12-14,TRUE
+CUS-0043,Pamela,Rivera,pamela.rivera850@gmail.com,204-505-5497,1981-07-18,Female,133 Laurier Ave,Saskatoon,SK,S4P 0T7,Canada,High Net Worth,2023-04-24,FALSE
+CUS-0044,Brandon,Rivera,brandon.rivera644@outlook.com,647-742-1645,1972-01-22,Male,5062 Spadina Ave,Oshawa,ON,K1A 0S5,Canada,High Net Worth,2022-10-23,TRUE
+CUS-0045,Michelle,Kim,michelle.kim898@bell.net,438-643-9221,1973-01-05,Female,4466 Oak Dr,Vaughan,ON,K1A 4P4,Canada,High Net Worth,2021-06-25,TRUE
+CUS-0046,Jacob,Martinez,jacob.martinez375@bell.net,647-909-7464,1975-03-29,Male,229 Elm St,Oakville,ON,K1A 8D7,Canada,Retail,2024-06-15,TRUE
+CUS-0047,Emma,Carter,emma.carter483@outlook.com,416-734-6374,1988-04-29,Female,9996 Pine Rd,Moncton,NB,E1C 1U7,Canada,High Net Worth,2021-03-19,TRUE
+CUS-0048,Jessica,Moore,jessica.moore119@hotmail.com,647-340-9807,1958-05-04,Female,2223 Dundas St,Mississauga,ON,K1A 7L8,Canada,Retail,2023-05-31,TRUE
+CUS-0049,Jason,Gonzalez,jason.gonzalez707@gmail.com,438-322-8264,1991-08-13,Male,7286 Pine Rd,Red Deer,AB,T2P 5D5,Canada,Retail,2023-02-19,FALSE
+CUS-0050,Linda,Chen,linda.chen94@hotmail.com,204-317-1349,1972-01-11,Female,829 Yonge St,Laval,QC,H2X 3E9,Canada,Retail,2021-05-15,TRUE
+CUS-0051,Scott,Ramirez,scott.ramirez3@bell.net,514-979-3370,1984-06-23,Male,2130 Wellington St,Oshawa,ON,K1A 4Z2,Canada,Retail,2021-08-27,TRUE
+CUS-0052,James,Rivera,james.rivera272@outlook.com,416-229-7897,1984-01-18,Male,8620 Church St,Montreal,QC,H2X 1P7,Canada,High Net Worth,2020-03-05,TRUE
+CUS-0053,Ryan,Pelletier,ryan.pelletier470@yahoo.ca,204-131-1996,1958-11-21,Male,7848 Dundas St,Oshawa,ON,K1A 6V1,Canada,Retail,2025-11-05,FALSE
+CUS-0054,William,Adams,william.adams282@outlook.com,587-748-9984,1968-04-22,Male,5328 Dundas St,Dartmouth,NS,B3H 9Q4,Canada,Retail,2020-09-26,TRUE
+CUS-0055,Alexander,Anderson,alexander.anderson910@hotmail.com,613-523-6553,1974-04-16,Male,7431 Dundas St,Saint John,NB,E1C 6X1,Canada,Retail,2024-10-27,TRUE
+CUS-0056,Melissa,Martin,melissa.martin852@gmail.com,647-195-8075,1997-07-19,Female,1583 Albert St,Charlottetown,PE,C1A 5Z2,Canada,Retail,2020-10-01,TRUE
+CUS-0057,Christine,Thomas,christine.thomas992@gmail.com,514-714-6119,1986-09-21,Female,5762 Church St,Surrey,BC,V5K 9Q3,Canada,Retail,2024-09-28,TRUE
+CUS-0058,George,Campbell,george.campbell232@bell.net,902-539-1430,1965-04-22,Male,9978 Somerset St,Vancouver,BC,V5K 4A2,Canada,Retail,2023-02-15,TRUE
+CUS-0059,Amanda,Smith,amanda.smith146@gmail.com,306-748-1502,1967-11-08,Female,1504 Albert St,Vaughan,ON,K1A 8G6,Canada,Retail,2024-06-29,TRUE
+CUS-0060,Donna,Adams,donna.adams162@outlook.com,902-732-1815,1962-08-15,Female,1337 Elm St,Saskatoon,SK,S4P 7V6,Canada,Retail,2020-08-03,TRUE
+CUS-0061,Margaret,Leblanc,margaret.leblanc291@gmail.com,204-794-8972,1985-12-19,Female,8634 Somerset St,Kitchener,ON,K1A 4B3,Canada,Retail,2024-10-26,TRUE
+CUS-0062,Mark,Hill,mark.hill336@yahoo.ca,647-107-9149,1967-04-24,Male,7056 Oak Dr,Barrie,ON,K1A 2M8,Canada,High Net Worth,2022-11-12,TRUE
+CUS-0063,Barbara,Chen,barbara.chen944@hotmail.com,647-982-6129,1994-02-19,Female,9434 College St,Mississauga,ON,K1A 9M6,Canada,Retail,2020-03-17,TRUE
+CUS-0064,Lisa,MacKenzie,lisa.mackenzie865@hotmail.com,647-349-8138,1987-06-19,Female,9649 Dundas St,Calgary,AB,T2P 8C6,Canada,High Net Worth,2020-12-26,TRUE
+CUS-0065,Brian,Perez,brian.perez523@bell.net,613-894-6724,2000-10-18,Male,5753 Albert St,London,ON,K1A 2H1,Canada,Retail,2021-04-12,TRUE
+CUS-0066,Jerry,Martinez,jerry.martinez779@bell.net,587-559-6295,1999-05-01,Male,5180 Maple Ave,Vaughan,ON,K1A 7C7,Canada,Retail,2025-03-15,TRUE
+CUS-0067,Emma,Davis,emma.davis473@yahoo.ca,778-138-1932,2000-07-07,Female,6042 Bay St,Trois-Rivieres,QC,H2X 1U1,Canada,Retail,2020-10-30,TRUE
+CUS-0068,Emma,MacDonald,emma.macdonald620@yahoo.ca,778-613-3471,1995-05-07,Female,1014 Spadina Ave,Mississauga,ON,K1A 1Z5,Canada,Institutional,2022-02-10,TRUE
+CUS-0069,John,Young,john.young625@bell.net,905-472-7108,1994-06-03,Male,4635 Dundas St,Kelowna,BC,V5K 6Y5,Canada,Retail,2025-11-16,TRUE
+CUS-0070,Barbara,Nelson,barbara.nelson742@yahoo.ca,709-772-3463,1989-09-05,Female,5462 Queen St,Markham,ON,K1A 9V2,Canada,High Net Worth,2023-03-09,TRUE
+CUS-0071,Sarah,MacLeod,sarah.macleod833@yahoo.ca,905-786-9624,1982-10-10,Female,1532 Bank St,Brampton,ON,K1A 6Q5,Canada,Retail,2024-03-22,TRUE
+CUS-0072,Brian,Fortin,brian.fortin80@outlook.com,514-964-2657,1975-04-29,Male,8318 Slater St,Richmond Hill,ON,K1A 8X8,Canada,Retail,2021-07-17,TRUE
+CUS-0073,Brandon,Carter,brandon.carter829@bell.net,905-838-8170,1969-07-22,Male,716 College St,Oakville,ON,K1A 5V3,Canada,Institutional,2022-01-10,TRUE
+CUS-0074,Sandra,Levesque,sandra.levesque377@outlook.com,204-684-8218,1982-10-06,Female,7565 Slater St,Montreal,QC,H2X 4Y6,Canada,Retail,2025-04-05,TRUE
+CUS-0075,Anthony,MacKay,anthony.mackay896@hotmail.com,438-667-2680,1977-06-06,Male,8453 Church St,Windsor,ON,K1A 4C2,Canada,Retail,2020-08-01,FALSE
+CUS-0076,Jeffrey,Lopez,jeffrey.lopez425@gmail.com,416-505-9224,1995-06-22,Male,6127 Pine Rd,Oshawa,ON,K1A 6C5,Canada,Retail,2023-12-02,TRUE
+CUS-0077,Patrick,Nelson,patrick.nelson940@yahoo.ca,709-583-3273,1967-05-06,Male,7686 Spadina Ave,Oakville,ON,K1A 9A1,Canada,Retail,2020-06-05,TRUE
+CUS-0078,Larry,MacKay,larry.mackay244@yahoo.ca,514-224-1782,1992-12-21,Male,3907 College St,Winnipeg,MB,R3C 9O1,Canada,Retail,2021-03-31,FALSE
+CUS-0079,Samuel,Leblanc,samuel.leblanc440@yahoo.ca,416-729-6780,1976-09-14,Male,3942 Laurier Ave,Saskatoon,SK,S4P 6F1,Canada,Retail,2021-08-11,TRUE
+CUS-0080,Ronald,Morin,ronald.morin766@yahoo.ca,416-465-2106,1989-09-16,Male,5650 Pine Rd,Mississauga,ON,K1A 1Y9,Canada,High Net Worth,2024-03-09,TRUE
+CUS-0081,George,Belanger,george.belanger647@hotmail.com,905-930-3209,1970-09-16,Male,1034 Elgin St,Levis,QC,H2X 7B4,Canada,Retail,2025-03-18,TRUE
+CUS-0082,Kevin,Flores,kevin.flores260@hotmail.com,416-871-4131,1990-09-23,Male,4688 Bloor St,Lethbridge,AB,T2P 0U5,Canada,Retail,2026-02-02,TRUE
+CUS-0083,Stephanie,Roy,stephanie.roy709@hotmail.com,778-476-9507,1985-06-01,Female,4370 Queen St,Victoria,BC,V5K 6C6,Canada,Retail,2022-02-04,TRUE
+CUS-0084,Michelle,Wilson,michelle.wilson457@yahoo.ca,587-834-7981,1984-06-02,Female,2731 Elgin St,Brampton,ON,K1A 7L7,Canada,Retail,2023-04-25,TRUE
+CUS-0085,Helen,Gagnon,helen.gagnon373@hotmail.com,403-920-3621,1960-02-23,Female,511 Maple Ave,Laval,QC,H2X 9V7,Canada,Retail,2020-11-03,TRUE
+CUS-0086,Melissa,Roberts,melissa.roberts972@hotmail.com,438-480-8273,1957-11-27,Female,1260 Laurier Ave,Saskatoon,SK,S4P 2Q5,Canada,Retail,2021-09-20,TRUE
+CUS-0087,Joseph,Brown,joseph.brown936@hotmail.com,403-220-5288,1999-10-09,Male,4265 Elgin St,Vaughan,ON,K1A 7G9,Canada,Retail,2025-10-21,FALSE
+CUS-0088,Betty,Thomas,betty.thomas921@outlook.com,306-555-2438,1961-08-23,Female,5237 Somerset St,Windsor,ON,K1A 5W1,Canada,Retail,2025-01-25,TRUE
+CUS-0089,Lisa,Thompson,lisa.thompson206@gmail.com,902-242-4878,2000-08-22,Female,8095 Main St,Vancouver,BC,V5K 5R9,Canada,Retail,2022-07-07,TRUE
+CUS-0090,Benjamin,Lopez,benjamin.lopez539@hotmail.com,604-887-7708,1982-09-30,Male,9420 Queen St,London,ON,K1A 2K1,Canada,Retail,2024-06-18,TRUE
+CUS-0091,Sarah,MacDonald,sarah.macdonald515@hotmail.com,709-156-3034,1971-04-29,Female,8489 Maple Ave,Moncton,NB,E1C 4F2,Canada,Retail,2021-06-12,TRUE
+CUS-0092,Shirley,Torres,shirley.torres282@bell.net,905-740-5961,1977-06-25,Female,8741 Queen St,Brampton,ON,K1A 8U2,Canada,Retail,2022-03-15,TRUE
+CUS-0093,Gregory,MacKenzie,gregory.mackenzie84@gmail.com,416-756-5336,1985-04-16,Male,3454 Slater St,Dartmouth,NS,B3H 9N9,Canada,Retail,2020-06-17,TRUE
+CUS-0094,Katherine,Hill,katherine.hill465@yahoo.ca,647-805-1981,1976-12-20,Female,2590 Spadina Ave,Edmonton,AB,T2P 6P7,Canada,Retail,2024-07-21,TRUE
+CUS-0095,Carolyn,Green,carolyn.green528@yahoo.ca,403-208-6228,1990-10-09,Female,3961 Spadina Ave,Trois-Rivieres,QC,H2X 1I7,Canada,Retail,2021-06-19,TRUE
+CUS-0096,Deborah,Murray,deborah.murray957@yahoo.ca,587-838-6123,1977-04-10,Female,3111 Slater St,Surrey,BC,V5K 2P8,Canada,Retail,2021-10-16,TRUE
+CUS-0097,Patricia,Lopez,patricia.lopez221@outlook.com,587-461-1797,2000-05-06,Female,829 Bay St,Burnaby,BC,V5K 7T7,Canada,Retail,2025-02-15,TRUE
+CUS-0098,Jeffrey,Moore,jeffrey.moore47@yahoo.ca,604-152-4189,1987-10-25,Male,5940 Wellington St,Quebec City,QC,H2X 4C6,Canada,Retail,2024-07-09,TRUE
+CUS-0099,Helen,Murray,helen.murray383@hotmail.com,902-447-6990,1966-07-18,Female,2364 Cedar Ln,Kitchener,ON,K1A 9Q6,Canada,Retail,2021-01-31,TRUE
+CUS-0100,Patrick,Nelson,patrick.nelson915@bell.net,403-243-6373,1995-12-31,Male,5219 Oak Dr,Edmonton,AB,T2P 6T4,Canada,Retail,2021-09-02,TRUE
+CUS-0101,Carolyn,Stewart,carolyn.stewart340@yahoo.ca,204-212-7824,1997-08-09,Female,9564 Bay St,Longueuil,QC,H2X 0T7,Canada,Retail,2020-03-09,TRUE
+CUS-0102,Jack,Miller,jack.miller645@bell.net,306-734-7229,1998-02-07,Male,2422 Somerset St,Halifax,NS,B3H 3B9,Canada,High Net Worth,2021-11-29,TRUE
+CUS-0103,Ryan,Green,ryan.green421@outlook.com,403-893-8726,1968-08-02,Male,1021 Elgin St,Surrey,BC,V5K 2Q3,Canada,Retail,2024-08-18,FALSE
+CUS-0104,Shirley,Carter,shirley.carter351@bell.net,403-462-5331,1970-07-15,Female,9996 University Ave,Sherbrooke,QC,H2X 3H4,Canada,Retail,2025-02-25,TRUE
+CUS-0105,Heather,Torres,heather.torres358@hotmail.com,403-914-5480,1998-11-14,Female,4716 Church St,Barrie,ON,K1A 9V8,Canada,Retail,2023-07-22,FALSE
+CUS-0106,Heather,Jackson,heather.jackson355@gmail.com,778-771-5201,1958-10-10,Female,7850 Cedar Ln,Gatineau,QC,H2X 3R4,Canada,High Net Worth,2023-03-24,TRUE
+CUS-0107,Richard,Murray,richard.murray686@gmail.com,403-331-4814,1976-06-19,Male,861 Church St,Halifax,NS,B3H 6K7,Canada,Retail,2022-09-20,TRUE
+CUS-0108,Larry,Lee,larry.lee775@outlook.com,514-428-5676,1997-09-04,Male,970 Slater St,Surrey,BC,V5K 1U9,Canada,Retail,2025-05-09,TRUE
+CUS-0109,Matthew,Kim,matthew.kim191@hotmail.com,306-993-5742,1958-04-05,Male,614 Main St,Vaughan,ON,K1A 4S9,Canada,Retail,2024-06-14,FALSE
+CUS-0110,Cynthia,Belanger,cynthia.belanger480@bell.net,514-297-2845,1999-04-24,Female,5418 Oak Dr,Winnipeg,MB,R3C 7U4,Canada,High Net Worth,2021-07-03,TRUE
+CUS-0111,Emily,Stewart,emily.stewart877@bell.net,204-515-8007,1972-04-30,Female,8443 Yonge St,Charlottetown,PE,C1A 1M1,Canada,Retail,2021-12-19,TRUE
+CUS-0112,Ashley,Smith,ashley.smith772@hotmail.com,514-437-5947,1989-05-30,Female,9544 Albert St,Quebec City,QC,H2X 9A4,Canada,Retail,2022-08-22,TRUE
+CUS-0113,Gregory,Thomas,gregory.thomas703@hotmail.com,403-820-6095,1982-07-11,Male,1924 Bank St,Calgary,AB,T2P 4L9,Canada,Retail,2021-10-16,FALSE
+CUS-0114,Karen,Bouchard,karen.bouchard935@bell.net,778-875-9806,1988-07-08,Female,3579 Slater St,Dartmouth,NS,B3H 3V9,Canada,High Net Worth,2024-08-30,TRUE
+CUS-0115,Shirley,Campbell,shirley.campbell925@bell.net,403-307-9792,1965-01-24,Female,2456 Oak Dr,London,ON,K1A 5Q7,Canada,Retail,2020-09-09,TRUE
+CUS-0116,Elizabeth,Leblanc,elizabeth.leblanc526@outlook.com,604-567-1945,1959-12-29,Female,9156 Spadina Ave,Kelowna,BC,V5K 4X0,Canada,Retail,2025-01-31,TRUE
+CUS-0117,Scott,Martinez,scott.martinez555@gmail.com,416-170-8734,1993-01-04,Male,520 Bay St,Mississauga,ON,K1A 6F2,Canada,High Net Worth,2023-11-12,FALSE
+CUS-0118,Melissa,Carter,melissa.carter700@gmail.com,204-995-9835,1988-11-12,Female,2179 Bank St,Kelowna,BC,V5K 5D2,Canada,Institutional,2024-03-18,TRUE
+CUS-0119,Jack,Lewis,jack.lewis690@hotmail.com,306-657-7948,1957-01-14,Male,8716 Dundas St,Toronto,ON,K1A 3H7,Canada,Retail,2023-05-07,TRUE
+CUS-0120,John,Kim,john.kim69@outlook.com,647-708-1550,1956-05-27,Male,7315 Rideau St,Fredericton,NB,E1C 0H0,Canada,Retail,2022-09-12,TRUE
+CUS-0121,Jerry,Davis,jerry.davis836@outlook.com,306-689-6224,2000-03-16,Male,9462 Rideau St,Windsor,ON,K1A 5H4,Canada,High Net Worth,2023-03-30,FALSE
+CUS-0122,Jason,Hill,jason.hill901@bell.net,306-279-7999,1960-06-20,Male,9108 University Ave,Laval,QC,H2X 0L6,Canada,High Net Worth,2026-03-30,TRUE
+CUS-0123,Rebecca,Martin,rebecca.martin485@bell.net,613-969-4692,1988-10-09,Female,4928 Elgin St,Longueuil,QC,H2X 2Z7,Canada,High Net Worth,2022-01-23,TRUE
+CUS-0124,Brenda,Poirier,brenda.poirier209@yahoo.ca,438-762-2295,1989-11-05,Female,7370 Bloor St,Windsor,ON,K1A 1R3,Canada,Retail,2022-09-21,TRUE
+CUS-0125,David,Harris,david.harris891@outlook.com,438-410-1251,1974-06-21,Male,3471 Cedar Ln,Halifax,NS,B3H 1X7,Canada,High Net Worth,2025-05-17,TRUE
+CUS-0126,Edward,Walker,edward.walker478@hotmail.com,403-764-6886,1983-11-08,Male,5054 Elm St,Regina,SK,S4P 5Q7,Canada,Retail,2023-03-05,TRUE
+CUS-0127,Maria,Green,maria.green47@hotmail.com,587-984-4625,1988-04-04,Female,2391 Main St,Barrie,ON,K1A 4R9,Canada,Retail,2023-07-05,TRUE
+CUS-0128,Anthony,Nelson,anthony.nelson564@hotmail.com,204-801-6530,1989-01-28,Male,4217 Slater St,Oshawa,ON,K1A 7X7,Canada,Retail,2022-10-03,TRUE
+CUS-0129,Lisa,Moore,lisa.moore658@bell.net,416-636-1554,1998-10-23,Female,1218 Somerset St,Brandon,MB,R3C 0Y0,Canada,Retail,2022-01-23,TRUE
+CUS-0130,David,Martin,david.martin383@hotmail.com,416-732-8916,1974-08-16,Male,7994 Main St,Toronto,ON,K1A 0R8,Canada,Retail,2025-09-02,TRUE
+CUS-0131,Anna,Torres,anna.torres110@outlook.com,647-636-3439,2000-01-21,Female,3949 Cedar Ln,Ottawa,ON,K1A 9Q4,Canada,High Net Worth,2024-10-29,TRUE
+CUS-0132,Elizabeth,Mitchell,elizabeth.mitchell308@outlook.com,204-947-2320,1996-03-06,Female,520 Queen St,Burnaby,BC,V5K 6M6,Canada,Retail,2022-09-23,TRUE
+CUS-0133,Alexander,Perez,alexander.perez580@yahoo.ca,709-197-9653,1999-11-05,Male,698 Pine Rd,Brampton,ON,K1A 3W9,Canada,Retail,2024-11-12,TRUE
+CUS-0134,Frank,Scott,frank.scott17@yahoo.ca,613-701-3362,1957-12-14,Male,6526 Queen St,Brandon,MB,R3C 4F9,Canada,Retail,2022-01-04,TRUE
+CUS-0135,Debra,Belanger,debra.belanger513@gmail.com,306-454-1879,1989-06-08,Female,1601 College St,Levis,QC,H2X 3C5,Canada,Retail,2021-07-27,TRUE
+CUS-0136,Heather,Adams,heather.adams234@hotmail.com,438-666-7150,1979-07-10,Female,7076 Oak Dr,Ottawa,ON,K1A 9V6,Canada,Retail,2025-01-19,TRUE
+CUS-0137,Patrick,Martinez,patrick.martinez729@hotmail.com,902-749-3527,1979-01-15,Male,6384 Yonge St,Brampton,ON,K1A 5D1,Canada,Retail,2021-09-23,TRUE
+CUS-0138,Maria,Wright,maria.wright442@outlook.com,778-670-9395,1966-11-20,Female,6686 Church St,Markham,ON,K1A 0C5,Canada,Retail,2020-12-23,TRUE
+CUS-0139,Deborah,Johnson,deborah.johnson743@gmail.com,403-348-9537,1992-02-15,Female,2779 Somerset St,Gatineau,QC,H2X 6F2,Canada,Retail,2024-05-07,TRUE
+CUS-0140,David,Perez,david.perez496@yahoo.ca,902-178-6916,1979-10-04,Male,4124 Pine Rd,Richmond,BC,V5K 7T9,Canada,Retail,2024-09-20,TRUE
+CUS-0141,Mary,Chen,mary.chen343@hotmail.com,604-935-3230,1989-01-30,Female,4923 Yonge St,Levis,QC,H2X 9W3,Canada,Retail,2023-09-11,TRUE
+CUS-0142,Michelle,Nguyen,michelle.nguyen386@yahoo.ca,514-936-7437,1999-01-19,Female,5981 Church St,Moncton,NB,E1C 9G9,Canada,Institutional,2022-09-19,TRUE
+CUS-0143,Jack,Gauthier,jack.gauthier839@gmail.com,709-914-7703,1994-05-03,Male,8181 Maple Ave,Barrie,ON,K1A 4H4,Canada,Retail,2023-04-08,TRUE
+CUS-0144,Barbara,Cote,barbara.cote519@bell.net,709-808-7853,1997-12-29,Female,8908 King St,Dartmouth,NS,B3H 5W8,Canada,Retail,2024-06-29,FALSE
+CUS-0145,Tyler,Young,tyler.young46@bell.net,587-760-7547,1986-11-06,Male,5433 College St,St. John's,NL,A1B 1A1,Canada,Retail,2021-11-12,TRUE
+CUS-0146,Ryan,Mitchell,ryan.mitchell354@outlook.com,416-594-2712,1996-07-17,Male,4841 College St,Burnaby,BC,V5K 1D2,Canada,Retail,2025-08-11,TRUE
+CUS-0147,Jonathan,Lavoie,jonathan.lavoie740@hotmail.com,306-563-6225,1997-09-19,Male,1101 Bay St,Trois-Rivieres,QC,H2X 0Z1,Canada,Retail,2021-02-03,TRUE
+CUS-0148,Frank,Perez,frank.perez339@outlook.com,403-536-8570,1970-08-26,Male,3799 Dundas St,Montreal,QC,H2X 2F6,Canada,Retail,2026-03-10,TRUE
+CUS-0149,Ryan,Ross,ryan.ross211@outlook.com,514-870-2025,1989-11-19,Male,9460 Church St,Richmond,BC,V5K 8F5,Canada,Retail,2020-01-19,TRUE
+CUS-0150,Christine,Fortin,christine.fortin402@bell.net,587-216-6700,1983-02-12,Female,5767 Spadina Ave,Winnipeg,MB,R3C 9F4,Canada,High Net Worth,2024-05-10,TRUE
+CUS-0151,Kevin,Thomas,kevin.thomas383@outlook.com,306-244-9369,1982-05-25,Male,6365 College St,Montreal,QC,H2X 9E9,Canada,Retail,2021-04-24,TRUE
+CUS-0152,Larry,Perez,larry.perez323@outlook.com,709-561-1878,1980-11-29,Male,5883 Main St,Red Deer,AB,T2P 7E3,Canada,High Net Worth,2021-07-28,FALSE
+CUS-0153,Rebecca,Fortin,rebecca.fortin85@outlook.com,587-131-4613,1994-10-27,Female,4786 King St,Surrey,BC,V5K 4H8,Canada,Retail,2025-06-24,TRUE
+CUS-0154,Brenda,Leblanc,brenda.leblanc844@bell.net,438-655-1681,1965-03-31,Female,7232 Wellington St,Kitchener,ON,K1A 3N1,Canada,High Net Worth,2023-01-02,TRUE
+CUS-0155,Kenneth,Jones,kenneth.jones450@gmail.com,709-220-4882,1978-07-30,Male,3439 Albert St,Kelowna,BC,V5K 9W5,Canada,High Net Worth,2023-11-28,TRUE
+CUS-0156,Lisa,Murray,lisa.murray584@gmail.com,438-645-5605,1973-07-15,Female,9779 Wellington St,Windsor,ON,K1A 2K4,Canada,Retail,2022-04-27,TRUE
+CUS-0157,Thomas,Patel,thomas.patel256@outlook.com,905-828-6277,1979-11-18,Male,4056 Slater St,Hamilton,ON,K1A 6P2,Canada,Retail,2021-06-03,TRUE
+CUS-0158,Deborah,Cote,deborah.cote768@bell.net,514-811-7046,1963-05-09,Female,7450 University Ave,London,ON,K1A 5S0,Canada,High Net Worth,2024-07-08,TRUE
+CUS-0159,Jack,Bouchard,jack.bouchard408@bell.net,613-539-4470,1987-02-20,Male,8106 Elm St,Moncton,NB,E1C 5J5,Canada,Retail,2020-09-16,TRUE
+CUS-0160,Carol,Miller,carol.miller128@gmail.com,709-261-8230,1963-12-07,Female,7480 Main St,Mississauga,ON,K1A 6G2,Canada,High Net Worth,2025-02-25,TRUE
+CUS-0161,Elizabeth,Campbell,elizabeth.campbell54@outlook.com,604-740-6005,1962-05-24,Female,3837 College St,Quebec City,QC,H2X 1W1,Canada,Retail,2024-03-03,TRUE
+CUS-0162,Scott,Lewis,scott.lewis713@gmail.com,438-936-2975,1994-12-05,Male,6920 Elgin St,Winnipeg,MB,R3C 2P1,Canada,Retail,2020-02-08,TRUE
+CUS-0163,Richard,Green,richard.green793@hotmail.com,709-871-3181,1981-11-05,Male,2341 Queen St,Vancouver,BC,V5K 8S0,Canada,Retail,2021-07-15,TRUE
+CUS-0164,Janet,Ramirez,janet.ramirez704@bell.net,778-980-4559,1968-07-31,Female,1421 Church St,Moncton,NB,E1C 2Y1,Canada,Retail,2024-08-13,TRUE
+CUS-0165,Michelle,Moore,michelle.moore567@outlook.com,587-714-5668,1979-11-06,Female,440 Somerset St,Montreal,QC,H2X 4G8,Canada,Retail,2020-12-11,TRUE
+CUS-0166,Emily,Miller,emily.miller247@gmail.com,778-753-2163,1999-05-26,Female,8656 Main St,Montreal,QC,H2X 5K2,Canada,Retail,2024-04-29,TRUE
+CUS-0167,Melissa,Belanger,melissa.belanger18@gmail.com,587-169-1225,1970-07-02,Female,4296 Cedar Ln,Charlottetown,PE,C1A 0B6,Canada,Retail,2025-04-13,TRUE
+CUS-0168,Sharon,Singh,sharon.singh318@gmail.com,647-623-4329,1968-09-12,Female,2546 Wellington St,Brampton,ON,K1A 5M9,Canada,Retail,2023-02-10,TRUE
+CUS-0169,Kenneth,Gagnon,kenneth.gagnon947@gmail.com,604-218-8428,1960-03-12,Male,9976 King St,Montreal,QC,H2X 4V2,Canada,Retail,2022-09-28,TRUE
+CUS-0170,Daniel,Bergeron,daniel.bergeron130@yahoo.ca,306-899-5403,1978-04-05,Male,1935 Slater St,Trois-Rivieres,QC,H2X 0K6,Canada,Retail,2021-11-14,TRUE
+CUS-0171,Nicholas,Bouchard,nicholas.bouchard880@hotmail.com,587-270-7024,1987-04-23,Male,2578 Elm St,Lethbridge,AB,T2P 1S1,Canada,Retail,2020-08-15,TRUE
+CUS-0172,James,Young,james.young943@hotmail.com,905-283-1579,1997-04-28,Male,9059 Elgin St,Mississauga,ON,K1A 6H5,Canada,Retail,2024-01-30,FALSE
+CUS-0173,Kimberly,Martinez,kimberly.martinez690@bell.net,416-283-4656,1988-06-12,Female,8451 King St,Saskatoon,SK,S4P 6C7,Canada,High Net Worth,2021-05-04,TRUE
+CUS-0174,Michelle,Lopez,michelle.lopez206@yahoo.ca,514-677-5979,1995-12-23,Female,3975 Spadina Ave,Regina,SK,S4P 5S7,Canada,Institutional,2020-02-02,TRUE
+CUS-0175,Christopher,Smith,christopher.smith355@bell.net,204-959-1157,1957-02-22,Male,5489 Main St,Surrey,BC,V5K 6X4,Canada,Retail,2022-08-12,TRUE
+CUS-0176,Jason,Fortin,jason.fortin45@gmail.com,613-965-9515,1967-10-10,Male,6768 Elgin St,Hamilton,ON,K1A 5O1,Canada,Retail,2023-02-20,TRUE
+CUS-0177,Barbara,Ross,barbara.ross243@outlook.com,514-367-6161,1960-08-02,Female,6439 Elgin St,Saskatoon,SK,S4P 5K7,Canada,Retail,2024-11-16,TRUE
+CUS-0178,Thomas,Morrison,thomas.morrison461@outlook.com,778-421-7660,1968-12-10,Male,1979 Wellington St,Markham,ON,K1A 5Y3,Canada,Retail,2021-03-08,TRUE
+CUS-0179,William,Lee,william.lee856@outlook.com,709-435-3430,1982-04-17,Male,1495 Elgin St,Charlottetown,PE,C1A 3L6,Canada,Retail,2020-06-14,TRUE
+CUS-0180,Nancy,Brown,nancy.brown256@bell.net,647-573-2669,1995-07-27,Female,2291 Church St,Burnaby,BC,V5K 0B3,Canada,Retail,2026-03-27,TRUE
+CUS-0181,Debra,Hernandez,debra.hernandez67@gmail.com,613-761-8265,1978-03-22,Female,2111 Queen St,Halifax,NS,B3H 5D0,Canada,High Net Worth,2020-11-03,TRUE
+CUS-0182,Janet,Chen,janet.chen177@hotmail.com,438-319-4066,1957-08-24,Female,4506 Elm St,Red Deer,AB,T2P 7E0,Canada,Retail,2024-04-16,TRUE
+CUS-0183,Amy,Patel,amy.patel287@gmail.com,604-240-7868,1997-12-22,Female,3268 Bank St,Regina,SK,S4P 8H8,Canada,High Net Worth,2020-09-06,FALSE
+CUS-0184,Kathleen,Belanger,kathleen.belanger398@yahoo.ca,514-284-1427,1985-11-12,Female,5225 Rideau St,Red Deer,AB,T2P 3A4,Canada,Retail,2025-08-19,FALSE
+CUS-0185,Heather,Morrison,heather.morrison673@outlook.com,613-372-9743,1969-04-27,Female,917 Slater St,Oshawa,ON,K1A 3S6,Canada,Retail,2021-02-14,TRUE
+CUS-0186,Matthew,Walker,matthew.walker29@bell.net,306-817-6761,1983-07-13,Male,9301 Laurier Ave,Halifax,NS,B3H 2S3,Canada,High Net Worth,2024-01-09,TRUE
+CUS-0187,Anna,Flores,anna.flores58@gmail.com,613-716-4584,1998-12-31,Female,327 Front St,Vaughan,ON,K1A 7A5,Canada,High Net Worth,2020-06-04,TRUE
+CUS-0188,Brian,Thompson,brian.thompson601@outlook.com,306-245-2817,1960-05-05,Male,8623 Bloor St,Sherbrooke,QC,H2X 1L6,Canada,Retail,2020-03-30,TRUE
+CUS-0189,Sarah,Lee,sarah.lee725@outlook.com,403-810-6846,1998-09-16,Female,3658 Somerset St,Richmond,BC,V5K 9F6,Canada,Retail,2023-07-23,TRUE
+CUS-0190,Matthew,Smith,matthew.smith617@outlook.com,438-928-4619,1990-02-17,Male,9266 Church St,Saskatoon,SK,S4P 7E5,Canada,High Net Worth,2020-05-12,TRUE
+CUS-0191,Lisa,Lopez,lisa.lopez272@gmail.com,613-355-2110,1985-02-13,Female,5743 Elm St,St. John's,NL,A1B 1X0,Canada,Retail,2025-01-03,TRUE
+CUS-0192,Lisa,Patel,lisa.patel385@bell.net,647-948-8855,1988-12-22,Female,9471 Bank St,Red Deer,AB,T2P 3F7,Canada,Retail,2023-12-09,TRUE
+CUS-0193,Patricia,Green,patricia.green175@yahoo.ca,604-264-2228,1964-05-24,Female,8963 Queen St,Quebec City,QC,H2X 5T9,Canada,High Net Worth,2020-10-30,TRUE
+CUS-0194,Katherine,Perez,katherine.perez104@gmail.com,438-310-4112,1993-12-14,Female,6706 Elgin St,Dartmouth,NS,B3H 8X8,Canada,Retail,2021-10-05,TRUE
+CUS-0195,Richard,Miller,richard.miller370@gmail.com,416-537-2435,1999-01-17,Male,4826 Somerset St,Burnaby,BC,V5K 9P3,Canada,Retail,2021-09-21,TRUE
+CUS-0196,Elizabeth,Morin,elizabeth.morin501@hotmail.com,204-371-2493,1982-08-31,Female,8915 Dundas St,Kitchener,ON,K1A 2L6,Canada,Retail,2024-06-16,TRUE
+CUS-0197,Laura,Gauthier,laura.gauthier64@bell.net,905-870-2584,1975-04-19,Female,1405 Somerset St,Quebec City,QC,H2X 5Z8,Canada,Retail,2023-01-05,TRUE
+CUS-0198,Larry,Davis,larry.davis587@hotmail.com,613-587-5896,1992-07-22,Male,1294 Dundas St,Victoria,BC,V5K 0Q9,Canada,High Net Worth,2026-01-02,TRUE
+CUS-0199,Joseph,Cote,joseph.cote130@outlook.com,416-533-2283,1969-12-30,Male,7134 Cedar Ln,Vaughan,ON,K1A 2T4,Canada,Retail,2022-05-17,TRUE
+CUS-0200,William,Roberts,william.roberts878@yahoo.ca,514-632-8506,1990-08-25,Male,203 Elgin St,Regina,SK,S4P 9S8,Canada,High Net Worth,2026-03-11,TRUE

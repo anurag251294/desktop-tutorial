@@ -1,0 +1,26 @@
+product_id,product_name,product_category,product_line,description,min_coverage,max_coverage,base_premium_rate,launch_date,is_active,risk_tier
+PRD-0001,Term Life 10,Insurance,Life Insurance,10-year term life insurance,50000,2000000,0.0012,2020-02-16,TRUE,Low
+PRD-0002,Term Life 20,Insurance,Life Insurance,20-year term life insurance,50000,2000000,0.0018,2015-02-08,TRUE,High
+PRD-0003,Whole Life,Insurance,Life Insurance,Permanent whole life coverage,100000,5000000,0.0035,2016-02-14,TRUE,Low
+PRD-0004,Universal Life,Insurance,Life Insurance,Flexible universal life policy,100000,5000000,0.0028,2020-09-03,TRUE,Medium
+PRD-0005,Critical Illness,Insurance,Health Insurance,Lump sum on critical illness diagnosis,25000,1000000,0.0022,2015-10-09,TRUE,Medium
+PRD-0006,Health Plus,Insurance,Health Insurance,Extended health and dental,0,0,0.0,2018-03-13,TRUE,High
+PRD-0007,Disability Income,Insurance,Health Insurance,Monthly income during disability,0,0,0.0,2022-11-21,TRUE,High
+PRD-0008,Auto Standard,Insurance,Auto Insurance,Standard auto coverage,0,0,0.0,2020-12-06,TRUE,High
+PRD-0009,Auto Premium,Insurance,Auto Insurance,Premium auto with collision,0,0,0.0,2018-05-11,FALSE,Low
+PRD-0010,Home Standard,Insurance,Home Insurance,Standard homeowner policy,100000,2000000,0.003,2016-07-04,TRUE,Low
+PRD-0011,Home Premium,Insurance,Home Insurance,Premium homeowner with riders,200000,5000000,0.004,2023-04-29,TRUE,Medium
+PRD-0012,Travel Basic,Insurance,Travel Insurance,Basic travel medical,0,0,0.0,2018-02-28,TRUE,High
+PRD-0013,Travel Comprehensive,Insurance,Travel Insurance,Comprehensive travel package,0,0,0.0,2018-11-05,TRUE,High
+PRD-0014,Canadian Equity Fund,Investment,Equity Funds,Diversified Canadian equities,5000,2000000,0.015,2017-12-17,TRUE,Medium
+PRD-0015,US Equity Growth,Investment,Equity Funds,US large-cap growth fund,5000,2000000,0.018,2015-07-28,TRUE,Medium
+PRD-0016,Global Equity Fund,Investment,Equity Funds,Global diversified equities,5000,2000000,0.02,2018-02-07,TRUE,Medium
+PRD-0017,Canadian Bond Fund,Investment,Fixed Income,Canadian government and corporate bonds,5000,1000000,0.008,2016-06-19,TRUE,Medium
+PRD-0018,Global Bond Fund,Investment,Fixed Income,International fixed income,5000,1000000,0.01,2016-10-23,TRUE,High
+PRD-0019,Balanced Growth,Investment,Balanced Funds,60/40 equity-bond balanced,5000,2000000,0.012,2022-11-30,TRUE,Low
+PRD-0020,Conservative Balanced,Investment,Balanced Funds,40/60 equity-bond balanced,5000,2000000,0.01,2016-04-03,TRUE,High
+PRD-0021,Money Market Fund,Investment,Money Market,Short-term money market,1000,500000,0.003,2016-09-02,TRUE,Medium
+PRD-0022,Real Estate Fund,Investment,Real Estate,Canadian real estate investment,10000,1000000,0.022,2021-07-13,TRUE,Medium
+PRD-0023,Retirement Income Fund,Annuity,Retirement,Guaranteed retirement income annuity,25000,2000000,0.025,2016-06-06,TRUE,Medium
+PRD-0024,Seg Fund Conservative,Annuity,Segregated Funds,Conservative segregated fund with guarantees,5000,1000000,0.018,2015-06-13,TRUE,Low
+PRD-0025,Seg Fund Growth,Annuity,Segregated Funds,Growth segregated fund with guarantees,5000,1000000,0.022,2022-08-25,TRUE,Low
