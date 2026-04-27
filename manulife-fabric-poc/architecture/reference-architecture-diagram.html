@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manulife Fabric POC — Reference Architecture</title>
+<style>
+  /* ── Reset & Base ─────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    background: #F9FAFB;
+    color: #1E293B;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body {
+    background-image: radial-gradient(circle, #d1d5db 0.8px, transparent 0.8px);
+    background-size: 24px 24px;
+  }
+
+  /* ── Page Container ───────────────────────────────────── */
+  .page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 28px 36px 20px;
+  }
+
+  /* ── Header ───────────────────────────────────────────── */
+  .header {
+    text-align: center;
+    margin-bottom: 6px;
+  }
+  .header h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: #0F172A;
+    letter-spacing: -0.3px;
+  }
+  .header h1 span { color: #2E86AB; }
+  .tagline {
+    font-size: 13px;
+    color: #64748B;
+    margin-top: 4px;
+    font-style: italic;
+    letter-spacing: 0.2px;
+  }
+
+  /* ── Main Grid: center column + side panels ───────────── */
+  .arch-grid {
+    display: grid;
+    grid-template-columns: 170px 1fr 190px;
+    gap: 10px;
+    align-items: start;
+    margin-top: 10px;
+  }
+
+  /* ── Center Column (layers) ───────────────────────────── */
+  .center-col { display: flex; flex-direction: column; gap: 0; }
+
+  /* ── Generic layer ────────────────────────────────────── */
+  .layer {
+    border-radius: 8px;
+    padding: 12px 18px;
+    position: relative;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+  }
+  .layer-label {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    opacity: 0.55;
+    margin-bottom: 3px;
+  }
+  .layer-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+  .layer-desc {
+    font-size: 11px;
+    opacity: 0.78;
+    line-height: 1.45;
+  }
+
+  /* ── Arrow between layers ─────────────────────────────── */
+  .arrow-down {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 22px;
+    color: #94A3B8;
+    font-size: 18px;
+    user-select: none;
+  }
+  .arrow-down svg { width: 18px; height: 18px; }
+
+  /* ── Layer 1: Users ───────────────────────────────────── */
+  .layer-users {
+    background: #E8F4FD;
+    border: 1px solid #B8DCF0;
+    display: flex;
+    gap: 14px;
+  }
+  .layer-users .box { flex: 1; }
+  .layer-users .layer-title { color: #1565C0; font-size: 13px; }
+  .layer-users .layer-desc { color: #37474F; }
+
+  /* ── Layer 2: AI / Orchestration ──────────────────────── */
+  .layer-orchestration {
+    background: linear-gradient(135deg, #2E86AB 0%, #256F8E 100%);
+    color: #fff;
+    border: 1px solid #1F6987;
+  }
+  .layer-orchestration .layer-label { color: rgba(255,255,255,0.6); }
+  .layer-orchestration .layer-desc { color: rgba(255,255,255,0.85); }
+
+  /* ── Layer 3: Query ───────────────────────────────────── */
+  .layer-query {
+    background: linear-gradient(135deg, #6C5B7B 0%, #5A4A68 100%);
+    color: #fff;
+    border: 1px solid #4E3F5F;
+  }
+  .layer-query .layer-label { color: rgba(255,255,255,0.55); }
+  .layer-query .layer-desc { color: rgba(255,255,255,0.82); }
+
+  /* ── Layer 4: Business Logic ──────────────────────────── */
+  .layer-semantic {
+    background: #FFF5EB;
+    border: 1px solid #F4A261;
+  }
+  .layer-semantic .layer-title { color: #C77A30; }
+  .layer-semantic .layer-desc { color: #6D4C20; }
+  .measures-row {
+    display: flex;
+    gap: 16px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+  }
+  .measure-badge {
+    font-size: 10px;
+    font-weight: 600;
+    background: rgba(244,162,97,0.18);
+    color: #B06A20;
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  /* ── Layer 5: OneLake ─────────────────────────────────── */
+  .layer-onelake {
+    background: #1F4E79;
+    color: #fff;
+    border: 1px solid #173D5E;
+    padding-bottom: 10px;
+  }
+  .layer-onelake .layer-label { color: rgba(255,255,255,0.45); }
+  .layer-onelake .layer-desc { color: rgba(255,255,255,0.7); }
+  .medallion-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 6px;
+  }
+  .medallion {
+    flex: 1;
+    border-radius: 6px;
+    padding: 7px 10px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 12px;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.15);
+  }
+  .medallion small {
+    display: block;
+    font-weight: 400;
+    font-size: 10px;
+    margin-top: 1px;
+    opacity: 0.85;
+  }
+  .m-bronze  { background: #CD7F32; color: #fff; }
+  .m-silver  { background: #C0C0C0; color: #2D2D2D; }
+  .m-gold    { background: #FFD700; color: #4A3800; }
+
+  /* ── Layer 6: Sources ─────────────────────────────────── */
+  .layer-sources {
+    background: #F1F1F1;
+    border: 1px solid #D0D0D0;
+    display: flex;
+    gap: 14px;
+  }
+  .layer-sources .box {
+    flex: 1;
+    background: #fff;
+    border-radius: 6px;
+    padding: 8px 10px;
+    border: 1px solid #E0E0E0;
+  }
+  .layer-sources .layer-title { font-size: 12px; color: #37474F; }
+  .layer-sources .layer-desc { font-size: 10px; color: #607D8B; }
+
+  /* ── Side Panels ──────────────────────────────────────── */
+  .side-panel {
+    border-radius: 8px;
+    padding: 12px 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    font-size: 11px;
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  /* Left panel: Governance */
+  .panel-governance {
+    background: #FFF8F6;
+    border: 2px solid #E76F51;
+    grid-row: 1 / span 11;
+  }
+  .panel-governance .panel-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #E76F51;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .panel-governance .panel-title svg { width: 14px; height: 14px; flex-shrink: 0; }
+  .panel-governance ul {
+    list-style: none;
+    padding: 0;
+  }
+  .panel-governance li {
+    padding: 4px 0;
+    border-bottom: 1px solid #F3DDD7;
+    color: #5E3A2E;
+    font-size: 10.5px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .panel-governance li:last-child { border-bottom: none; }
+  .gov-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: #E76F51;
+    flex-shrink: 0;
+  }
+
+  /* Right panel: AI Search */
+  .panel-search {
+    background: #F0FAF4;
+    border: 1px solid #81C99E;
+    grid-row: 1 / span 11;
+  }
+  .panel-search .panel-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #2D7A4B;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .panel-search .panel-title svg { width: 14px; height: 14px; flex-shrink: 0; }
+  .search-item {
+    padding: 4px 0;
+    border-bottom: 1px solid #C8E6D5;
+    color: #1E5631;
+    font-size: 10.5px;
+  }
+  .search-item:last-child { border-bottom: none; }
+  .search-item strong { display: block; font-size: 11px; }
+
+  /* Connector lines between side panels and center */
+  .connector-label {
+    font-size: 9px;
+    color: #94A3B8;
+    text-align: center;
+    margin-top: 8px;
+    letter-spacing: 0.3px;
+  }
+
+  /* ── SVG overlay for connector arrows ─────────────────── */
+  .svg-connectors {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Legend ────────────────────────────────────────────── */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 10px;
+    padding: 8px 0 0;
+    border-top: 1px solid #E2E8F0;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    color: #64748B;
+  }
+  .legend-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid rgba(0,0,0,0.1);
+    flex-shrink: 0;
+  }
+
+  /* ── Footer ───────────────────────────────────────────── */
+  .footer {
+    text-align: center;
+    font-size: 9px;
+    color: #94A3B8;
+    margin-top: 6px;
+    letter-spacing: 0.2px;
+  }
+
+  /* ── Print Styles ─────────────────────────────────────── */
+  @media print {
+    @page {
+      size: A4 landscape;
+      margin: 12mm 10mm;
+    }
+    body {
+      background-image: none;
+      background: #fff;
+    }
+    .page {
+      padding: 0;
+      max-width: 100%;
+    }
+    .layer, .side-panel {
+      box-shadow: none;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>Manulife Fabric POC &mdash; <span>Reference Architecture</span></h1>
+    <div class="tagline">"OneLake is the foundation. Semantic Model is the brain. Data Agent is the voice."</div>
+  </div>
+
+  <!-- Architecture Grid -->
+  <div class="arch-grid">
+
+    <!-- ═══ LEFT PANEL: Governance ═══ -->
+    <div class="side-panel panel-governance">
+      <div class="panel-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#E76F51" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Governance &amp; Security
+      </div>
+      <ul>
+        <li><span class="gov-dot"></span>Row-Level Security</li>
+        <li><span class="gov-dot"></span>Azure AD / Entra ID</li>
+        <li><span class="gov-dot"></span>Workspace Roles</li>
+        <li><span class="gov-dot"></span>Data Classification</li>
+        <li><span class="gov-dot"></span>Audit Logging</li>
+      </ul>
+      <div class="connector-label" style="margin-top:auto; padding-top:8px;">Applies to<br>all layers</div>
+    </div>
+
+    <!-- ═══ CENTER COLUMN ═══ -->
+    <div class="center-col">
+
+      <!-- Layer 1: Users -->
+      <div class="layer layer-users">
+        <div class="box">
+          <div class="layer-label">Layer 1 &middot; Users &amp; Experience</div>
+          <div class="layer-title">Business Users</div>
+          <div class="layer-desc">Service Reps, Analysts, Executives</div>
+        </div>
+        <div class="box" style="border-left: 2px solid #B8DCF0; padding-left: 14px;">
+          <div class="layer-title">Standalone Copilot Experience</div>
+          <div class="layer-desc">Custom App / Power BI Embedded</div>
+        </div>
+      </div>
+
+      <!-- Arrow -->
+      <div class="arrow-down">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+      </div>
+
+      <!-- Layer 2: Orchestration -->
+      <div class="layer layer-orchestration">
+        <div class="layer-label">Layer 2 &middot; AI &amp; Orchestration</div>
+        <div class="layer-title">Orchestration Layer</div>
+        <div class="layer-desc">Azure OpenAI GPT-4o &mdash; Intent Classification, Response Combination, Prompt Routing</div>
+      </div>
+
+      <!-- Arrow -->
+      <div class="arrow-down">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+      </div>
+
+      <!-- Layer 3: Query -->
+      <div class="layer layer-query">
+        <div class="layer-label">Layer 3 &middot; Query Layer</div>
+        <div class="layer-title">Fabric Data Agent</div>
+        <div class="layer-desc">Natural Language &rarr; DAX / SQL &mdash; The Governed Query Interface</div>
+      </div>
+
+      <!-- Arrow -->
+      <div class="arrow-down">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+      </div>
+
+      <!-- Layer 4: Semantic Model -->
+      <div class="layer layer-semantic">
+        <div class="layer-label">Layer 4 &middot; Business Logic</div>
+        <div class="layer-title">Semantic Model</div>
+        <div class="layer-desc">Power BI Dataset &mdash; DirectLake Mode</div>
+        <div class="measures-row">
+          <span class="measure-badge">14 DAX Measures</span>
+          <span class="measure-badge">6 Relationships</span>
+          <span class="measure-badge">8 Tables</span>
+        </div>
+      </div>
+
+      <!-- Arrow -->
+      <div class="arrow-down">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+      </div>
+
+      <!-- Layer 5: OneLake -->
+      <div class="layer layer-onelake">
+        <div class="layer-label">Layer 5 &middot; Data Foundation</div>
+        <div class="layer-title">OneLake Lakehouse</div>
+        <div class="layer-desc">Unified storage layer &mdash; Delta / Parquet</div>
+        <div class="medallion-row">
+          <div class="medallion m-bronze">Bronze<small>7 raw tables</small></div>
+          <div class="medallion m-silver">Silver<small>7 cleansed tables</small></div>
+          <div class="medallion m-gold">Gold<small>10 star schema tables</small></div>
+        </div>
+      </div>
+
+      <!-- Arrow -->
+      <div class="arrow-down">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+      </div>
+
+      <!-- Layer 6: Sources -->
+      <div class="layer layer-sources">
+        <div class="box">
+          <div class="layer-label">Layer 6 &middot; Sources</div>
+          <div class="layer-title">Structured Sources</div>
+          <div class="layer-desc">Customers, Policies, Claims, Products, Investments, Advisors, Transactions</div>
+        </div>
+        <div class="box">
+          <div class="layer-label">&nbsp;</div>
+          <div class="layer-title">Unstructured Sources</div>
+          <div class="layer-desc">Policy Terms, Claims Guidelines, FAQ, Investment Commentary, Compliance Handbook</div>
+        </div>
+      </div>
+
+    </div><!-- /center-col -->
+
+    <!-- ═══ RIGHT PANEL: AI Search ═══ -->
+    <div class="side-panel panel-search">
+      <div class="panel-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#2D7A4B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        Azure AI Search
+      </div>
+      <div class="search-item"><strong>Vector Index</strong>Embedding-based semantic retrieval</div>
+      <div class="search-item"><strong>Document Chunks</strong>Chunked &amp; indexed unstructured content</div>
+      <div class="search-item"><strong>RAG Retrieval</strong>Retrieval-Augmented Generation pipeline</div>
+      <div class="connector-label" style="margin-top: 10px; border-top: 1px dashed #81C99E; padding-top: 6px;">
+        Connected to<br>
+        <strong style="color:#2E86AB;">Orchestration Layer</strong><br>
+        &amp;<br>
+        <strong style="color:#607D8B;">Unstructured Sources</strong>
+      </div>
+    </div>
+
+  </div><!-- /arch-grid -->
+
+  <!-- Horizontal connector hint arrows via SVG -->
+  <svg width="0" height="0" style="position:absolute;">
+    <defs>
+      <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#94A3B8"/>
+      </marker>
+    </defs>
+  </svg>
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="legend-item"><div class="legend-swatch" style="background:#E8F4FD;"></div>Users &amp; Experience</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#2E86AB;"></div>AI &amp; Orchestration</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#6C5B7B;"></div>Query Layer</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#F4A261;"></div>Business Logic</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#1F4E79;"></div>Data Foundation</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#E0E0E0;"></div>Sources</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#A8D5BA;"></div>Azure AI Search</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#fff; border-color:#E76F51;border-width:2px;"></div>Governance &amp; Security</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#CD7F32;"></div>Bronze</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#C0C0C0;"></div>Silver</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#FFD700;"></div>Gold</div>
+  </div>
+
+  <div class="footer">Manulife Fabric POC &mdash; Reference Architecture &mdash; Microsoft Fabric + Azure OpenAI + Azure AI Search</div>
+
+</div><!-- /page -->
+</body>
+</html>
