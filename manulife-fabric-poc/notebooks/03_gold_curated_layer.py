@@ -133,8 +133,8 @@ try:
             col("age"),
             col("age_band"),
             *[col(c) for c in df_silver_customers.columns
-              if c in ["email", "phone", "address", "city", "province", "postal_code",
-                        "country", "gender", "segment", "risk_profile", "region"]],
+              if c in ["email", "phone", "address_line1", "city", "province", "postal_code",
+                        "country", "gender", "customer_segment", "is_active", "registration_date"]],
         )
         .dropDuplicates(["customer_id"])
     )
@@ -164,9 +164,9 @@ try:
         .select(
             col("product_id"),
             *[col(c) for c in df_silver_products.columns
-              if c in ["product_name", "product_type", "product_category", "description",
-                        "risk_level", "min_investment", "max_investment", "launch_date",
-                        "status", "line_of_business"]],
+              if c in ["product_name", "product_category", "product_line", "description",
+                        "min_coverage", "max_coverage", "base_premium_rate", "launch_date",
+                        "is_active", "risk_tier"]],
         )
         .dropDuplicates(["product_id"])
     )
@@ -196,9 +196,9 @@ try:
         .select(
             col("advisor_id"),
             *[col(c) for c in df_silver_advisors.columns
-              if c in ["advisor_name", "first_name", "last_name", "region", "branch",
-                        "hire_date", "certification", "license_type", "status",
-                        "specialization", "tier"]],
+              if c in ["first_name", "last_name", "email", "branch_office", "region",
+                        "certification_level", "specialization", "hire_date",
+                        "is_active", "aum_total"]],
         )
         .dropDuplicates(["advisor_id"])
     )
@@ -229,9 +229,9 @@ try:
             col("policy_id"),
             col("customer_id"),
             *[col(c) for c in df_silver_policies.columns
-              if c in ["policy_type", "policy_status", "status", "start_date", "end_date",
-                        "effective_date", "issue_date", "payment_frequency",
-                        "coverage_amount", "deductible", "product_id", "advisor_id"]],
+              if c in ["policy_number", "policy_type", "status", "effective_date",
+                        "expiry_date", "payment_frequency", "coverage_amount",
+                        "premium_amount", "risk_category", "product_id", "advisor_id"]],
         )
         .dropDuplicates(["policy_id"])
     )
@@ -257,25 +257,17 @@ print("Creating: dim_fund")
 try:
     df_silver_investments = spark.table("silver_investments")
 
-    # Extract distinct fund info from investments
-    fund_columns = [c for c in df_silver_investments.columns
-                    if c in ["fund_id", "fund_name", "fund_type", "fund_category",
-                             "asset_class", "risk_rating", "management_fee", "currency"]]
-
-    if "fund_id" in df_silver_investments.columns:
-        df_dim_fund = (
-            df_silver_investments
-            .select(*[col(c) for c in fund_columns])
-            .dropDuplicates(["fund_id"])
+    # Extract distinct fund info from investments (using fund_name as natural key)
+    df_dim_fund = (
+        df_silver_investments
+        .select(
+            col("fund_name"),
+            *[col(c) for c in df_silver_investments.columns
+              if c in ["fund_type", "risk_rating", "region"]],
         )
-        df_dim_fund = generate_surrogate_key(df_dim_fund, "fund_id")
-    else:
-        # If no fund_id, create a placeholder dimension
-        df_dim_fund = spark.createDataFrame(
-            [(1, "General Fund", "Mixed", "Default")],
-            ["fund_sk", "fund_name", "fund_type", "fund_category"]
-        )
-        print("  NOTE: No fund_id in investments; created placeholder dim_fund.")
+        .dropDuplicates(["fund_name"])
+    )
+    df_dim_fund = generate_surrogate_key(df_dim_fund, "fund_name")
 
     write_gold_table(df_dim_fund, "dim_fund")
     display(df_dim_fund.limit(5))
@@ -301,10 +293,10 @@ try:
             col("claim_id"),
             col("policy_id"),
             *[col(c) for c in df_silver_claims.columns
-              if c in ["customer_id", "claim_date", "submission_date", "settlement_date",
-                        "claim_amount", "settlement_amount", "approved_amount",
-                        "status", "claim_type", "claim_status_category",
-                        "processing_days", "incident_date", "cause"]],
+              if c in ["customer_id", "claim_number", "claim_date", "resolution_date",
+                        "claim_amount", "approved_amount", "status", "claim_type",
+                        "claim_status_category", "processing_days",
+                        "adjuster_name", "denial_reason", "is_approved", "is_denied"]],
         )
     )
 
@@ -333,10 +325,9 @@ try:
         .select(
             col("transaction_id"),
             *[col(c) for c in df_silver_transactions.columns
-              if c in ["policy_id", "customer_id", "investment_id", "advisor_id",
-                        "transaction_date", "transaction_type", "transaction_amount",
-                        "units", "unit_price", "fee_amount", "net_amount",
-                        "currency", "channel"]],
+              if c in ["policy_id", "customer_id", "investment_id",
+                        "transaction_date", "transaction_type", "amount",
+                        "payment_method", "status", "reference_number"]],
         )
     )
 
@@ -366,11 +357,9 @@ try:
             col("investment_id"),
             col("customer_id"),
             *[col(c) for c in df_silver_investments.columns
-              if c in ["fund_id", "advisor_id", "investment_date", "purchase_date",
-                        "maturity_date", "valuation_date", "investment_amount",
-                        "current_value", "market_value", "units", "unit_price",
-                        "return_rate", "investment_type", "status", "currency",
-                        "region"]],
+              if c in ["advisor_id", "fund_name", "fund_type", "inception_date",
+                        "last_valuation_date", "investment_amount", "current_value",
+                        "return_ytd_pct", "return_1yr_pct", "risk_rating", "region"]],
         )
     )
 
@@ -402,9 +391,9 @@ try:
             *[col(c) for c in df_silver_policies.columns
               if c in ["product_id", "advisor_id", "premium_amount",
                         "annualized_premium", "payment_frequency",
-                        "start_date", "end_date", "effective_date",
-                        "policy_type", "policy_status", "status",
-                        "coverage_amount", "policy_duration_days"]],
+                        "effective_date", "expiry_date",
+                        "policy_type", "status",
+                        "coverage_amount", "risk_category", "policy_duration_days"]],
         )
     )
 
@@ -431,9 +420,9 @@ gold_tables_config = {
     "gold_dim_advisor": "advisor_id",
     "gold_dim_policy": "policy_id",
     "gold_dim_fund": None,
-    "gold_fact_claims": "claim_date",
-    "gold_fact_transactions": "transaction_date",
-    "gold_fact_investments": "customer_id",
+    "gold_fact_claims": "claim_id",
+    "gold_fact_transactions": "transaction_id",
+    "gold_fact_investments": "investment_id",
     "gold_fact_policy_premiums": "policy_id",
 }
 

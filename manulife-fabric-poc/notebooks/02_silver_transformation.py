@@ -167,7 +167,7 @@ try:
 
     df_policies = trim_string_columns(df_policies)
     df_policies = standardize_dates(df_policies, [
-        "start_date", "end_date", "effective_date", "issue_date"
+        "effective_date", "expiry_date", "last_payment_date"
     ])
     df_policies = deduplicate(df_policies, ["policy_id"])
 
@@ -185,8 +185,8 @@ try:
     df_policies = df_policies.withColumn(
         "policy_duration_days",
         datediff(
-            coalesce(col("end_date"), current_date()),
-            coalesce(col("start_date"), col("effective_date"), col("issue_date"))
+            coalesce(col("expiry_date"), current_date()),
+            col("effective_date")
         )
     )
 
@@ -214,7 +214,7 @@ try:
 
     df_claims = trim_string_columns(df_claims)
     df_claims = standardize_dates(df_claims, [
-        "claim_date", "submission_date", "settlement_date", "incident_date"
+        "claim_date", "resolution_date"
     ])
     df_claims = deduplicate(df_claims, ["claim_id"])
 
@@ -222,18 +222,25 @@ try:
     df_claims = df_claims.withColumn(
         "processing_days",
         datediff(
-            coalesce(col("settlement_date"), current_date()),
-            coalesce(col("submission_date"), col("claim_date"))
+            coalesce(col("resolution_date"), current_date()),
+            col("claim_date")
         )
     )
 
     # Enrichment: claim status categorization
     df_claims = df_claims.withColumn(
         "claim_status_category",
-        when(lower(col("status")).isin("approved", "settled", "paid"), "Resolved")
-        .when(lower(col("status")).isin("pending", "under review", "in progress"), "Open")
-        .when(lower(col("status")).isin("denied", "rejected"), "Denied")
+        when(lower(col("status")).isin("approved", "paid", "closed"), "Resolved")
+        .when(lower(col("status")).isin("submitted", "under review"), "Open")
+        .when(lower(col("status")).isin("denied"), "Denied")
         .otherwise("Other")
+    )
+
+    # Boolean flags for easier aggregation
+    df_claims = (
+        df_claims
+        .withColumn("is_approved", col("status").isin("Approved", "Paid", "Closed"))
+        .withColumn("is_denied", col("status") == "Denied")
     )
 
     df_claims = add_data_quality_flag(df_claims, ["claim_id", "policy_id", "claim_amount"])
@@ -286,7 +293,7 @@ try:
 
     df_investments = trim_string_columns(df_investments)
     df_investments = standardize_dates(df_investments, [
-        "investment_date", "maturity_date", "purchase_date", "valuation_date"
+        "inception_date", "last_valuation_date"
     ])
     df_investments = deduplicate(df_investments, ["investment_id"])
 
@@ -354,7 +361,7 @@ try:
             "transaction_type", upper(trim(col("transaction_type")))
         )
 
-    df_transactions = add_data_quality_flag(df_transactions, ["transaction_id", "transaction_amount"])
+    df_transactions = add_data_quality_flag(df_transactions, ["transaction_id", "amount"])
     df_transactions = df_transactions.withColumn("_silver_timestamp", current_timestamp())
 
     df_transactions.write.format("delta").mode("overwrite").option("overwriteSchema", "true").saveAsTable("silver_transactions")
