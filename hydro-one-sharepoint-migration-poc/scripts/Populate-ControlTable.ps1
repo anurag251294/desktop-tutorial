@@ -285,10 +285,16 @@ try {
 
     if ($SpecificSites.Count -gt 0) {
         Write-Log "Using specific sites list ($($SpecificSites.Count) sites)" -Level "INFO"
+        Write-Log "Skipping Get-PnPTenantSite (avoids requiring SharePoint Administrator role). Site title will be resolved per-site via Get-PnPWeb." -Level "INFO"
         $sites = $SpecificSites | ForEach-Object {
             $targetUrl = "$SharePointTenantUrl$_"
-            Write-Log "  Fetching site: $targetUrl" -Level "INFO"
-            Get-PnPTenantSite -Url $targetUrl
+            Write-Log "  Queued site: $targetUrl" -Level "INFO"
+            [PSCustomObject]@{
+                Url                 = $targetUrl
+                Title               = $_
+                Template            = "(not queried - non-admin mode)"
+                StorageUsageCurrent = 0
+            }
         }
     }
     else {
@@ -359,6 +365,20 @@ try {
                 Connect-PnPOnline -Url $siteUrl -Interactive -ClientId $ClientId
             }
             Write-Log "  Connected to site successfully." -Level "SUCCESS"
+
+            # When using SpecificSites mode, resolve title via Get-PnPWeb (non-admin operation)
+            if ($SpecificSites.Count -gt 0) {
+                try {
+                    $web = Get-PnPWeb -Includes Title
+                    if ($web -and $web.Title) {
+                        $site.Title = $web.Title
+                        Write-Log "  Resolved site title: $($site.Title)" -Level "INFO"
+                    }
+                }
+                catch {
+                    Write-Log "  Could not resolve site title via Get-PnPWeb: $_" -Level "WARNING"
+                }
+            }
 
             # Get all document libraries
             Write-Log "  Fetching document libraries (BaseTemplate=101, non-hidden)..." -Level "INFO"
