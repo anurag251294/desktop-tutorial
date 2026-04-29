@@ -102,10 +102,32 @@ function Get-LibraryStats {
         [string]$LibraryName
     )
 
+    Write-Log "      [Get-LibraryStats] Start - Site: $SiteUrl, Library: '$LibraryName'" -Level "INFO"
+    $statsStart = Get-Date
+
     try {
+        Write-Log "      [Get-LibraryStats] Calling Get-PnPListItem -List '$LibraryName' -PageSize 5000 -Fields FileLeafRef, File_x0020_Size, FSObjType..." -Level "INFO"
         $items = Get-PnPListItem -List $LibraryName -PageSize 5000 -Fields "FileLeafRef", "File_x0020_Size", "FSObjType"
+        $itemCount = ($items | Measure-Object).Count
+        $fetchDuration = ((Get-Date) - $statsStart).TotalSeconds
+        Write-Log "      [Get-LibraryStats] Retrieved $itemCount total items in $([math]::Round($fetchDuration, 1))s" -Level "INFO"
+
+        if ($itemCount -eq 0) {
+            Write-Log "      [Get-LibraryStats] WARNING: 0 items returned. Library may be empty, or auth scope may not allow item enumeration." -Level "WARNING"
+        }
+
         $files = $items | Where-Object { $_["FSObjType"] -eq 0 }
         $folders = $items | Where-Object { $_["FSObjType"] -eq 1 }
+        $other = $items | Where-Object { $_["FSObjType"] -ne 0 -and $_["FSObjType"] -ne 1 }
+        Write-Log "      [Get-LibraryStats] Breakdown: $(($files | Measure-Object).Count) files, $(($folders | Measure-Object).Count) folders, $(($other | Measure-Object).Count) other" -Level "INFO"
+
+        # Log a sample of the first 3 file names for visual confirmation
+        if (($files | Measure-Object).Count -gt 0) {
+            $sample = $files | Select-Object -First 3
+            $sample | ForEach-Object {
+                Write-Log "      [Get-LibraryStats] Sample file: '$($_["FileLeafRef"])' ($([math]::Round([long]$_["File_x0020_Size"] / 1KB, 2)) KB)" -Level "INFO"
+            }
+        }
 
         $stats = @{
             FileCount   = ($files | Measure-Object).Count
@@ -114,10 +136,18 @@ function Get-LibraryStats {
             LargestFile = ($files | ForEach-Object { [long]$_["File_x0020_Size"] } | Measure-Object -Maximum).Maximum
         }
 
+        Write-Log "      [Get-LibraryStats] Computed stats - Files: $($stats.FileCount), Folders: $($stats.FolderCount), TotalSize: $($stats.TotalSize) bytes ($([math]::Round($stats.TotalSize / 1MB, 2)) MB), Largest: $($stats.LargestFile) bytes" -Level "INFO"
         return $stats
     }
     catch {
-        Write-Log "Error getting stats for $LibraryName : $_" -Level "WARNING"
+        Write-Log "      [Get-LibraryStats] FAILED for library '$LibraryName'" -Level "ERROR"
+        Write-Log "      [Get-LibraryStats] Error: $_" -Level "ERROR"
+        Write-Log "      [Get-LibraryStats] Exception type: $($_.Exception.GetType().FullName)" -Level "ERROR"
+        Write-Log "      [Get-LibraryStats] Exception message: $($_.Exception.Message)" -Level "ERROR"
+        if ($_.Exception.InnerException) {
+            Write-Log "      [Get-LibraryStats] Inner exception: $($_.Exception.InnerException.Message)" -Level "ERROR"
+        }
+        Write-Log "      [Get-LibraryStats] Stack trace: $($_.ScriptStackTrace)" -Level "ERROR"
         return @{
             FileCount   = 0
             FolderCount = 0
@@ -175,6 +205,21 @@ function Insert-ControlTableRecord {
         CreatedBy           = $env:USERNAME
     }
 
+    Write-Log "      [SQL] Upsert payload: SiteUrl='$($params.SiteUrl)', LibraryName='$($params.LibraryName)', SiteTitle='$($params.SiteTitle)', FileCount=$($params.FileCount), TotalSizeBytes=$($params.TotalSizeBytes), Priority=$($params.Priority)" -Level "INFO"
+
+    # Pre-check: does the row already exist?
+    try {
+        $existsQuery = "SELECT COUNT(*) AS RowCount FROM dbo.MigrationControl WHERE SiteUrl = '$($params.SiteUrl -replace "'","''")' AND LibraryName = '$($params.LibraryName -replace "'","''")'"
+        $existsResult = Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $existsQuery
+        $existed = ($existsResult.RowCount -gt 0)
+        Write-Log "      [SQL] Pre-check: row $(if ($existed) { 'EXISTS - will UPDATE' } else { 'does NOT exist - will INSERT' })" -Level "INFO"
+    }
+    catch {
+        Write-Log "      [SQL] Pre-check failed (continuing anyway): $_" -Level "WARNING"
+        $existed = $null
+    }
+
+    $sqlStart = Get-Date
     Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $query -Variable @(
         "SiteUrl=$($params.SiteUrl)",
         "LibraryName=$($params.LibraryName)",
@@ -187,6 +232,8 @@ function Insert-ControlTableRecord {
         "Priority=$($params.Priority)",
         "CreatedBy=$($params.CreatedBy)"
     )
+    $sqlDuration = ((Get-Date) - $sqlStart).TotalSeconds
+    Write-Log "      [SQL] Operation completed in $([math]::Round($sqlDuration, 2))s ($(if ($existed) { 'UPDATE' } elseif ($existed -eq $false) { 'INSERT' } else { 'UNKNOWN' }))" -Level "INFO"
 }
 #endregion
 
@@ -366,6 +413,33 @@ try {
             }
             Write-Log "  Connected to site successfully." -Level "SUCCESS"
 
+            # Verify the active PnP context (confirms we're really pointing at the right site)
+            try {
+                $siteCtx = Get-PnPContext
+                Write-Log "  PnP context after site connect - Url: $($siteCtx.Url)" -Level "INFO"
+            }
+            catch {
+                Write-Log "  Could not retrieve PnP context: $_" -Level "WARNING"
+            }
+
+            # Log the authenticated identity (helps diagnose 'wrong account' issues)
+            try {
+                $currentUser = Get-PnPProperty -ClientObject (Get-PnPWeb) -Property CurrentUser
+                Write-Log "  Authenticated as: $($currentUser.LoginName) ($($currentUser.Title), Email: $($currentUser.Email))" -Level "INFO"
+            }
+            catch {
+                Write-Log "  Could not resolve current user identity: $_" -Level "WARNING"
+            }
+
+            # Log site / web details (server-relative URL, language, etc.)
+            try {
+                $webDetail = Get-PnPWeb -Includes Title, ServerRelativeUrl, Url, Id, Language, WebTemplate, Created
+                Write-Log "  Web details - Title: '$($webDetail.Title)', ServerRelativeUrl: '$($webDetail.ServerRelativeUrl)', WebTemplate: '$($webDetail.WebTemplate)', Language: $($webDetail.Language), Created: $($webDetail.Created)" -Level "INFO"
+            }
+            catch {
+                Write-Log "  Could not retrieve web details: $_" -Level "WARNING"
+            }
+
             # When using SpecificSites mode, resolve title via Get-PnPWeb (non-admin operation)
             if ($SpecificSites.Count -gt 0) {
                 try {
@@ -382,14 +456,64 @@ try {
 
             # Get all document libraries
             Write-Log "  Fetching document libraries (BaseTemplate=101, non-hidden)..." -Level "INFO"
+            $listFetchStart = Get-Date
             $allLists = Get-PnPList
+            $listFetchDuration = ((Get-Date) - $listFetchStart).TotalSeconds
+            Write-Log "  Get-PnPList completed in $([math]::Round($listFetchDuration, 2))s" -Level "INFO"
             Write-Log "  Total lists/libraries in site: $(($allLists | Measure-Object).Count)" -Level "INFO"
+
+            # Group lists by BaseTemplate for a quick overview
+            if (($allLists | Measure-Object).Count -gt 0) {
+                $templateGroups = $allLists | Group-Object -Property BaseTemplate | Sort-Object Count -Descending
+                Write-Log "  Lists grouped by BaseTemplate:" -Level "INFO"
+                $templateGroups | ForEach-Object {
+                    $templateName = switch ([int]$_.Name) {
+                        100 { "Generic List" }
+                        101 { "Document Library" }
+                        102 { "Survey" }
+                        103 { "Links" }
+                        104 { "Announcements" }
+                        105 { "Contacts" }
+                        106 { "Calendar/Events" }
+                        107 { "Tasks" }
+                        108 { "Discussion Board" }
+                        109 { "Picture Library" }
+                        115 { "Form Library" }
+                        119 { "Site Pages / Wiki" }
+                        171 { "Tasks (project)" }
+                        544 { "Microsoft Project Tasks" }
+                        700 { "Teams Wiki" }
+                        850 { "Publishing" }
+                        851 { "Asset Library" }
+                        default { "Unknown" }
+                    }
+                    Write-Log "    BaseTemplate $($_.Name) ($templateName): $($_.Count) list(s)" -Level "INFO"
+                }
+            }
+
+            $allLists | ForEach-Object {
+                $rootFolderUrl = try { $_.RootFolder.ServerRelativeUrl } catch { "(not loaded)" }
+                Write-Log "    List: '$($_.Title)' | BaseTemplate=$($_.BaseTemplate) | Hidden=$($_.Hidden) | ItemCount=$($_.ItemCount) | RootFolder=$rootFolderUrl" -Level "INFO"
+            }
 
             $libraries = $allLists | Where-Object {
                 $_.BaseTemplate -eq 101 -and  # Document Library
                 $_.Hidden -eq $false -and
                 $_.Title -notin $excludeLibraries -and
                 $_.Title -notlike "Preservation*"
+            }
+
+            # Log why each list was filtered out (helps diagnose empty results)
+            if (($libraries | Measure-Object).Count -eq 0 -and ($allLists | Measure-Object).Count -gt 0) {
+                Write-Log "  All lists filtered out - reasons:" -Level "WARNING"
+                $allLists | ForEach-Object {
+                    $reasons = @()
+                    if ($_.BaseTemplate -ne 101) { $reasons += "not BaseTemplate 101 (got $($_.BaseTemplate))" }
+                    if ($_.Hidden) { $reasons += "Hidden=true" }
+                    if ($_.Title -in $excludeLibraries) { $reasons += "in exclude list" }
+                    if ($_.Title -like "Preservation*") { $reasons += "Preservation*" }
+                    Write-Log "    '$($_.Title)' rejected: $($reasons -join ', ')" -Level "WARNING"
+                }
             }
 
             $libCount = ($libraries | Measure-Object).Count
