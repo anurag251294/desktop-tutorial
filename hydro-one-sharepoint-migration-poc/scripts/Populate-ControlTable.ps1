@@ -542,8 +542,120 @@ if ($SharePointTenantUrl -match "^(https://[^/]+\.sharepoint\.com)(/sites/.+|/te
 }
 
 # Build SQL connection string (using Azure AD authentication)
-$sqlConnectionString = "Server=tcp:$SqlServerName.database.windows.net,1433;Initial Catalog=$SqlDatabaseName;Authentication=Active Directory Integrated;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
-Write-Log "SQL connection string built (server: $SqlServerName.database.windows.net, db: $SqlDatabaseName, auth: AD Integrated)" -Level "INFO"
+$sqlFqdn = "$SqlServerName.database.windows.net"
+$sqlConnectionString = "Server=tcp:$sqlFqdn,1433;Initial Catalog=$SqlDatabaseName;Authentication=Active Directory Integrated;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+Write-Log "SQL connection string built (server: $sqlFqdn, db: $SqlDatabaseName, auth: AD Integrated)" -Level "INFO"
+
+# === SQL PRE-FLIGHT CHECK ===
+Write-Log "========================================" -Level "INFO"
+Write-Log "SQL CONNECTIVITY PRE-FLIGHT CHECK" -Level "INFO"
+Write-Log "========================================" -Level "INFO"
+
+# Step 1: DNS resolution
+Write-Log "[SQL-DIAG] Step 1: DNS resolution for $sqlFqdn" -Level "INFO"
+try {
+    $dnsResult = [System.Net.Dns]::GetHostAddresses($sqlFqdn)
+    Write-Log "[SQL-DIAG]   PASS - Resolved to: $($dnsResult.IPAddressToString -join ', ')" -Level "SUCCESS"
+}
+catch {
+    Write-Log "[SQL-DIAG]   FAIL - Cannot resolve hostname: $sqlFqdn" -Level "ERROR"
+    Write-Log "[SQL-DIAG]   Error: $($_.Exception.Message)" -Level "ERROR"
+    Write-Log "[SQL-DIAG]   --- Troubleshooting ---" -Level "ERROR"
+    Write-Log "[SQL-DIAG]   1. Verify the SQL server name is correct: '$SqlServerName'" -Level "ERROR"
+    Write-Log "[SQL-DIAG]   2. Check if the server exists: az sql server show --name $SqlServerName --resource-group <rg-name>" -Level "ERROR"
+    Write-Log "[SQL-DIAG]   3. If using private endpoints, ensure your DNS can resolve the private link FQDN" -Level "ERROR"
+    Write-Log "[SQL-DIAG]   4. Try: nslookup $sqlFqdn" -Level "ERROR"
+    throw "SQL Server DNS resolution failed for '$sqlFqdn'. Verify the -SqlServerName parameter is correct."
+}
+
+# Step 2: TCP connectivity
+Write-Log "[SQL-DIAG] Step 2: TCP connectivity to $sqlFqdn`:1433" -Level "INFO"
+try {
+    $tcpClient = New-Object System.Net.Sockets.TcpClient
+    $connectTask = $tcpClient.ConnectAsync($sqlFqdn, 1433)
+    if ($connectTask.Wait(10000)) {
+        Write-Log "[SQL-DIAG]   PASS - TCP port 1433 is reachable" -Level "SUCCESS"
+    }
+    else {
+        Write-Log "[SQL-DIAG]   FAIL - TCP connection timed out after 10s" -Level "ERROR"
+        Write-Log "[SQL-DIAG]   The server exists but port 1433 is not reachable." -Level "ERROR"
+        Write-Log "[SQL-DIAG]   Check: firewall rules, NSG rules, or private endpoint configuration." -Level "ERROR"
+    }
+    $tcpClient.Close()
+}
+catch {
+    Write-Log "[SQL-DIAG]   FAIL - TCP connection error: $($_.Exception.Message)" -Level "ERROR"
+    Write-Log "[SQL-DIAG]   Check firewall rules on the SQL server and network connectivity." -Level "ERROR"
+}
+
+# Step 3: SQL authentication test
+Write-Log "[SQL-DIAG] Step 3: SQL authentication and database access" -Level "INFO"
+try {
+    $testResult = Invoke-Sqlcmd -ConnectionString $sqlConnectionString -Query "SELECT DB_NAME() AS DatabaseName, SUSER_SNAME() AS LoginName, SYSTEM_USER AS SystemUser, GETUTCDATE() AS ServerTime" -ErrorAction Stop
+    Write-Log "[SQL-DIAG]   PASS - Connected to database: $($testResult.DatabaseName)" -Level "SUCCESS"
+    Write-Log "[SQL-DIAG]   Login: $($testResult.LoginName)" -Level "INFO"
+    Write-Log "[SQL-DIAG]   System User: $($testResult.SystemUser)" -Level "INFO"
+    Write-Log "[SQL-DIAG]   Server Time (UTC): $($testResult.ServerTime)" -Level "INFO"
+}
+catch {
+    Write-Log "[SQL-DIAG]   FAIL - SQL query failed: $($_.Exception.Message)" -Level "ERROR"
+    if ($_.Exception.Message -like "*Login failed*") {
+        Write-Log "[SQL-DIAG]   Authentication failed. Check:" -Level "ERROR"
+        Write-Log "[SQL-DIAG]   1. Your Azure AD account has access to database '$SqlDatabaseName'" -Level "ERROR"
+        Write-Log "[SQL-DIAG]   2. You are logged into the correct Azure account: az account show" -Level "ERROR"
+        Write-Log "[SQL-DIAG]   3. The SQL Server has Azure AD admin configured" -Level "ERROR"
+    }
+    elseif ($_.Exception.Message -like "*Cannot open database*") {
+        Write-Log "[SQL-DIAG]   Database '$SqlDatabaseName' does not exist or is inaccessible." -Level "ERROR"
+    }
+    throw "SQL pre-flight check failed. Fix the SQL connection before proceeding."
+}
+
+# Step 4: Verify MigrationControl table exists
+Write-Log "[SQL-DIAG] Step 4: Verify MigrationControl table exists" -Level "INFO"
+try {
+    $tableCheck = Invoke-Sqlcmd -ConnectionString $sqlConnectionString -Query "SELECT TABLE_SCHEMA, TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'MigrationControl'" -ErrorAction Stop
+    if ($tableCheck) {
+        Write-Log "[SQL-DIAG]   PASS - Table found: $($tableCheck.TABLE_SCHEMA).$($tableCheck.TABLE_NAME)" -Level "SUCCESS"
+
+        # Check current row count
+        $rowCount = Invoke-Sqlcmd -ConnectionString $sqlConnectionString -Query "SELECT COUNT(*) AS RowCount FROM dbo.MigrationControl" -ErrorAction Stop
+        Write-Log "[SQL-DIAG]   Current row count: $($rowCount.RowCount)" -Level "INFO"
+    }
+    else {
+        Write-Log "[SQL-DIAG]   FAIL - Table 'MigrationControl' not found in database '$SqlDatabaseName'" -Level "ERROR"
+        Write-Log "[SQL-DIAG]   Run the DDL script first: sqlcmd -S $sqlFqdn -d $SqlDatabaseName -i sql/create_control_table.sql -G" -Level "ERROR"
+        throw "MigrationControl table does not exist."
+    }
+}
+catch [Microsoft.Data.SqlClient.SqlException] {
+    Write-Log "[SQL-DIAG]   FAIL - Could not query table metadata: $($_.Exception.Message)" -Level "ERROR"
+    throw
+}
+
+# Step 5: Test write permission
+Write-Log "[SQL-DIAG] Step 5: Verify write permissions (INSERT/UPDATE)" -Level "INFO"
+try {
+    $permCheck = Invoke-Sqlcmd -ConnectionString $sqlConnectionString -Query @"
+        SELECT
+            HAS_PERMS_BY_NAME('dbo.MigrationControl', 'OBJECT', 'INSERT') AS CanInsert,
+            HAS_PERMS_BY_NAME('dbo.MigrationControl', 'OBJECT', 'UPDATE') AS CanUpdate,
+            HAS_PERMS_BY_NAME('dbo.MigrationControl', 'OBJECT', 'SELECT') AS CanSelect
+"@ -ErrorAction Stop
+    Write-Log "[SQL-DIAG]   SELECT: $(if ($permCheck.CanSelect -eq 1) { 'GRANTED' } else { 'DENIED' })" -Level $(if ($permCheck.CanSelect -eq 1) { "SUCCESS" } else { "ERROR" })
+    Write-Log "[SQL-DIAG]   INSERT: $(if ($permCheck.CanInsert -eq 1) { 'GRANTED' } else { 'DENIED' })" -Level $(if ($permCheck.CanInsert -eq 1) { "SUCCESS" } else { "ERROR" })
+    Write-Log "[SQL-DIAG]   UPDATE: $(if ($permCheck.CanUpdate -eq 1) { 'GRANTED' } else { 'DENIED' })" -Level $(if ($permCheck.CanUpdate -eq 1) { "SUCCESS" } else { "ERROR" })
+    if ($permCheck.CanInsert -ne 1 -or $permCheck.CanUpdate -ne 1) {
+        Write-Log "[SQL-DIAG]   WARNING: Missing write permissions. The user needs db_datawriter role." -Level "ERROR"
+        Write-Log "[SQL-DIAG]   Run: ALTER ROLE db_datawriter ADD MEMBER [your-user];" -Level "ERROR"
+    }
+}
+catch {
+    Write-Log "[SQL-DIAG]   Could not check permissions: $($_.Exception.Message)" -Level "WARNING"
+}
+
+Write-Log "[SQL-DIAG] SQL pre-flight check completed." -Level "SUCCESS"
+Write-Log "========================================" -Level "INFO"
 
 try {
     # Determine initial connection URL
