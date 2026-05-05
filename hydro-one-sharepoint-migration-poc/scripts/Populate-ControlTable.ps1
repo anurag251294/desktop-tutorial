@@ -96,6 +96,247 @@ function Write-Log {
     Write-Host "[$timestamp] [$Level] $Message" -ForegroundColor $color
 }
 
+function Test-CertificateInStore {
+    param([string]$Thumbprint)
+
+    Write-Log "  [DIAG] Searching for certificate with thumbprint: $Thumbprint" -Level "INFO"
+    $stores = @("Cert:\CurrentUser\My", "Cert:\LocalMachine\My")
+    $found = $false
+    foreach ($store in $stores) {
+        try {
+            $cert = Get-ChildItem -Path $store | Where-Object { $_.Thumbprint -eq $Thumbprint }
+            if ($cert) {
+                $found = $true
+                Write-Log "  [DIAG] FOUND certificate in $store" -Level "SUCCESS"
+                Write-Log "  [DIAG]   Subject:    $($cert.Subject)" -Level "INFO"
+                Write-Log "  [DIAG]   Issuer:     $($cert.Issuer)" -Level "INFO"
+                Write-Log "  [DIAG]   NotBefore:  $($cert.NotBefore)" -Level "INFO"
+                Write-Log "  [DIAG]   NotAfter:   $($cert.NotAfter)" -Level "INFO"
+                Write-Log "  [DIAG]   HasPrivKey: $($cert.HasPrivateKey)" -Level "INFO"
+                Write-Log "  [DIAG]   KeyUsage:   $($cert.Extensions | Where-Object { $_ -is [System.Security.Cryptography.X509Certificates.X509KeyUsageExtension] } | ForEach-Object { $_.KeyUsages })" -Level "INFO"
+                if ($cert.NotAfter -lt (Get-Date)) {
+                    Write-Log "  [DIAG]   WARNING: Certificate has EXPIRED on $($cert.NotAfter)" -Level "ERROR"
+                }
+                if (-not $cert.HasPrivateKey) {
+                    Write-Log "  [DIAG]   WARNING: Certificate does NOT have a private key - auth will fail" -Level "ERROR"
+                }
+            }
+            else {
+                Write-Log "  [DIAG] Not found in $store" -Level "INFO"
+            }
+        }
+        catch {
+            Write-Log "  [DIAG] Could not search $store : $_" -Level "WARNING"
+        }
+    }
+    if (-not $found) {
+        Write-Log "  [DIAG] CERTIFICATE NOT FOUND in any store. Ensure it is imported into CurrentUser\My." -Level "ERROR"
+    }
+    return $found
+}
+
+function Inspect-PnPAccessToken {
+    Write-Log "  [DIAG] === Access Token Inspection ===" -Level "INFO"
+    try {
+        $token = Get-PnPAccessToken -ErrorAction Stop
+        if (-not $token) {
+            Write-Log "  [DIAG] Get-PnPAccessToken returned null/empty" -Level "ERROR"
+            return
+        }
+        Write-Log "  [DIAG] Access token retrieved (length: $($token.Length) chars)" -Level "SUCCESS"
+        Write-Log "  [DIAG] Token prefix: $($token.Substring(0, [Math]::Min(20, $token.Length)))..." -Level "INFO"
+
+        # Decode JWT payload (middle segment)
+        $parts = $token.Split('.')
+        if ($parts.Count -ge 2) {
+            $payload = $parts[1]
+            # Fix Base64 padding
+            $padded = $payload.Replace('-', '+').Replace('_', '/')
+            switch ($padded.Length % 4) {
+                2 { $padded += '==' }
+                3 { $padded += '=' }
+            }
+            try {
+                $decoded = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($padded))
+                $claims = $decoded | ConvertFrom-Json
+
+                Write-Log "  [DIAG] --- JWT Claims ---" -Level "INFO"
+                Write-Log "  [DIAG]   aud (audience):  $($claims.aud)" -Level "INFO"
+                Write-Log "  [DIAG]   iss (issuer):    $($claims.iss)" -Level "INFO"
+                Write-Log "  [DIAG]   app_displayname: $($claims.app_displayname)" -Level "INFO"
+                Write-Log "  [DIAG]   appid (clientId):$($claims.appid)" -Level "INFO"
+                Write-Log "  [DIAG]   tid (tenantId):  $($claims.tid)" -Level "INFO"
+                Write-Log "  [DIAG]   oid (objectId):  $($claims.oid)" -Level "INFO"
+                Write-Log "  [DIAG]   sub (subject):   $($claims.sub)" -Level "INFO"
+                Write-Log "  [DIAG]   idtyp:           $($claims.idtyp)" -Level "INFO"
+
+                # Token timestamps
+                if ($claims.iat) {
+                    $issuedAt = [DateTimeOffset]::FromUnixTimeSeconds($claims.iat).DateTime
+                    Write-Log "  [DIAG]   iat (issued):    $issuedAt UTC" -Level "INFO"
+                }
+                if ($claims.exp) {
+                    $expiresAt = [DateTimeOffset]::FromUnixTimeSeconds($claims.exp).DateTime
+                    $remaining = ($expiresAt - [DateTime]::UtcNow).TotalMinutes
+                    Write-Log "  [DIAG]   exp (expires):   $expiresAt UTC ($([math]::Round($remaining, 1)) min remaining)" -Level "INFO"
+                    if ($remaining -lt 5) {
+                        Write-Log "  [DIAG]   WARNING: Token expires in less than 5 minutes!" -Level "WARNING"
+                    }
+                }
+
+                # Roles (application permissions)
+                if ($claims.roles) {
+                    Write-Log "  [DIAG]   --- Application Roles (permissions granted) ---" -Level "INFO"
+                    foreach ($role in $claims.roles) {
+                        Write-Log "  [DIAG]     ROLE: $role" -Level "SUCCESS"
+                    }
+                    # Check for required permissions
+                    $requiredRoles = @("Sites.Read.All", "Sites.ReadWrite.All", "Sites.FullControl.All", "Files.Read.All", "Files.ReadWrite.All")
+                    $hasRead = $claims.roles | Where-Object { $_ -in $requiredRoles }
+                    if (-not $hasRead) {
+                        Write-Log "  [DIAG]   WARNING: None of the expected SharePoint/Graph roles found!" -Level "ERROR"
+                        Write-Log "  [DIAG]   Expected at least one of: $($requiredRoles -join ', ')" -Level "ERROR"
+                        Write-Log "  [DIAG]   This will cause 403 Forbidden errors when accessing SharePoint data." -Level "ERROR"
+                    }
+                }
+                else {
+                    Write-Log "  [DIAG]   WARNING: No 'roles' claim found in token" -Level "WARNING"
+                    Write-Log "  [DIAG]   This means NO application permissions are granted, or admin consent is missing." -Level "ERROR"
+                }
+
+                # Scopes (delegated permissions)
+                if ($claims.scp) {
+                    Write-Log "  [DIAG]   --- Delegated Scopes ---" -Level "INFO"
+                    Write-Log "  [DIAG]     SCOPES: $($claims.scp)" -Level "INFO"
+                }
+
+                # Audience check
+                if ($claims.aud) {
+                    if ($claims.aud -like "*sharepoint*") {
+                        Write-Log "  [DIAG]   Audience is SharePoint resource" -Level "INFO"
+                    }
+                    elseif ($claims.aud -like "*graph.microsoft.com*") {
+                        Write-Log "  [DIAG]   Audience is Microsoft Graph" -Level "INFO"
+                    }
+                    else {
+                        Write-Log "  [DIAG]   Audience is: $($claims.aud) (not SharePoint or Graph)" -Level "WARNING"
+                    }
+                }
+
+                Write-Log "  [DIAG] --- End JWT Claims ---" -Level "INFO"
+            }
+            catch {
+                Write-Log "  [DIAG] Could not decode JWT payload: $_" -Level "WARNING"
+            }
+        }
+        else {
+            Write-Log "  [DIAG] Token does not appear to be a valid JWT (expected 3 segments, got $($parts.Count))" -Level "WARNING"
+        }
+    }
+    catch {
+        Write-Log "  [DIAG] Failed to retrieve access token: $_" -Level "ERROR"
+        Write-Log "  [DIAG] Exception type: $($_.Exception.GetType().FullName)" -Level "ERROR"
+        Write-Log "  [DIAG] This may indicate the connection was not fully established." -Level "ERROR"
+    }
+}
+
+function Test-GraphApiAccess {
+    param([string]$SiteUrl)
+
+    Write-Log "  [DIAG] === Graph API Permission Probe ===" -Level "INFO"
+    try {
+        $token = Get-PnPAccessToken -ErrorAction Stop
+        $headers = @{ "Authorization" = "Bearer $token"; "Accept" = "application/json" }
+
+        # Test 1: Can we reach Graph API at all?
+        Write-Log "  [DIAG] Test 1: GET https://graph.microsoft.com/v1.0/me (basic Graph connectivity)" -Level "INFO"
+        try {
+            $meResult = Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/me" -Headers $headers -Method Get -ErrorAction Stop
+            Write-Log "  [DIAG]   PASS - Authenticated as: $($meResult.displayName) ($($meResult.userPrincipalName))" -Level "SUCCESS"
+        }
+        catch {
+            $statusCode = $_.Exception.Response.StatusCode.value__
+            Write-Log "  [DIAG]   HTTP $statusCode - $($_.Exception.Message)" -Level "WARNING"
+            if ($statusCode -eq 403) {
+                Write-Log "  [DIAG]   Note: 403 on /me is expected for app-only (certificate) auth. Testing app endpoint instead..." -Level "INFO"
+                try {
+                    $orgResult = Invoke-RestMethod -Uri "https://graph.microsoft.com/v1.0/organization" -Headers $headers -Method Get -ErrorAction Stop
+                    Write-Log "  [DIAG]   PASS (app-only) - Org: $($orgResult.value[0].displayName) (TenantId: $($orgResult.value[0].id))" -Level "SUCCESS"
+                }
+                catch {
+                    $orgStatus = $_.Exception.Response.StatusCode.value__
+                    Write-Log "  [DIAG]   FAIL - /organization also returned HTTP $orgStatus : $($_.Exception.Message)" -Level "ERROR"
+                }
+            }
+        }
+
+        # Test 2: Can we access SharePoint sites via Graph?
+        if ($SiteUrl -match "sharepoint\.com(/sites/|/teams/)(.+)$") {
+            $sitePath = $Matches[2].TrimEnd('/')
+            $hostname = ([Uri]$SiteUrl).Host
+            $graphSiteUrl = "https://graph.microsoft.com/v1.0/sites/${hostname}:/sites/${sitePath}"
+            Write-Log "  [DIAG] Test 2: GET $graphSiteUrl (Graph API site access)" -Level "INFO"
+            try {
+                $siteResult = Invoke-RestMethod -Uri $graphSiteUrl -Headers $headers -Method Get -ErrorAction Stop
+                Write-Log "  [DIAG]   PASS - Site found: '$($siteResult.displayName)' (id: $($siteResult.id))" -Level "SUCCESS"
+            }
+            catch {
+                $statusCode = $_.Exception.Response.StatusCode.value__
+                Write-Log "  [DIAG]   FAIL - HTTP $statusCode : $($_.Exception.Message)" -Level "ERROR"
+                if ($statusCode -eq 401) {
+                    Write-Log "  [DIAG]   401 Unauthorized: Token is invalid, expired, or audience mismatch" -Level "ERROR"
+                }
+                elseif ($statusCode -eq 403) {
+                    Write-Log "  [DIAG]   403 Forbidden: App lacks Sites.Read.All permission OR admin consent not granted" -Level "ERROR"
+                    Write-Log "  [DIAG]   ACTION: Go to Entra ID > App registrations > $ClientId > API permissions" -Level "ERROR"
+                    Write-Log "  [DIAG]   Verify Sites.Read.All (Application) has a green checkmark for admin consent" -Level "ERROR"
+                }
+                elseif ($statusCode -eq 404) {
+                    Write-Log "  [DIAG]   404 Not Found: Site does not exist at this path, or app cannot see it" -Level "ERROR"
+                    Write-Log "  [DIAG]   Verify the site URL is correct: $SiteUrl" -Level "ERROR"
+                }
+            }
+        }
+
+        # Test 3: Can we list drives (document libraries) via Graph?
+        if ($SiteUrl -match "sharepoint\.com(/sites/|/teams/)(.+)$") {
+            $graphDrivesUrl = "https://graph.microsoft.com/v1.0/sites/${hostname}:/sites/${sitePath}:/drives"
+            Write-Log "  [DIAG] Test 3: GET $graphDrivesUrl (Graph API drives/libraries)" -Level "INFO"
+            try {
+                $drivesResult = Invoke-RestMethod -Uri $graphDrivesUrl -Headers $headers -Method Get -ErrorAction Stop
+                $driveCount = ($drivesResult.value | Measure-Object).Count
+                Write-Log "  [DIAG]   PASS - Found $driveCount drive(s):" -Level "SUCCESS"
+                $drivesResult.value | ForEach-Object {
+                    Write-Log "  [DIAG]     Drive: '$($_.name)' (id: $($_.id), type: $($_.driveType))" -Level "INFO"
+                }
+            }
+            catch {
+                $statusCode = $_.Exception.Response.StatusCode.value__
+                Write-Log "  [DIAG]   FAIL - HTTP $statusCode : $($_.Exception.Message)" -Level "ERROR"
+                if ($statusCode -eq 403) {
+                    Write-Log "  [DIAG]   403: App lacks Files.Read.All permission to enumerate drives" -Level "ERROR"
+                }
+            }
+        }
+
+        # Test 4: Test SharePoint REST API access (via PnP context)
+        Write-Log "  [DIAG] Test 4: SharePoint REST API via PnP (Get-PnPWeb)" -Level "INFO"
+        try {
+            $web = Get-PnPWeb -ErrorAction Stop
+            Write-Log "  [DIAG]   PASS - PnP Web title: '$($web.Title)', URL: $($web.Url)" -Level "SUCCESS"
+        }
+        catch {
+            Write-Log "  [DIAG]   FAIL - Get-PnPWeb error: $_" -Level "ERROR"
+            Write-Log "  [DIAG]   Exception type: $($_.Exception.GetType().FullName)" -Level "ERROR"
+        }
+
+        Write-Log "  [DIAG] === End Permission Probe ===" -Level "INFO"
+    }
+    catch {
+        Write-Log "  [DIAG] Permission probe failed (could not get access token): $_" -Level "ERROR"
+    }
+}
+
 function Get-LibraryStats {
     param(
         [string]$SiteUrl,
@@ -320,21 +561,65 @@ try {
 
     if ($ClientId -and $CertificateThumbprint) {
         Write-Log "Auth: Certificate-based (ClientId: $ClientId, Thumbprint: $CertificateThumbprint)" -Level "INFO"
+
+        # Pre-flight: validate certificate exists and is valid
+        Write-Log "[DIAG] === Pre-flight Certificate Validation ===" -Level "INFO"
+        $certFound = Test-CertificateInStore -Thumbprint $CertificateThumbprint
+        if (-not $certFound) {
+            Write-Log "CERTIFICATE VALIDATION FAILED: Certificate not found in any store." -Level "ERROR"
+            Write-Log "Import the certificate: Import-PfxCertificate -FilePath cert.pfx -CertStoreLocation Cert:\CurrentUser\My" -Level "ERROR"
+            throw "Certificate with thumbprint $CertificateThumbprint not found."
+        }
+
+        # Resolve tenant ID
         $openIdUrl = "https://login.microsoftonline.com/$($SharePointTenantUrl.Split('/')[2].Split('.')[0]).onmicrosoft.com/.well-known/openid-configuration"
         Write-Log "Resolving tenant ID from: $openIdUrl" -Level "INFO"
-        $tenantId = (Invoke-RestMethod $openIdUrl).token_endpoint.Split('/')[3]
-        Write-Log "Resolved tenant ID: $tenantId" -Level "INFO"
+        try {
+            $openIdResponse = Invoke-RestMethod $openIdUrl -ErrorAction Stop
+            $tenantId = $openIdResponse.token_endpoint.Split('/')[3]
+            Write-Log "Resolved tenant ID: $tenantId" -Level "INFO"
+            Write-Log "  token_endpoint: $($openIdResponse.token_endpoint)" -Level "INFO"
+            Write-Log "  authorization_endpoint: $($openIdResponse.authorization_endpoint)" -Level "INFO"
+        }
+        catch {
+            Write-Log "FAILED to resolve tenant ID from OpenID configuration" -Level "ERROR"
+            Write-Log "  URL attempted: $openIdUrl" -Level "ERROR"
+            Write-Log "  Error: $_" -Level "ERROR"
+            Write-Log "  Possible cause: the .onmicrosoft.com domain does not match the SharePoint tenant" -Level "ERROR"
+            Write-Log "  Try passing -TenantId directly if your tenant uses a custom domain" -Level "ERROR"
+            throw
+        }
+
         Write-Log "Calling Connect-PnPOnline with certificate auth..." -Level "INFO"
+        Write-Log "  URL: $initialUrl" -Level "INFO"
+        Write-Log "  ClientId: $ClientId" -Level "INFO"
+        Write-Log "  Thumbprint: $CertificateThumbprint" -Level "INFO"
+        Write-Log "  Tenant: $tenantId" -Level "INFO"
         try {
             Connect-PnPOnline -Url $initialUrl -ClientId $ClientId -Thumbprint $CertificateThumbprint -Tenant $tenantId
         }
         catch {
-            Write-Log "Failed to connect to: $initialUrl" -Level "ERROR"
-            Write-Log "Common causes:" -Level "ERROR"
-            Write-Log "  - Certificate thumbprint is incorrect or cert not installed in CurrentUser\My store" -Level "ERROR"
-            Write-Log "  - App registration does not have Sites.Read.All or Sites.FullControl.All API permission" -Level "ERROR"
-            Write-Log "  - Admin consent has not been granted for the app in the target tenant" -Level "ERROR"
-            Write-Log "  - Tenant ID mismatch (resolved: $tenantId)" -Level "ERROR"
+            Write-Log "FAILED to connect to: $initialUrl" -Level "ERROR"
+            Write-Log "  Error: $_" -Level "ERROR"
+            Write-Log "  Exception type: $($_.Exception.GetType().FullName)" -Level "ERROR"
+            Write-Log "  Exception message: $($_.Exception.Message)" -Level "ERROR"
+            if ($_.Exception.InnerException) {
+                Write-Log "  Inner exception: $($_.Exception.InnerException.Message)" -Level "ERROR"
+                Write-Log "  Inner exception type: $($_.Exception.InnerException.GetType().FullName)" -Level "ERROR"
+                if ($_.Exception.InnerException.InnerException) {
+                    Write-Log "  Inner inner exception: $($_.Exception.InnerException.InnerException.Message)" -Level "ERROR"
+                }
+            }
+            Write-Log "  Stack trace: $($_.ScriptStackTrace)" -Level "ERROR"
+            Write-Log "  --- Troubleshooting Guide ---" -Level "ERROR"
+            Write-Log "  1. Verify certificate has a private key and is not expired (see DIAG output above)" -Level "ERROR"
+            Write-Log "  2. Verify the certificate is uploaded to the Entra ID app registration:" -Level "ERROR"
+            Write-Log "     Entra ID > App registrations > $ClientId > Certificates & secrets > Certificates" -Level "ERROR"
+            Write-Log "  3. Verify the app has API permissions with admin consent:" -Level "ERROR"
+            Write-Log "     Entra ID > App registrations > $ClientId > API permissions" -Level "ERROR"
+            Write-Log "     Required: Microsoft Graph > Sites.Read.All (Application) with admin consent" -Level "ERROR"
+            Write-Log "  4. Verify the tenant ID is correct: $tenantId" -Level "ERROR"
+            Write-Log "  5. Verify the site URL exists: $initialUrl" -Level "ERROR"
             throw
         }
     }
@@ -346,12 +631,21 @@ try {
             Connect-PnPOnline -Url $initialUrl -Interactive -ClientId $ClientId
         }
         catch {
-            Write-Log "Failed to connect to: $initialUrl" -Level "ERROR"
-            Write-Log "Common causes of 'NotFound' errors:" -Level "ERROR"
-            Write-Log "  - The site URL does not exist: $initialUrl" -Level "ERROR"
-            Write-Log "  - The Entra ID app (ClientId: $ClientId) needs 'http://localhost' as a redirect URI (for interactive auth)" -Level "ERROR"
-            Write-Log "  - The app does not have SharePoint API permissions (Sites.Read.All) with admin consent granted" -Level "ERROR"
-            Write-Log "  - If enumerating all sites, the app needs SharePoint admin center access; use -SpecificSites to skip admin" -Level "ERROR"
+            Write-Log "FAILED to connect to: $initialUrl" -Level "ERROR"
+            Write-Log "  Error: $_" -Level "ERROR"
+            Write-Log "  Exception type: $($_.Exception.GetType().FullName)" -Level "ERROR"
+            Write-Log "  Exception message: $($_.Exception.Message)" -Level "ERROR"
+            if ($_.Exception.InnerException) {
+                Write-Log "  Inner exception: $($_.Exception.InnerException.Message)" -Level "ERROR"
+                Write-Log "  Inner exception type: $($_.Exception.InnerException.GetType().FullName)" -Level "ERROR"
+            }
+            Write-Log "  Stack trace: $($_.ScriptStackTrace)" -Level "ERROR"
+            Write-Log "  --- Troubleshooting Guide ---" -Level "ERROR"
+            Write-Log "  1. Ensure the Entra ID app has 'http://localhost' as a redirect URI:" -Level "ERROR"
+            Write-Log "     Entra ID > App registrations > $ClientId > Authentication > Mobile and desktop" -Level "ERROR"
+            Write-Log "  2. Ensure the app has SharePoint API permissions (Sites.Read.All) with admin consent" -Level "ERROR"
+            Write-Log "  3. If you see 'NotFound', the site URL may not exist: $initialUrl" -Level "ERROR"
+            Write-Log "  4. For admin center access, use -SpecificSites to skip the admin URL requirement" -Level "ERROR"
             throw
         }
     }
@@ -375,6 +669,17 @@ try {
         Write-Log "Warning: Could not verify PnP context: $_" -Level "WARNING"
     }
 
+    # === POST-CONNECT DIAGNOSTICS ===
+    # Inspect access token to reveal granted permissions
+    Write-Log "========================================" -Level "INFO"
+    Write-Log "POST-CONNECT PERMISSION DIAGNOSTICS" -Level "INFO"
+    Write-Log "========================================" -Level "INFO"
+    Inspect-PnPAccessToken
+
+    # Probe Graph API and SharePoint permissions directly
+    Test-GraphApiAccess -SiteUrl $initialUrl
+    Write-Log "========================================" -Level "INFO"
+
     # Get all site collections
     Write-Log "Enumerating site collections..." -Level "INFO"
 
@@ -394,7 +699,33 @@ try {
     }
     else {
         Write-Log "Querying all tenant sites with filter: '$SiteFilter'" -Level "INFO"
-        $allSites = Get-PnPTenantSite -Filter "Url -like '$SiteFilter'"
+        Write-Log "  NOTE: Get-PnPTenantSite requires SharePoint Administrator role or Global Administrator" -Level "INFO"
+        Write-Log "  If this fails, use -SpecificSites instead to bypass admin center access" -Level "INFO"
+        try {
+            $allSites = Get-PnPTenantSite -Filter "Url -like '$SiteFilter'" -ErrorAction Stop
+        }
+        catch {
+            Write-Log "FAILED: Get-PnPTenantSite returned an error" -Level "ERROR"
+            Write-Log "  Error: $_" -Level "ERROR"
+            Write-Log "  Exception type: $($_.Exception.GetType().FullName)" -Level "ERROR"
+            Write-Log "  Exception message: $($_.Exception.Message)" -Level "ERROR"
+            if ($_.Exception.InnerException) {
+                Write-Log "  Inner exception: $($_.Exception.InnerException.Message)" -Level "ERROR"
+                Write-Log "  Inner exception type: $($_.Exception.InnerException.GetType().FullName)" -Level "ERROR"
+            }
+            Write-Log "  Stack trace: $($_.ScriptStackTrace)" -Level "ERROR"
+            Write-Log "" -Level "INFO"
+            Write-Log "  --- Troubleshooting ---" -Level "ERROR"
+            Write-Log "  This usually means one of:" -Level "ERROR"
+            Write-Log "  1. The connected URL is wrong (connected to: $initialUrl)" -Level "ERROR"
+            Write-Log "     Expected format: https://tenant-admin.sharepoint.com" -Level "ERROR"
+            Write-Log "  2. The app/user does not have SharePoint Administrator role" -Level "ERROR"
+            Write-Log "  3. The access token audience is not SharePoint (see DIAG token output above)" -Level "ERROR"
+            Write-Log "" -Level "INFO"
+            Write-Log "  RECOMMENDED: Use -SpecificSites to skip admin center and connect directly to sites:" -Level "ERROR"
+            Write-Log "    -SpecificSites @('/sites/SiteName1', '/sites/SiteName2')" -Level "ERROR"
+            throw
+        }
         Write-Log "Raw site count from tenant: $(($allSites | Measure-Object).Count)" -Level "INFO"
 
         $sites = $allSites | Where-Object {
@@ -453,13 +784,39 @@ try {
             Write-Log "  Disconnecting previous PnP session..." -Level "INFO"
             Disconnect-PnPOnline -ErrorAction SilentlyContinue
             Write-Log "  Connecting to site: $siteUrl" -Level "INFO"
-            if ($ClientId -and $CertificateThumbprint) {
-                Connect-PnPOnline -Url $siteUrl -ClientId $ClientId -Thumbprint $CertificateThumbprint -Tenant $tenantId
+            try {
+                if ($ClientId -and $CertificateThumbprint) {
+                    Write-Log "  [DIAG] Connect-PnPOnline -Url '$siteUrl' -ClientId '$ClientId' -Thumbprint '$CertificateThumbprint' -Tenant '$tenantId'" -Level "INFO"
+                    Connect-PnPOnline -Url $siteUrl -ClientId $ClientId -Thumbprint $CertificateThumbprint -Tenant $tenantId
+                }
+                else {
+                    Write-Log "  [DIAG] Connect-PnPOnline -Url '$siteUrl' -Interactive -ClientId '$ClientId'" -Level "INFO"
+                    Connect-PnPOnline -Url $siteUrl -Interactive -ClientId $ClientId
+                }
             }
-            else {
-                Connect-PnPOnline -Url $siteUrl -Interactive -ClientId $ClientId
+            catch {
+                Write-Log "  FAILED to connect to site: $siteUrl" -Level "ERROR"
+                Write-Log "  Error: $_" -Level "ERROR"
+                Write-Log "  Exception type: $($_.Exception.GetType().FullName)" -Level "ERROR"
+                Write-Log "  Exception message: $($_.Exception.Message)" -Level "ERROR"
+                if ($_.Exception.InnerException) {
+                    Write-Log "  Inner exception: $($_.Exception.InnerException.Message)" -Level "ERROR"
+                    Write-Log "  Inner exception type: $($_.Exception.InnerException.GetType().FullName)" -Level "ERROR"
+                }
+                Write-Log "  Stack trace: $($_.ScriptStackTrace)" -Level "ERROR"
+                Write-Log "  --- Possible causes ---" -Level "ERROR"
+                Write-Log "  1. Site does not exist: $siteUrl" -Level "ERROR"
+                Write-Log "  2. App lacks permission to this specific site" -Level "ERROR"
+                Write-Log "  3. Site may require different authentication scope" -Level "ERROR"
+                throw
             }
             Write-Log "  Connected to site successfully." -Level "SUCCESS"
+
+            # Run per-site permission diagnostics
+            Write-Log "  [DIAG] --- Per-Site Token & Permission Check ---" -Level "INFO"
+            Inspect-PnPAccessToken
+            Test-GraphApiAccess -SiteUrl $siteUrl
+            Write-Log "  [DIAG] --- End Per-Site Check ---" -Level "INFO"
 
             # Verify the active PnP context (confirms we're really pointing at the right site)
             try {
@@ -505,7 +862,24 @@ try {
             # Get all document libraries
             Write-Log "  Fetching document libraries (BaseTemplate=101, non-hidden)..." -Level "INFO"
             $listFetchStart = Get-Date
-            $allLists = Get-PnPList
+            try {
+                $allLists = Get-PnPList -ErrorAction Stop
+            }
+            catch {
+                Write-Log "  FAILED: Get-PnPList returned an error" -Level "ERROR"
+                Write-Log "  Error: $_" -Level "ERROR"
+                Write-Log "  Exception type: $($_.Exception.GetType().FullName)" -Level "ERROR"
+                Write-Log "  Exception message: $($_.Exception.Message)" -Level "ERROR"
+                if ($_.Exception.InnerException) {
+                    Write-Log "  Inner exception: $($_.Exception.InnerException.Message)" -Level "ERROR"
+                }
+                Write-Log "  Stack trace: $($_.ScriptStackTrace)" -Level "ERROR"
+                Write-Log "  --- Troubleshooting ---" -Level "ERROR"
+                Write-Log "  1. The app may lack permission to enumerate lists on this site" -Level "ERROR"
+                Write-Log "  2. Check if the access token has the correct audience (see DIAG output)" -Level "ERROR"
+                Write-Log "  3. Verify Sites.Read.All permission with admin consent is granted" -Level "ERROR"
+                throw
+            }
             $listFetchDuration = ((Get-Date) - $listFetchStart).TotalSeconds
             Write-Log "  Get-PnPList completed in $([math]::Round($listFetchDuration, 2))s" -Level "INFO"
             Write-Log "  Total lists/libraries in site: $(($allLists | Measure-Object).Count)" -Level "INFO"
