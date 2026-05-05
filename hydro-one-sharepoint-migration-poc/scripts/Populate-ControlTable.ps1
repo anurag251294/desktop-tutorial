@@ -283,6 +283,23 @@ foreach ($module in $requiredModules) {
     Write-Log "Module '$module' imported successfully." -Level "SUCCESS"
 }
 
+# Auto-detect if a site URL was passed as -SharePointTenantUrl and extract the site path
+# e.g. "https://hydroone.sharepoint.com/sites/MySite" -> tenant="https://hydroone.sharepoint.com", site="/sites/MySite"
+if ($SharePointTenantUrl -match "^(https://[^/]+\.sharepoint\.com)(/sites/.+|/teams/.+)$") {
+    $extractedTenantUrl = $Matches[1]
+    $extractedSitePath = $Matches[2].TrimEnd('/')
+    Write-Log "Detected site path in -SharePointTenantUrl: '$extractedSitePath'" -Level "WARNING"
+    Write-Log "Extracting tenant root: '$extractedTenantUrl'" -Level "WARNING"
+    $SharePointTenantUrl = $extractedTenantUrl
+    if ($SpecificSites.Count -eq 0) {
+        $SpecificSites = @($extractedSitePath)
+        Write-Log "Auto-set -SpecificSites to: $($SpecificSites -join ', ')" -Level "WARNING"
+    }
+    else {
+        Write-Log "SpecificSites already provided, ignoring extracted site path." -Level "INFO"
+    }
+}
+
 # Build SQL connection string (using Azure AD authentication)
 $sqlConnectionString = "Server=tcp:$SqlServerName.database.windows.net,1433;Initial Catalog=$SqlDatabaseName;Authentication=Active Directory Integrated;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
 Write-Log "SQL connection string built (server: $SqlServerName.database.windows.net, db: $SqlDatabaseName, auth: AD Integrated)" -Level "INFO"
