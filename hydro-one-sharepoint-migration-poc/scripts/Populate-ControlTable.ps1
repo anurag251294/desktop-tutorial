@@ -475,10 +475,41 @@ function Insert-ControlTableRecord {
         [hashtable]$Record
     )
 
+    # Escape single quotes for safe SQL string interpolation
+    $eSiteUrl      = $Record.SiteUrl -replace "'","''"
+    $eLibraryName  = $Record.LibraryName -replace "'","''"
+    $eSiteTitle    = $Record.SiteTitle -replace "'","''"
+    $eLibraryTitle = $Record.LibraryTitle -replace "'","''"
+    $eCreatedBy    = ($env:USERNAME) -replace "'","''"
+    $fileCount     = [int]$Record.FileCount
+    $folderCount   = [int]$Record.FolderCount
+    $totalSize     = [long]$(if ($Record.TotalSizeBytes) { $Record.TotalSizeBytes } else { 0 })
+    $largestFile   = [long]$(if ($Record.LargestFileSizeBytes) { $Record.LargestFileSizeBytes } else { 0 })
+    $priority      = [int]$Record.Priority
+
+    Write-Log "      [SQL] Upsert payload: SiteUrl='$eSiteUrl', LibraryName='$eLibraryName', SiteTitle='$eSiteTitle', FileCount=$fileCount, TotalSizeBytes=$totalSize, Priority=$priority" -Level "INFO"
+
+    # Pre-check: does the row already exist?
+    try {
+        $existsQuery = "SELECT COUNT(*) AS [RowCount] FROM dbo.MigrationControl WHERE SiteUrl = N'$eSiteUrl' AND LibraryName = N'$eLibraryName'"
+        Write-Log "      [SQL] Pre-check query: $existsQuery" -Level "DEBUG"
+        $existsResult = Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $existsQuery -ErrorAction Stop
+        $existed = ($existsResult.RowCount -gt 0)
+        Write-Log "      [SQL] Pre-check: row $(if ($existed) { 'EXISTS - will UPDATE' } else { 'does NOT exist - will INSERT' })" -Level "INFO"
+    }
+    catch {
+        Write-Log "      [SQL] Pre-check failed (continuing anyway): $_" -Level "WARNING"
+        Write-ExceptionDetail $_ "      [SQL] "
+        $existed = $null
+    }
+
+    # Build the upsert query with inline values
+    # Note: Invoke-Sqlcmd -Variable uses SQLCMD $(VarName) syntax, NOT T-SQL @VarName.
+    # Using inline values with proper escaping to avoid this confusion.
     $query = @"
     IF NOT EXISTS (
         SELECT 1 FROM dbo.MigrationControl
-        WHERE SiteUrl = @SiteUrl AND LibraryName = @LibraryName
+        WHERE SiteUrl = N'$eSiteUrl' AND LibraryName = N'$eLibraryName'
     )
     BEGIN
         INSERT INTO dbo.MigrationControl (
@@ -486,66 +517,29 @@ function Insert-ControlTableRecord {
             Status, FileCount, FolderCount, TotalSizeBytes, LargestFileSizeBytes,
             Priority, CreatedDate, CreatedBy
         ) VALUES (
-            @SiteUrl, @LibraryName, @SiteTitle, @LibraryTitle,
-            'Pending', @FileCount, @FolderCount, @TotalSizeBytes, @LargestFileSizeBytes,
-            @Priority, GETUTCDATE(), @CreatedBy
+            N'$eSiteUrl', N'$eLibraryName', N'$eSiteTitle', N'$eLibraryTitle',
+            'Pending', $fileCount, $folderCount, $totalSize, $largestFile,
+            $priority, GETUTCDATE(), N'$eCreatedBy'
         )
     END
     ELSE
     BEGIN
         UPDATE dbo.MigrationControl
-        SET FileCount = @FileCount,
-            FolderCount = @FolderCount,
-            TotalSizeBytes = @TotalSizeBytes,
-            LargestFileSizeBytes = @LargestFileSizeBytes,
+        SET FileCount = $fileCount,
+            FolderCount = $folderCount,
+            TotalSizeBytes = $totalSize,
+            LargestFileSizeBytes = $largestFile,
             ModifiedDate = GETUTCDATE(),
-            ModifiedBy = @CreatedBy
-        WHERE SiteUrl = @SiteUrl AND LibraryName = @LibraryName
+            ModifiedBy = N'$eCreatedBy'
+        WHERE SiteUrl = N'$eSiteUrl' AND LibraryName = N'$eLibraryName'
     END
 "@
 
-    $params = @{
-        SiteUrl             = $Record.SiteUrl
-        LibraryName         = $Record.LibraryName
-        SiteTitle           = $Record.SiteTitle
-        LibraryTitle        = $Record.LibraryTitle
-        FileCount           = $Record.FileCount
-        FolderCount         = $Record.FolderCount
-        TotalSizeBytes      = $Record.TotalSizeBytes
-        LargestFileSizeBytes = $Record.LargestFileSizeBytes
-        Priority            = $Record.Priority
-        CreatedBy           = $env:USERNAME
-    }
-
-    Write-Log "      [SQL] Upsert payload: SiteUrl='$($params.SiteUrl)', LibraryName='$($params.LibraryName)', SiteTitle='$($params.SiteTitle)', FileCount=$($params.FileCount), TotalSizeBytes=$($params.TotalSizeBytes), Priority=$($params.Priority)" -Level "INFO"
-
-    # Pre-check: does the row already exist?
-    try {
-        $existsQuery = "SELECT COUNT(*) AS [RowCount] FROM dbo.MigrationControl WHERE SiteUrl = '$($params.SiteUrl -replace "'","''")' AND LibraryName = '$($params.LibraryName -replace "'","''")'"
-        $existsResult = Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $existsQuery
-        $existed = ($existsResult.RowCount -gt 0)
-        Write-Log "      [SQL] Pre-check: row $(if ($existed) { 'EXISTS - will UPDATE' } else { 'does NOT exist - will INSERT' })" -Level "INFO"
-    }
-    catch {
-        Write-Log "      [SQL] Pre-check failed (continuing anyway): $_" -Level "WARNING"
-        $existed = $null
-    }
-
+    Write-Log "      [SQL] Executing upsert query..." -Level "DEBUG"
     $sqlStart = Get-Date
-    Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $query -Variable @(
-        "SiteUrl=$($params.SiteUrl)",
-        "LibraryName=$($params.LibraryName)",
-        "SiteTitle=$($params.SiteTitle)",
-        "LibraryTitle=$($params.LibraryTitle)",
-        "FileCount=$($params.FileCount)",
-        "FolderCount=$($params.FolderCount)",
-        "TotalSizeBytes=$($params.TotalSizeBytes)",
-        "LargestFileSizeBytes=$($params.LargestFileSizeBytes)",
-        "Priority=$($params.Priority)",
-        "CreatedBy=$($params.CreatedBy)"
-    )
+    Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $query -ErrorAction Stop
     $sqlDuration = ((Get-Date) - $sqlStart).TotalSeconds
-    Write-Log "      [SQL] Operation completed in $([math]::Round($sqlDuration, 2))s ($(if ($existed) { 'UPDATE' } elseif ($existed -eq $false) { 'INSERT' } else { 'UNKNOWN' }))" -Level "INFO"
+    Write-Log "      [SQL] Operation completed in $([math]::Round($sqlDuration, 2))s ($(if ($existed) { 'UPDATE' } elseif ($existed -eq $false) { 'INSERT' } else { 'UPSERT' }))" -Level "INFO"
 }
 #endregion
 
@@ -809,7 +803,7 @@ catch {
 
 # Step 3: SQL authentication test
 Write-Log "[SQL-DIAG] Step 3/6: SQL authentication and database access" -Level "INFO"
-Write-Log "[SQL-DIAG]   Connection string (sanitized): Server=tcp:$sqlFqdn,1433; Database=$SqlDatabaseName; Auth=AD Integrated; Encrypt=True" -Level "INFO"
+Write-Log "[SQL-DIAG]   Connection string (sanitized): Server=tcp:$sqlFqdn,1433; Database=$SqlDatabaseName; Auth=$sqlAuthMode; Encrypt=True" -Level "INFO"
 try {
     $sqlAuthStart = Get-Date
     $testResult = Invoke-Sqlcmd -ConnectionString $sqlConnectionString -Query @"
@@ -899,7 +893,7 @@ try {
         Write-Log "[SQL-DIAG]   Table schema ($($columns.Count) columns):" -Level "DEBUG"
         foreach ($col in $columns) {
             $typeStr = $col.DATA_TYPE
-            if ($col.CHARACTER_MAXIMUM_LENGTH -and $col.CHARACTER_MAXIMUM_LENGTH -gt 0) { $typeStr += "($($col.CHARACTER_MAXIMUM_LENGTH))" }
+            if ($null -ne $col.CHARACTER_MAXIMUM_LENGTH -and $col.CHARACTER_MAXIMUM_LENGTH -isnot [System.DBNull] -and $col.CHARACTER_MAXIMUM_LENGTH -gt 0) { $typeStr += "($($col.CHARACTER_MAXIMUM_LENGTH))" }
             Write-Log "[SQL-DIAG]     $($col.COLUMN_NAME) ($typeStr, nullable=$($col.IS_NULLABLE))" -Level "DEBUG"
         }
     }
@@ -1426,7 +1420,7 @@ try {
                     catch {
                         Write-Log "    SQL upsert FAILED" -Level "ERROR"
                         Write-ExceptionDetail $_ "    "
-                        Write-Log "    Connection string (redacted): Server=$sqlFqdn, DB=$SqlDatabaseName, Auth=AD Integrated" -Level "ERROR"
+                        Write-Log "    Connection string (redacted): Server=$sqlFqdn, DB=$SqlDatabaseName, Auth=$sqlAuthMode" -Level "ERROR"
                         Write-Log "    --- SQL Upsert Troubleshooting ---" -Level "ERROR"
                         if ($_.Exception.Message -like "*network*" -or $_.Exception.Message -like "*not found or was not accessible*") {
                             Write-Log "    SQL server became unreachable during migration. Check network/firewall." -Level "ERROR"
