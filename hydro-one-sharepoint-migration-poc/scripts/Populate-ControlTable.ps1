@@ -1386,12 +1386,10 @@ try {
 
                 if ($stats.FileCount -gt 0) {
                     # Calculate priority based on size (smaller = higher priority for faster initial results)
-                    $priority = switch ($stats.TotalSize) {
-                        { $_ -lt 104857600 } { 10 }      # < 100 MB
-                        { $_ -lt 1073741824 } { 50 }    # < 1 GB
-                        { $_ -lt 10737418240 } { 100 }  # < 10 GB
-                        default { 200 }                  # > 10 GB
-                    }
+                    $priority = $(if ($stats.TotalSize -lt 104857600) { 10 }        # < 100 MB
+                        elseif ($stats.TotalSize -lt 1073741824) { 50 }          # < 1 GB
+                        elseif ($stats.TotalSize -lt 10737418240) { 100 }        # < 10 GB
+                        else { 200 })                                             # > 10 GB
                     Write-Log "    Assigned priority: $priority (based on size $([math]::Round($stats.TotalSize / 1GB, 2)) GB)" -Level "INFO"
 
                     # Create record
@@ -1402,8 +1400,8 @@ try {
                         LibraryTitle         = $library.Title
                         FileCount            = $stats.FileCount
                         FolderCount          = $stats.FolderCount
-                        TotalSizeBytes       = if ($stats.TotalSize) { $stats.TotalSize } else { 0 }
-                        LargestFileSizeBytes = if ($stats.LargestFile) { $stats.LargestFile } else { 0 }
+                        TotalSizeBytes       = $(if ($stats.TotalSize) { $stats.TotalSize } else { 0 })
+                        LargestFileSizeBytes = $(if ($stats.LargestFile) { $stats.LargestFile } else { 0 })
                         Priority             = $priority
                     }
 
