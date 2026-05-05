@@ -22,10 +22,26 @@
 .PARAMETER SiteFilter
     Optional filter to limit which sites to enumerate (e.g., "*Documents*")
 
+.PARAMETER SqlUsername
+    Optional SQL Server username for SQL authentication (instead of AD Integrated).
+    Use this when AD Integrated auth fails due to ADFS/federation issues.
+
+.PARAMETER SqlPassword
+    Optional SQL Server password (SecureString) for SQL authentication.
+    If SqlUsername is provided without SqlPassword, you will be prompted.
+
 .EXAMPLE
     .\Populate-ControlTable.ps1 -SharePointTenantUrl "https://hydroone.sharepoint.com" `
         -SqlServerName "sql-hydroone-migration-dev" -SqlDatabaseName "MigrationControl" `
         -ClientId "your-entra-app-client-id"
+
+.EXAMPLE
+    # Using SQL authentication instead of AD Integrated:
+    .\Populate-ControlTable.ps1 -SharePointTenantUrl "https://hydroone.sharepoint.com" `
+        -SqlServerName "sql-hydroone-migration-dev" -SqlDatabaseName "MigrationControl" `
+        -ClientId "your-entra-app-client-id" -CertificateThumbprint "ABC123..." `
+        -SpecificSites @("/sites/MySite") `
+        -SqlUsername "sqladmin" -SqlPassword (ConvertTo-SecureString "YourPassword" -AsPlainText -Force)
 
 .NOTES
     Author: Microsoft Azure Data Engineering Team
@@ -60,7 +76,13 @@ param(
     [string]$ClientId,
 
     [Parameter(Mandatory = $false)]
-    [string]$CertificateThumbprint
+    [string]$CertificateThumbprint,
+
+    [Parameter(Mandatory = $false)]
+    [string]$SqlUsername,
+
+    [Parameter(Mandatory = $false)]
+    [securestring]$SqlPassword
 )
 
 #region Configuration
@@ -83,17 +105,66 @@ $excludeLibraries = @(
 #endregion
 
 #region Functions
+
+# Generate a unique log file path for this run
+$script:LogFilePath = Join-Path (Get-Location) "Populate-ControlTable_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
+
 function Write-Log {
     param([string]$Message, [string]$Level = "INFO")
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss.fff"
     $color = switch ($Level) {
         "INFO"    { "White" }
         "SUCCESS" { "Green" }
         "WARNING" { "Yellow" }
         "ERROR"   { "Red" }
+        "DEBUG"   { "DarkGray" }
         default   { "White" }
     }
-    Write-Host "[$timestamp] [$Level] $Message" -ForegroundColor $color
+    $logLine = "[$timestamp] [$Level] $Message"
+    Write-Host $logLine -ForegroundColor $color
+    # Also write to log file for later analysis
+    try { $logLine | Out-File -Append -FilePath $script:LogFilePath -Encoding UTF8 } catch {}
+}
+
+function Write-ExceptionDetail {
+    param($ErrorRecord, [string]$Prefix = "")
+    Write-Log "${Prefix}Exception type: $($ErrorRecord.Exception.GetType().FullName)" -Level "ERROR"
+    Write-Log "${Prefix}Exception message: $($ErrorRecord.Exception.Message)" -Level "ERROR"
+    Write-Log "${Prefix}Stack trace: $($ErrorRecord.ScriptStackTrace)" -Level "ERROR"
+    if ($ErrorRecord.Exception.InnerException) {
+        Write-Log "${Prefix}Inner exception type: $($ErrorRecord.Exception.InnerException.GetType().FullName)" -Level "ERROR"
+        Write-Log "${Prefix}Inner exception message: $($ErrorRecord.Exception.InnerException.Message)" -Level "ERROR"
+        if ($ErrorRecord.Exception.InnerException.InnerException) {
+            Write-Log "${Prefix}Inner inner exception type: $($ErrorRecord.Exception.InnerException.InnerException.GetType().FullName)" -Level "ERROR"
+            Write-Log "${Prefix}Inner inner exception message: $($ErrorRecord.Exception.InnerException.InnerException.Message)" -Level "ERROR"
+        }
+    }
+    # For HTTP/web exceptions, extract response body
+    if ($ErrorRecord.Exception -is [System.Net.WebException] -and $ErrorRecord.Exception.Response) {
+        try {
+            $stream = $ErrorRecord.Exception.Response.GetResponseStream()
+            $reader = New-Object System.IO.StreamReader($stream)
+            $body = $reader.ReadToEnd()
+            Write-Log "${Prefix}HTTP Response Status: $($ErrorRecord.Exception.Response.StatusCode) ($($ErrorRecord.Exception.Response.StatusDescription))" -Level "ERROR"
+            Write-Log "${Prefix}HTTP Response Body: $body" -Level "ERROR"
+            $reader.Close()
+            $stream.Close()
+        }
+        catch { Write-Log "${Prefix}(could not read HTTP response body)" -Level "DEBUG" }
+    }
+    # For SqlException, extract additional SQL details
+    if ($ErrorRecord.Exception -is [Microsoft.Data.SqlClient.SqlException]) {
+        $sqlEx = $ErrorRecord.Exception
+        Write-Log "${Prefix}SQL Error Number: $($sqlEx.Number)" -Level "ERROR"
+        Write-Log "${Prefix}SQL Error State: $($sqlEx.State)" -Level "ERROR"
+        Write-Log "${Prefix}SQL Error Class: $($sqlEx.Class)" -Level "ERROR"
+        Write-Log "${Prefix}SQL Server: $($sqlEx.Server)" -Level "ERROR"
+        Write-Log "${Prefix}SQL Procedure: $($sqlEx.Procedure)" -Level "ERROR"
+        Write-Log "${Prefix}SQL Line: $($sqlEx.LineNumber)" -Level "ERROR"
+        foreach ($sqlError in $sqlEx.Errors) {
+            Write-Log "${Prefix}  SQL Error Detail: [$($sqlError.Number)] $($sqlError.Message) (State=$($sqlError.State), Class=$($sqlError.Class), Server=$($sqlError.Server), Procedure=$($sqlError.Procedure), Line=$($sqlError.LineNumber))" -Level "ERROR"
+        }
+    }
 }
 
 function Test-CertificateInStore {
@@ -479,24 +550,91 @@ function Insert-ControlTableRecord {
 #endregion
 
 #region Main Script
+$scriptStartTime = Get-Date
 Write-Log "========================================" -Level "INFO"
 Write-Log "SharePoint Site Enumeration and Control Table Population" -Level "INFO"
+Write-Log "Script started at: $($scriptStartTime.ToString('yyyy-MM-dd HH:mm:ss.fff'))" -Level "INFO"
+Write-Log "Log file: $script:LogFilePath" -Level "INFO"
 Write-Log "========================================" -Level "INFO"
 
 # Log environment details for troubleshooting
+Write-Log "" -Level "INFO"
+Write-Log "=== ENVIRONMENT DIAGNOSTICS ===" -Level "INFO"
 Write-Log "PowerShell Version: $($PSVersionTable.PSVersion) ($($PSVersionTable.PSEdition))" -Level "INFO"
 Write-Log "OS: $([System.Runtime.InteropServices.RuntimeInformation]::OSDescription)" -Level "INFO"
 Write-Log ".NET Runtime: $([System.Runtime.InteropServices.RuntimeInformation]::FrameworkDescription)" -Level "INFO"
 Write-Log "Running as: $env:USERNAME on $env:COMPUTERNAME" -Level "INFO"
 Write-Log "Working directory: $(Get-Location)" -Level "INFO"
+Write-Log "User domain: $env:USERDOMAIN" -Level "INFO"
+Write-Log "User profile: $env:USERPROFILE" -Level "INFO"
+Write-Log "Temp path: $([System.IO.Path]::GetTempPath())" -Level "INFO"
+
+# Network diagnostics
+Write-Log "" -Level "INFO"
+Write-Log "=== NETWORK DIAGNOSTICS ===" -Level "INFO"
+try {
+    $localIPs = [System.Net.Dns]::GetHostAddresses([System.Net.Dns]::GetHostName()) | Where-Object { $_.AddressFamily -eq 'InterNetwork' }
+    Write-Log "Local IP addresses: $($localIPs.IPAddressToString -join ', ')" -Level "INFO"
+}
+catch { Write-Log "Could not resolve local IP: $_" -Level "DEBUG" }
+
+# Test internet connectivity
+Write-Log "Testing outbound HTTPS connectivity..." -Level "INFO"
+$connectivityTargets = @(
+    @{ Name = "Microsoft Login (OAuth)"; Url = "https://login.microsoftonline.com" },
+    @{ Name = "Microsoft Graph API";    Url = "https://graph.microsoft.com" },
+    @{ Name = "SharePoint Online";      Url = $SharePointTenantUrl }
+)
+foreach ($target in $connectivityTargets) {
+    try {
+        $response = Invoke-WebRequest -Uri $target.Url -Method Head -TimeoutSec 10 -UseBasicParsing -ErrorAction Stop
+        Write-Log "  $($target.Name) ($($target.Url)): REACHABLE (HTTP $($response.StatusCode))" -Level "SUCCESS"
+    }
+    catch {
+        $statusCode = $_.Exception.Response.StatusCode.value__
+        if ($statusCode) {
+            Write-Log "  $($target.Name) ($($target.Url)): HTTP $statusCode (server reachable, returned error - this may be OK)" -Level "WARNING"
+        }
+        else {
+            Write-Log "  $($target.Name) ($($target.Url)): UNREACHABLE - $($_.Exception.Message)" -Level "ERROR"
+        }
+    }
+}
+
+# Check Azure CLI login context (helps diagnose AD Integrated auth issues for SQL)
+Write-Log "" -Level "INFO"
+Write-Log "=== AZURE CLI CONTEXT ===" -Level "INFO"
+try {
+    $azAccount = az account show 2>&1 | ConvertFrom-Json -ErrorAction Stop
+    Write-Log "Azure CLI logged in: YES" -Level "SUCCESS"
+    Write-Log "  Subscription: $($azAccount.name) ($($azAccount.id))" -Level "INFO"
+    Write-Log "  Tenant: $($azAccount.tenantId)" -Level "INFO"
+    Write-Log "  User: $($azAccount.user.name) (type: $($azAccount.user.type))" -Level "INFO"
+    Write-Log "  Environment: $($azAccount.environmentName)" -Level "INFO"
+    Write-Log "  Home tenant: $($azAccount.homeTenantId)" -Level "INFO"
+}
+catch {
+    Write-Log "Azure CLI: NOT LOGGED IN or az not installed" -Level "WARNING"
+    Write-Log "  This affects SQL 'Active Directory Integrated' auth. Run: az login" -Level "WARNING"
+    Write-Log "  Error: $_" -Level "DEBUG"
+}
+
+Write-Log "" -Level "INFO"
+Write-Log "=== SCRIPT PARAMETERS ===" -Level "INFO"
 Write-Log "SharePoint Tenant: $SharePointTenantUrl" -Level "INFO"
 Write-Log "SQL Server: $SqlServerName" -Level "INFO"
 Write-Log "SQL Database: $SqlDatabaseName" -Level "INFO"
 Write-Log "Site Filter: $SiteFilter" -Level "INFO"
+Write-Log "SpecificSites count: $($SpecificSites.Count)" -Level "INFO"
 if ($SpecificSites.Count -gt 0) { Write-Log "Specific Sites: $($SpecificSites -join ', ')" -Level "INFO" }
+Write-Log "ExcludeSites count: $($ExcludeSites.Count)" -Level "INFO"
 if ($ExcludeSites.Count -gt 0) { Write-Log "Excluded Sites: $($ExcludeSites -join ', ')" -Level "INFO" }
 Write-Log "Auth Mode: $(if ($ClientId -and $CertificateThumbprint) { 'Certificate' } elseif ($ClientId) { 'Interactive with ClientId' } else { 'No ClientId (will fail)' })" -Level "INFO"
 Write-Log "ClientId: $(if ($ClientId) { $ClientId } else { '(not provided)' })" -Level "INFO"
+Write-Log "CertificateThumbprint: $(if ($CertificateThumbprint) { $CertificateThumbprint } else { '(not provided)' })" -Level "INFO"
+Write-Log "UseInteractiveAuth: $UseInteractiveAuth" -Level "INFO"
+Write-Log "SqlUsername: $(if ($SqlUsername) { $SqlUsername } else { '(not provided - using AD Integrated)' })" -Level "INFO"
+Write-Log "SqlPassword: $(if ($SqlPassword) { '(provided)' } else { '(not provided)' })" -Level "INFO"
 Write-Log "========================================" -Level "INFO"
 
 # Check PowerShell version compatibility
@@ -508,21 +646,44 @@ if ($PSVersionTable.PSVersion.Major -lt 7) {
 }
 
 # Check for required modules
+Write-Log "" -Level "INFO"
+Write-Log "=== MODULE VALIDATION ===" -Level "INFO"
 $requiredModules = @("PnP.PowerShell", "SqlServer")
 foreach ($module in $requiredModules) {
     if (-not (Get-Module -ListAvailable -Name $module)) {
         Write-Log "Module '$module' not found. Installing..." -Level "WARNING"
-        Install-Module -Name $module -Force -AllowClobber -Scope CurrentUser
-        Write-Log "Module '$module' installed successfully." -Level "SUCCESS"
+        try {
+            Install-Module -Name $module -Force -AllowClobber -Scope CurrentUser -ErrorAction Stop
+            Write-Log "Module '$module' installed successfully." -Level "SUCCESS"
+        }
+        catch {
+            Write-Log "FAILED to install module '$module': $_" -Level "ERROR"
+            Write-ExceptionDetail $_
+            throw
+        }
     }
     else {
-        $moduleVersion = (Get-Module -ListAvailable -Name $module | Sort-Object Version -Descending | Select-Object -First 1).Version
-        Write-Log "Module '$module' found (v$moduleVersion)" -Level "INFO"
+        $allVersions = Get-Module -ListAvailable -Name $module | Sort-Object Version -Descending
+        $latestVersion = $allVersions | Select-Object -First 1
+        Write-Log "Module '$module' found (v$($latestVersion.Version))" -Level "INFO"
+        Write-Log "  Module path: $($latestVersion.ModuleBase)" -Level "DEBUG"
+        if ($allVersions.Count -gt 1) {
+            Write-Log "  Multiple versions installed: $($allVersions.Version -join ', ')" -Level "DEBUG"
+        }
     }
     Write-Log "Importing module: $module" -Level "INFO"
-    Import-Module $module
-    Write-Log "Module '$module' imported successfully." -Level "SUCCESS"
+    try {
+        Import-Module $module -ErrorAction Stop
+        $imported = Get-Module -Name $module
+        Write-Log "Module '$module' imported successfully (v$($imported.Version))" -Level "SUCCESS"
+    }
+    catch {
+        Write-Log "FAILED to import module '$module': $_" -Level "ERROR"
+        Write-ExceptionDetail $_
+        throw
+    }
 }
+Write-Log "=== END MODULE VALIDATION ===" -Level "INFO"
 
 # Auto-detect if a site URL was passed as -SharePointTenantUrl and extract the site path
 # e.g. "https://hydroone.sharepoint.com/sites/MySite" -> tenant="https://hydroone.sharepoint.com", site="/sites/MySite"
@@ -541,10 +702,28 @@ if ($SharePointTenantUrl -match "^(https://[^/]+\.sharepoint\.com)(/sites/.+|/te
     }
 }
 
-# Build SQL connection string (using Azure AD authentication)
+# Build SQL connection string
 $sqlFqdn = "$SqlServerName.database.windows.net"
-$sqlConnectionString = "Server=tcp:$sqlFqdn,1433;Initial Catalog=$SqlDatabaseName;Authentication=Active Directory Integrated;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
-Write-Log "SQL connection string built (server: $sqlFqdn, db: $SqlDatabaseName, auth: AD Integrated)" -Level "INFO"
+if ($SqlUsername) {
+    # SQL Authentication (username/password)
+    if (-not $SqlPassword) {
+        Write-Log "SqlUsername provided but SqlPassword is missing. Prompting..." -Level "WARNING"
+        $SqlPassword = Read-Host -Prompt "Enter SQL password for '$SqlUsername'" -AsSecureString
+    }
+    $plainPassword = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto(
+        [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($SqlPassword)
+    )
+    $sqlConnectionString = "Server=tcp:$sqlFqdn,1433;Initial Catalog=$SqlDatabaseName;User ID=$SqlUsername;Password=$plainPassword;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+    $sqlAuthMode = "SQL Authentication (user: $SqlUsername)"
+    Write-Log "SQL connection string built (server: $sqlFqdn, db: $SqlDatabaseName, auth: SQL Auth, user: $SqlUsername)" -Level "INFO"
+}
+else {
+    # Azure AD Integrated (default)
+    $sqlConnectionString = "Server=tcp:$sqlFqdn,1433;Initial Catalog=$SqlDatabaseName;Authentication=Active Directory Integrated;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+    $sqlAuthMode = "Active Directory Integrated"
+    Write-Log "SQL connection string built (server: $sqlFqdn, db: $SqlDatabaseName, auth: AD Integrated)" -Level "INFO"
+    Write-Log "  TIP: If AD Integrated auth fails (ADFS/federated issues), use -SqlUsername and -SqlPassword for SQL auth instead" -Level "INFO"
+}
 
 # === SQL PRE-FLIGHT CHECK ===
 Write-Log "========================================" -Level "INFO"
@@ -552,106 +731,247 @@ Write-Log "SQL CONNECTIVITY PRE-FLIGHT CHECK" -Level "INFO"
 Write-Log "========================================" -Level "INFO"
 
 # Step 1: DNS resolution
-Write-Log "[SQL-DIAG] Step 1: DNS resolution for $sqlFqdn" -Level "INFO"
+Write-Log "[SQL-DIAG] Step 1/6: DNS resolution for $sqlFqdn" -Level "INFO"
 try {
+    $dnsStart = Get-Date
     $dnsResult = [System.Net.Dns]::GetHostAddresses($sqlFqdn)
-    Write-Log "[SQL-DIAG]   PASS - Resolved to: $($dnsResult.IPAddressToString -join ', ')" -Level "SUCCESS"
+    $dnsDuration = ((Get-Date) - $dnsStart).TotalMilliseconds
+    Write-Log "[SQL-DIAG]   PASS - Resolved to: $($dnsResult.IPAddressToString -join ', ') (took $([math]::Round($dnsDuration))ms)" -Level "SUCCESS"
+    foreach ($ip in $dnsResult) {
+        Write-Log "[SQL-DIAG]   IP: $($ip.IPAddressToString) (AddressFamily: $($ip.AddressFamily))" -Level "DEBUG"
+    }
+
+    # Also check privatelink FQDN to detect private endpoint configuration
+    $privateFqdn = "$SqlServerName.privatelink.database.windows.net"
+    Write-Log "[SQL-DIAG]   Checking private endpoint DNS: $privateFqdn" -Level "DEBUG"
+    try {
+        $privateDns = [System.Net.Dns]::GetHostAddresses($privateFqdn)
+        Write-Log "[SQL-DIAG]   Private endpoint DNS resolves to: $($privateDns.IPAddressToString -join ', ')" -Level "INFO"
+        Write-Log "[SQL-DIAG]   Private endpoint appears to be configured." -Level "INFO"
+    }
+    catch {
+        Write-Log "[SQL-DIAG]   Private endpoint DNS does not resolve (not configured or using public access)" -Level "DEBUG"
+    }
 }
 catch {
     Write-Log "[SQL-DIAG]   FAIL - Cannot resolve hostname: $sqlFqdn" -Level "ERROR"
-    Write-Log "[SQL-DIAG]   Error: $($_.Exception.Message)" -Level "ERROR"
+    Write-ExceptionDetail $_ "  [SQL-DIAG]   "
     Write-Log "[SQL-DIAG]   --- Troubleshooting ---" -Level "ERROR"
     Write-Log "[SQL-DIAG]   1. Verify the SQL server name is correct: '$SqlServerName'" -Level "ERROR"
-    Write-Log "[SQL-DIAG]   2. Check if the server exists: az sql server show --name $SqlServerName --resource-group <rg-name>" -Level "ERROR"
-    Write-Log "[SQL-DIAG]   3. If using private endpoints, ensure your DNS can resolve the private link FQDN" -Level "ERROR"
-    Write-Log "[SQL-DIAG]   4. Try: nslookup $sqlFqdn" -Level "ERROR"
+    Write-Log "[SQL-DIAG]   2. The full FQDN being resolved is: $sqlFqdn" -Level "ERROR"
+    Write-Log "[SQL-DIAG]   3. Check if the server exists in Azure:" -Level "ERROR"
+    Write-Log "[SQL-DIAG]      az sql server list --query ""[?name=='$SqlServerName'].[name,fullyQualifiedDomainName,state]"" -o table" -Level "ERROR"
+    Write-Log "[SQL-DIAG]   4. If using private endpoints, check private DNS zone configuration" -Level "ERROR"
+    Write-Log "[SQL-DIAG]   5. Try manual DNS lookup: nslookup $sqlFqdn" -Level "ERROR"
+    Write-Log "[SQL-DIAG]   6. Try manual DNS lookup: Resolve-DnsName $sqlFqdn" -Level "ERROR"
+    Write-Log "[SQL-DIAG]   7. Check your DNS server: (Get-DnsClientServerAddress -AddressFamily IPv4).ServerAddresses" -Level "ERROR"
+    try {
+        $dnsServers = (Get-DnsClientServerAddress -AddressFamily IPv4 -ErrorAction Stop).ServerAddresses | Select-Object -Unique
+        Write-Log "[SQL-DIAG]   Current DNS servers: $($dnsServers -join ', ')" -Level "ERROR"
+    }
+    catch { Write-Log "[SQL-DIAG]   (could not query DNS server configuration)" -Level "DEBUG" }
     throw "SQL Server DNS resolution failed for '$sqlFqdn'. Verify the -SqlServerName parameter is correct."
 }
 
 # Step 2: TCP connectivity
-Write-Log "[SQL-DIAG] Step 2: TCP connectivity to $sqlFqdn`:1433" -Level "INFO"
+Write-Log "[SQL-DIAG] Step 2/6: TCP connectivity to ${sqlFqdn}:1433" -Level "INFO"
 try {
     $tcpClient = New-Object System.Net.Sockets.TcpClient
+    $tcpStart = Get-Date
     $connectTask = $tcpClient.ConnectAsync($sqlFqdn, 1433)
     if ($connectTask.Wait(10000)) {
-        Write-Log "[SQL-DIAG]   PASS - TCP port 1433 is reachable" -Level "SUCCESS"
+        $tcpDuration = ((Get-Date) - $tcpStart).TotalMilliseconds
+        Write-Log "[SQL-DIAG]   PASS - TCP port 1433 is reachable (took $([math]::Round($tcpDuration))ms)" -Level "SUCCESS"
+        Write-Log "[SQL-DIAG]   Local endpoint: $($tcpClient.Client.LocalEndPoint)" -Level "DEBUG"
+        Write-Log "[SQL-DIAG]   Remote endpoint: $($tcpClient.Client.RemoteEndPoint)" -Level "DEBUG"
     }
     else {
         Write-Log "[SQL-DIAG]   FAIL - TCP connection timed out after 10s" -Level "ERROR"
-        Write-Log "[SQL-DIAG]   The server exists but port 1433 is not reachable." -Level "ERROR"
-        Write-Log "[SQL-DIAG]   Check: firewall rules, NSG rules, or private endpoint configuration." -Level "ERROR"
+        Write-Log "[SQL-DIAG]   The DNS resolved but the port is unreachable." -Level "ERROR"
+        Write-Log "[SQL-DIAG]   --- Troubleshooting ---" -Level "ERROR"
+        Write-Log "[SQL-DIAG]   1. Check SQL Server firewall rules allow your IP" -Level "ERROR"
+        Write-Log "[SQL-DIAG]   2. Check for AllowAzureServices firewall rule:" -Level "ERROR"
+        Write-Log "[SQL-DIAG]      az sql server firewall-rule list --server $SqlServerName --resource-group <rg-name> -o table" -Level "ERROR"
+        Write-Log "[SQL-DIAG]   3. If behind a corporate firewall/VPN, ensure port 1433 outbound is allowed" -Level "ERROR"
+        Write-Log "[SQL-DIAG]   4. Try: Test-NetConnection $sqlFqdn -Port 1433" -Level "ERROR"
+        Write-Log "[SQL-DIAG]   5. Check NSG rules if using VNet integration" -Level "ERROR"
     }
     $tcpClient.Close()
 }
 catch {
-    Write-Log "[SQL-DIAG]   FAIL - TCP connection error: $($_.Exception.Message)" -Level "ERROR"
-    Write-Log "[SQL-DIAG]   Check firewall rules on the SQL server and network connectivity." -Level "ERROR"
+    Write-Log "[SQL-DIAG]   FAIL - TCP connection error" -Level "ERROR"
+    Write-ExceptionDetail $_ "  [SQL-DIAG]   "
+    Write-Log "[SQL-DIAG]   --- Troubleshooting ---" -Level "ERROR"
+    Write-Log "[SQL-DIAG]   1. Firewall may be blocking port 1433" -Level "ERROR"
+    Write-Log "[SQL-DIAG]   2. Try: Test-NetConnection $sqlFqdn -Port 1433" -Level "ERROR"
+    Write-Log "[SQL-DIAG]   3. Check if VPN is required and connected" -Level "ERROR"
 }
 
 # Step 3: SQL authentication test
-Write-Log "[SQL-DIAG] Step 3: SQL authentication and database access" -Level "INFO"
+Write-Log "[SQL-DIAG] Step 3/6: SQL authentication and database access" -Level "INFO"
+Write-Log "[SQL-DIAG]   Connection string (sanitized): Server=tcp:$sqlFqdn,1433; Database=$SqlDatabaseName; Auth=AD Integrated; Encrypt=True" -Level "INFO"
 try {
-    $testResult = Invoke-Sqlcmd -ConnectionString $sqlConnectionString -Query "SELECT DB_NAME() AS DatabaseName, SUSER_SNAME() AS LoginName, SYSTEM_USER AS SystemUser, GETUTCDATE() AS ServerTime" -ErrorAction Stop
-    Write-Log "[SQL-DIAG]   PASS - Connected to database: $($testResult.DatabaseName)" -Level "SUCCESS"
+    $sqlAuthStart = Get-Date
+    $testResult = Invoke-Sqlcmd -ConnectionString $sqlConnectionString -Query @"
+        SELECT
+            DB_NAME() AS DatabaseName,
+            SUSER_SNAME() AS LoginName,
+            SYSTEM_USER AS SystemUser,
+            ORIGINAL_LOGIN() AS OriginalLogin,
+            USER_NAME() AS DatabaseUser,
+            GETUTCDATE() AS ServerTimeUTC,
+            SERVERPROPERTY('ProductVersion') AS SqlVersion,
+            SERVERPROPERTY('Edition') AS SqlEdition,
+            SERVERPROPERTY('ServerName') AS ServerName,
+            SERVERPROPERTY('EngineEdition') AS EngineEdition,
+            CONNECTIONPROPERTY('client_net_address') AS ClientIP,
+            CONNECTIONPROPERTY('protocol_type') AS ProtocolType,
+            CONNECTIONPROPERTY('auth_scheme') AS AuthScheme,
+            CONNECTIONPROPERTY('net_transport') AS NetTransport
+"@ -ErrorAction Stop
+    $sqlAuthDuration = ((Get-Date) - $sqlAuthStart).TotalSeconds
+    Write-Log "[SQL-DIAG]   PASS - Connected to database: $($testResult.DatabaseName) (took $([math]::Round($sqlAuthDuration, 2))s)" -Level "SUCCESS"
     Write-Log "[SQL-DIAG]   Login: $($testResult.LoginName)" -Level "INFO"
     Write-Log "[SQL-DIAG]   System User: $($testResult.SystemUser)" -Level "INFO"
-    Write-Log "[SQL-DIAG]   Server Time (UTC): $($testResult.ServerTime)" -Level "INFO"
+    Write-Log "[SQL-DIAG]   Original Login: $($testResult.OriginalLogin)" -Level "INFO"
+    Write-Log "[SQL-DIAG]   Database User: $($testResult.DatabaseUser)" -Level "INFO"
+    Write-Log "[SQL-DIAG]   Server Time (UTC): $($testResult.ServerTimeUTC)" -Level "INFO"
+    Write-Log "[SQL-DIAG]   SQL Version: $($testResult.SqlVersion) ($($testResult.SqlEdition))" -Level "INFO"
+    Write-Log "[SQL-DIAG]   Server Name: $($testResult.ServerName)" -Level "INFO"
+    Write-Log "[SQL-DIAG]   Client IP: $($testResult.ClientIP)" -Level "INFO"
+    Write-Log "[SQL-DIAG]   Auth Scheme: $($testResult.AuthScheme)" -Level "INFO"
+    Write-Log "[SQL-DIAG]   Protocol: $($testResult.ProtocolType) ($($testResult.NetTransport))" -Level "INFO"
 }
 catch {
-    Write-Log "[SQL-DIAG]   FAIL - SQL query failed: $($_.Exception.Message)" -Level "ERROR"
+    Write-Log "[SQL-DIAG]   FAIL - SQL authentication failed" -Level "ERROR"
+    Write-ExceptionDetail $_ "  [SQL-DIAG]   "
     if ($_.Exception.Message -like "*Login failed*") {
-        Write-Log "[SQL-DIAG]   Authentication failed. Check:" -Level "ERROR"
-        Write-Log "[SQL-DIAG]   1. Your Azure AD account has access to database '$SqlDatabaseName'" -Level "ERROR"
-        Write-Log "[SQL-DIAG]   2. You are logged into the correct Azure account: az account show" -Level "ERROR"
-        Write-Log "[SQL-DIAG]   3. The SQL Server has Azure AD admin configured" -Level "ERROR"
+        Write-Log "[SQL-DIAG]   --- Authentication Troubleshooting ---" -Level "ERROR"
+        Write-Log "[SQL-DIAG]   1. Check your Azure AD login: az account show" -Level "ERROR"
+        Write-Log "[SQL-DIAG]   2. Verify Azure AD admin is set on the SQL server:" -Level "ERROR"
+        Write-Log "[SQL-DIAG]      az sql server ad-admin list --server $SqlServerName --resource-group <rg-name>" -Level "ERROR"
+        Write-Log "[SQL-DIAG]   3. Verify your user exists in the database:" -Level "ERROR"
+        Write-Log "[SQL-DIAG]      SELECT name, type_desc FROM sys.database_principals WHERE type IN ('E','X')" -Level "ERROR"
+        Write-Log "[SQL-DIAG]   4. If using Managed Identity, ensure the correct identity is assigned" -Level "ERROR"
     }
     elseif ($_.Exception.Message -like "*Cannot open database*") {
-        Write-Log "[SQL-DIAG]   Database '$SqlDatabaseName' does not exist or is inaccessible." -Level "ERROR"
+        Write-Log "[SQL-DIAG]   Database '$SqlDatabaseName' does not exist or user lacks access." -Level "ERROR"
+        Write-Log "[SQL-DIAG]   List databases: az sql db list --server $SqlServerName --resource-group <rg-name> -o table" -Level "ERROR"
+    }
+    elseif ($_.Exception.Message -like "*token*" -or $_.Exception.Message -like "*AADSTS*") {
+        Write-Log "[SQL-DIAG]   Azure AD token acquisition failed." -Level "ERROR"
+        Write-Log "[SQL-DIAG]   1. Re-authenticate: az login --tenant <tenant-id>" -Level "ERROR"
+        Write-Log "[SQL-DIAG]   2. Clear token cache: az account clear && az login" -Level "ERROR"
     }
     throw "SQL pre-flight check failed. Fix the SQL connection before proceeding."
 }
 
 # Step 4: Verify MigrationControl table exists
-Write-Log "[SQL-DIAG] Step 4: Verify MigrationControl table exists" -Level "INFO"
+Write-Log "[SQL-DIAG] Step 4/6: Verify MigrationControl table exists" -Level "INFO"
 try {
-    $tableCheck = Invoke-Sqlcmd -ConnectionString $sqlConnectionString -Query "SELECT TABLE_SCHEMA, TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'MigrationControl'" -ErrorAction Stop
+    $tableCheck = Invoke-Sqlcmd -ConnectionString $sqlConnectionString -Query @"
+        SELECT TABLE_SCHEMA, TABLE_NAME
+        FROM INFORMATION_SCHEMA.TABLES
+        WHERE TABLE_NAME = 'MigrationControl'
+"@ -ErrorAction Stop
     if ($tableCheck) {
         Write-Log "[SQL-DIAG]   PASS - Table found: $($tableCheck.TABLE_SCHEMA).$($tableCheck.TABLE_NAME)" -Level "SUCCESS"
 
-        # Check current row count
+        # Check current row count and status distribution
         $rowCount = Invoke-Sqlcmd -ConnectionString $sqlConnectionString -Query "SELECT COUNT(*) AS RowCount FROM dbo.MigrationControl" -ErrorAction Stop
         Write-Log "[SQL-DIAG]   Current row count: $($rowCount.RowCount)" -Level "INFO"
+
+        if ($rowCount.RowCount -gt 0) {
+            $statusDist = Invoke-Sqlcmd -ConnectionString $sqlConnectionString -Query "SELECT Status, COUNT(*) AS Cnt FROM dbo.MigrationControl GROUP BY Status ORDER BY Cnt DESC" -ErrorAction Stop
+            Write-Log "[SQL-DIAG]   Status distribution:" -Level "INFO"
+            foreach ($row in $statusDist) {
+                Write-Log "[SQL-DIAG]     $($row.Status): $($row.Cnt)" -Level "INFO"
+            }
+        }
+
+        # Log table columns for schema verification
+        $columns = Invoke-Sqlcmd -ConnectionString $sqlConnectionString -Query @"
+            SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, IS_NULLABLE
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_NAME = 'MigrationControl' AND TABLE_SCHEMA = 'dbo'
+            ORDER BY ORDINAL_POSITION
+"@ -ErrorAction Stop
+        Write-Log "[SQL-DIAG]   Table schema ($($columns.Count) columns):" -Level "DEBUG"
+        foreach ($col in $columns) {
+            $typeStr = $col.DATA_TYPE
+            if ($col.CHARACTER_MAXIMUM_LENGTH -and $col.CHARACTER_MAXIMUM_LENGTH -gt 0) { $typeStr += "($($col.CHARACTER_MAXIMUM_LENGTH))" }
+            Write-Log "[SQL-DIAG]     $($col.COLUMN_NAME) ($typeStr, nullable=$($col.IS_NULLABLE))" -Level "DEBUG"
+        }
     }
     else {
         Write-Log "[SQL-DIAG]   FAIL - Table 'MigrationControl' not found in database '$SqlDatabaseName'" -Level "ERROR"
-        Write-Log "[SQL-DIAG]   Run the DDL script first: sqlcmd -S $sqlFqdn -d $SqlDatabaseName -i sql/create_control_table.sql -G" -Level "ERROR"
+        # List what tables do exist
+        $existingTables = Invoke-Sqlcmd -ConnectionString $sqlConnectionString -Query "SELECT TABLE_SCHEMA, TABLE_NAME FROM INFORMATION_SCHEMA.TABLES ORDER BY TABLE_SCHEMA, TABLE_NAME" -ErrorAction SilentlyContinue
+        if ($existingTables) {
+            Write-Log "[SQL-DIAG]   Tables that DO exist in the database:" -Level "ERROR"
+            foreach ($t in $existingTables) { Write-Log "[SQL-DIAG]     $($t.TABLE_SCHEMA).$($t.TABLE_NAME)" -Level "ERROR" }
+        }
+        else {
+            Write-Log "[SQL-DIAG]   Database appears to have NO tables at all." -Level "ERROR"
+        }
+        Write-Log "[SQL-DIAG]   Run the DDL script first:" -Level "ERROR"
+        Write-Log "[SQL-DIAG]     sqlcmd -S $sqlFqdn -d $SqlDatabaseName -i sql/create_control_table.sql -G" -Level "ERROR"
         throw "MigrationControl table does not exist."
     }
 }
 catch [Microsoft.Data.SqlClient.SqlException] {
-    Write-Log "[SQL-DIAG]   FAIL - Could not query table metadata: $($_.Exception.Message)" -Level "ERROR"
+    Write-Log "[SQL-DIAG]   FAIL - Could not query table metadata" -Level "ERROR"
+    Write-ExceptionDetail $_ "  [SQL-DIAG]   "
     throw
 }
 
-# Step 5: Test write permission
-Write-Log "[SQL-DIAG] Step 5: Verify write permissions (INSERT/UPDATE)" -Level "INFO"
+# Step 5: Test write permissions
+Write-Log "[SQL-DIAG] Step 5/6: Verify write permissions (SELECT/INSERT/UPDATE/EXECUTE)" -Level "INFO"
 try {
     $permCheck = Invoke-Sqlcmd -ConnectionString $sqlConnectionString -Query @"
         SELECT
+            HAS_PERMS_BY_NAME('dbo.MigrationControl', 'OBJECT', 'SELECT') AS CanSelect,
             HAS_PERMS_BY_NAME('dbo.MigrationControl', 'OBJECT', 'INSERT') AS CanInsert,
             HAS_PERMS_BY_NAME('dbo.MigrationControl', 'OBJECT', 'UPDATE') AS CanUpdate,
-            HAS_PERMS_BY_NAME('dbo.MigrationControl', 'OBJECT', 'SELECT') AS CanSelect
+            HAS_PERMS_BY_NAME('dbo.MigrationControl', 'OBJECT', 'DELETE') AS CanDelete,
+            IS_MEMBER('db_datareader') AS IsDataReader,
+            IS_MEMBER('db_datawriter') AS IsDataWriter,
+            IS_MEMBER('db_owner') AS IsDbOwner
 "@ -ErrorAction Stop
-    Write-Log "[SQL-DIAG]   SELECT: $(if ($permCheck.CanSelect -eq 1) { 'GRANTED' } else { 'DENIED' })" -Level $(if ($permCheck.CanSelect -eq 1) { "SUCCESS" } else { "ERROR" })
-    Write-Log "[SQL-DIAG]   INSERT: $(if ($permCheck.CanInsert -eq 1) { 'GRANTED' } else { 'DENIED' })" -Level $(if ($permCheck.CanInsert -eq 1) { "SUCCESS" } else { "ERROR" })
-    Write-Log "[SQL-DIAG]   UPDATE: $(if ($permCheck.CanUpdate -eq 1) { 'GRANTED' } else { 'DENIED' })" -Level $(if ($permCheck.CanUpdate -eq 1) { "SUCCESS" } else { "ERROR" })
+    Write-Log "[SQL-DIAG]   Object permissions on dbo.MigrationControl:" -Level "INFO"
+    Write-Log "[SQL-DIAG]     SELECT: $(if ($permCheck.CanSelect -eq 1) { 'GRANTED' } else { 'DENIED' })" -Level $(if ($permCheck.CanSelect -eq 1) { "SUCCESS" } else { "ERROR" })
+    Write-Log "[SQL-DIAG]     INSERT: $(if ($permCheck.CanInsert -eq 1) { 'GRANTED' } else { 'DENIED' })" -Level $(if ($permCheck.CanInsert -eq 1) { "SUCCESS" } else { "ERROR" })
+    Write-Log "[SQL-DIAG]     UPDATE: $(if ($permCheck.CanUpdate -eq 1) { 'GRANTED' } else { 'DENIED' })" -Level $(if ($permCheck.CanUpdate -eq 1) { "SUCCESS" } else { "ERROR" })
+    Write-Log "[SQL-DIAG]     DELETE: $(if ($permCheck.CanDelete -eq 1) { 'GRANTED' } else { 'DENIED' })" -Level $(if ($permCheck.CanDelete -eq 1) { "SUCCESS" } else { "ERROR" })
+    Write-Log "[SQL-DIAG]   Role memberships:" -Level "INFO"
+    Write-Log "[SQL-DIAG]     db_datareader: $(if ($permCheck.IsDataReader -eq 1) { 'YES' } else { 'NO' })" -Level $(if ($permCheck.IsDataReader -eq 1) { "SUCCESS" } else { "WARNING" })
+    Write-Log "[SQL-DIAG]     db_datawriter: $(if ($permCheck.IsDataWriter -eq 1) { 'YES' } else { 'NO' })" -Level $(if ($permCheck.IsDataWriter -eq 1) { "SUCCESS" } else { "WARNING" })
+    Write-Log "[SQL-DIAG]     db_owner:      $(if ($permCheck.IsDbOwner -eq 1) { 'YES' } else { 'NO' })" -Level "INFO"
     if ($permCheck.CanInsert -ne 1 -or $permCheck.CanUpdate -ne 1) {
-        Write-Log "[SQL-DIAG]   WARNING: Missing write permissions. The user needs db_datawriter role." -Level "ERROR"
-        Write-Log "[SQL-DIAG]   Run: ALTER ROLE db_datawriter ADD MEMBER [your-user];" -Level "ERROR"
+        Write-Log "[SQL-DIAG]   WARNING: Missing write permissions." -Level "ERROR"
+        Write-Log "[SQL-DIAG]   Fix with: ALTER ROLE db_datawriter ADD MEMBER [$(if ($testResult) { $testResult.DatabaseUser } else { 'your-user' })];" -Level "ERROR"
     }
 }
 catch {
-    Write-Log "[SQL-DIAG]   Could not check permissions: $($_.Exception.Message)" -Level "WARNING"
+    Write-Log "[SQL-DIAG]   Could not check permissions" -Level "WARNING"
+    Write-ExceptionDetail $_ "  [SQL-DIAG]   "
+}
+
+# Step 6: Test upsert dry-run
+Write-Log "[SQL-DIAG] Step 6/6: Dry-run INSERT/ROLLBACK test" -Level "INFO"
+try {
+    Invoke-Sqlcmd -ConnectionString $sqlConnectionString -Query @"
+        BEGIN TRANSACTION
+        INSERT INTO dbo.MigrationControl (SiteUrl, LibraryName, SiteTitle, LibraryTitle, Status, FileCount, FolderCount, TotalSizeBytes, LargestFileSizeBytes, Priority, CreatedDate, CreatedBy)
+        VALUES ('__DIAG_TEST__', '__DIAG_TEST__', 'test', 'test', 'Pending', 0, 0, 0, 0, 999, GETUTCDATE(), 'DIAG')
+        ROLLBACK TRANSACTION
+"@ -ErrorAction Stop
+    Write-Log "[SQL-DIAG]   PASS - INSERT test succeeded (rolled back, no data written)" -Level "SUCCESS"
+}
+catch {
+    Write-Log "[SQL-DIAG]   FAIL - INSERT dry-run failed" -Level "ERROR"
+    Write-ExceptionDetail $_ "  [SQL-DIAG]   "
+    Write-Log "[SQL-DIAG]   This means the script will fail when trying to write migration data." -Level "ERROR"
 }
 
 Write-Log "[SQL-DIAG] SQL pre-flight check completed." -Level "SUCCESS"
@@ -1104,9 +1424,19 @@ try {
                         Write-Log "    SQL upsert successful - Files: $($stats.FileCount), Size: $([math]::Round($stats.TotalSize / 1GB, 2)) GB" -Level "SUCCESS"
                     }
                     catch {
-                        Write-Log "    SQL upsert FAILED: $_" -Level "ERROR"
-                        Write-Log "    Exception type: $($_.Exception.GetType().FullName)" -Level "ERROR"
-                        Write-Log "    Connection string (redacted): Server=$SqlServerName.database.windows.net, DB=$SqlDatabaseName" -Level "ERROR"
+                        Write-Log "    SQL upsert FAILED" -Level "ERROR"
+                        Write-ExceptionDetail $_ "    "
+                        Write-Log "    Connection string (redacted): Server=$sqlFqdn, DB=$SqlDatabaseName, Auth=AD Integrated" -Level "ERROR"
+                        Write-Log "    --- SQL Upsert Troubleshooting ---" -Level "ERROR"
+                        if ($_.Exception.Message -like "*network*" -or $_.Exception.Message -like "*not found or was not accessible*") {
+                            Write-Log "    SQL server became unreachable during migration. Check network/firewall." -Level "ERROR"
+                        }
+                        elseif ($_.Exception.Message -like "*Login failed*" -or $_.Exception.Message -like "*authenticate*" -or $_.Exception.Message -like "*token*") {
+                            Write-Log "    Authentication token may have expired. Try re-running: az login" -Level "ERROR"
+                        }
+                        elseif ($_.Exception.Message -like "*permission*" -or $_.Exception.Message -like "*denied*") {
+                            Write-Log "    Write permission denied. Check db_datawriter role assignment." -Level "ERROR"
+                        }
                     }
                 }
                 else {
@@ -1120,9 +1450,13 @@ try {
         catch {
             $failedSites += $siteUrl
             Write-Log "ERROR processing site $siteUrl" -Level "ERROR"
-            Write-Log "  Error message: $_" -Level "ERROR"
-            Write-Log "  Exception type: $($_.Exception.GetType().FullName)" -Level "ERROR"
-            Write-Log "  Stack trace: $($_.ScriptStackTrace)" -Level "ERROR"
+            Write-ExceptionDetail $_ "  "
+            Write-Log "  --- Site Error Context ---" -Level "ERROR"
+            Write-Log "  Site URL: $siteUrl" -Level "ERROR"
+            Write-Log "  Site relative URL: $siteRelativeUrl" -Level "ERROR"
+            Write-Log "  Site index: $siteIndex of $siteCount" -Level "ERROR"
+            Write-Log "  Elapsed time for this site: $([math]::Round(((Get-Date) - $siteStartTime).TotalSeconds, 1))s" -Level "ERROR"
+            Write-Log "  Continuing to next site..." -Level "WARNING"
             continue
         }
     }
@@ -1142,22 +1476,26 @@ try {
     }
     Write-Log "========================================" -Level "INFO"
 
+    $totalDuration = ((Get-Date) - $scriptStartTime).TotalSeconds
     Write-Log "Control table population completed!" -Level "SUCCESS"
+    Write-Log "Total script duration: $([math]::Round($totalDuration, 1))s ($([math]::Round($totalDuration / 60, 1)) min)" -Level "INFO"
+    Write-Log "Log file saved to: $script:LogFilePath" -Level "INFO"
 }
 catch {
-    Write-Log "FATAL ERROR: $_" -Level "ERROR"
-    Write-Log "Exception type: $($_.Exception.GetType().FullName)" -Level "ERROR"
-    Write-Log "Exception message: $($_.Exception.Message)" -Level "ERROR"
-    Write-Log "Stack trace: $($_.ScriptStackTrace)" -Level "ERROR"
-    if ($_.Exception.InnerException) {
-        Write-Log "Inner exception: $($_.Exception.InnerException.Message)" -Level "ERROR"
-        Write-Log "Inner exception type: $($_.Exception.InnerException.GetType().FullName)" -Level "ERROR"
-    }
+    Write-Log "========================================" -Level "ERROR"
+    Write-Log "FATAL ERROR" -Level "ERROR"
+    Write-Log "========================================" -Level "ERROR"
+    Write-ExceptionDetail $_
+    $totalDuration = ((Get-Date) - $scriptStartTime).TotalSeconds
+    Write-Log "Script failed after $([math]::Round($totalDuration, 1))s" -Level "ERROR"
+    Write-Log "Log file saved to: $script:LogFilePath" -Level "ERROR"
+    Write-Log "Share this log file for troubleshooting." -Level "ERROR"
     exit 1
 }
 finally {
     Write-Log "Cleaning up PnP connection..." -Level "INFO"
     Disconnect-PnPOnline -ErrorAction SilentlyContinue
     Write-Log "Done." -Level "INFO"
+    Write-Log "Full log available at: $script:LogFilePath" -Level "INFO"
 }
 #endregion
