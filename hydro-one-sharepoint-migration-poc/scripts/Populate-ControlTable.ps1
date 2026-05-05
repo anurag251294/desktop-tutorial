@@ -288,24 +288,55 @@ $sqlConnectionString = "Server=tcp:$SqlServerName.database.windows.net,1433;Init
 Write-Log "SQL connection string built (server: $SqlServerName.database.windows.net, db: $SqlDatabaseName, auth: AD Integrated)" -Level "INFO"
 
 try {
-    # Connect to SharePoint Admin Center
-    $adminUrl = $SharePointTenantUrl -replace ".sharepoint.com", "-admin.sharepoint.com"
-    Write-Log "Connecting to SharePoint Admin Center: $adminUrl" -Level "INFO"
+    # Determine initial connection URL
+    # When using -SpecificSites, we don't need admin center access (avoids 404 errors
+    # when the app registration lacks SharePoint admin permissions)
+    if ($SpecificSites.Count -gt 0) {
+        $initialUrl = "$SharePointTenantUrl$($SpecificSites[0])"
+        Write-Log "Using -SpecificSites mode: connecting directly to first site (no admin center required)" -Level "INFO"
+        Write-Log "Initial connection URL: $initialUrl" -Level "INFO"
+    }
+    else {
+        $initialUrl = $SharePointTenantUrl -replace "\.sharepoint\.com", "-admin.sharepoint.com"
+        Write-Log "Connecting to SharePoint Admin Center: $initialUrl" -Level "INFO"
+    }
 
     if ($ClientId -and $CertificateThumbprint) {
         Write-Log "Auth: Certificate-based (ClientId: $ClientId, Thumbprint: $CertificateThumbprint)" -Level "INFO"
-        $openIdUrl = "https://login.microsoftonline.com/$($SharePointTenantUrl.Split('/')[2].Split('.')[0]).onmicrosoft.com/.well-known/openid_configuration"
+        $openIdUrl = "https://login.microsoftonline.com/$($SharePointTenantUrl.Split('/')[2].Split('.')[0]).onmicrosoft.com/.well-known/openid-configuration"
         Write-Log "Resolving tenant ID from: $openIdUrl" -Level "INFO"
         $tenantId = (Invoke-RestMethod $openIdUrl).token_endpoint.Split('/')[3]
         Write-Log "Resolved tenant ID: $tenantId" -Level "INFO"
         Write-Log "Calling Connect-PnPOnline with certificate auth..." -Level "INFO"
-        Connect-PnPOnline -Url $adminUrl -ClientId $ClientId -Thumbprint $CertificateThumbprint -Tenant $tenantId
+        try {
+            Connect-PnPOnline -Url $initialUrl -ClientId $ClientId -Thumbprint $CertificateThumbprint -Tenant $tenantId
+        }
+        catch {
+            Write-Log "Failed to connect to: $initialUrl" -Level "ERROR"
+            Write-Log "Common causes:" -Level "ERROR"
+            Write-Log "  - Certificate thumbprint is incorrect or cert not installed in CurrentUser\My store" -Level "ERROR"
+            Write-Log "  - App registration does not have Sites.Read.All or Sites.FullControl.All API permission" -Level "ERROR"
+            Write-Log "  - Admin consent has not been granted for the app in the target tenant" -Level "ERROR"
+            Write-Log "  - Tenant ID mismatch (resolved: $tenantId)" -Level "ERROR"
+            throw
+        }
     }
     elseif ($ClientId) {
         Write-Log "Auth: Interactive with ClientId: $ClientId" -Level "INFO"
-        Write-Log "Calling Connect-PnPOnline -Interactive -ClientId $ClientId -Url $adminUrl" -Level "INFO"
+        Write-Log "Calling Connect-PnPOnline -Interactive -ClientId $ClientId -Url $initialUrl" -Level "INFO"
         Write-Log "A browser window should open for authentication..." -Level "INFO"
-        Connect-PnPOnline -Url $adminUrl -Interactive -ClientId $ClientId
+        try {
+            Connect-PnPOnline -Url $initialUrl -Interactive -ClientId $ClientId
+        }
+        catch {
+            Write-Log "Failed to connect to: $initialUrl" -Level "ERROR"
+            Write-Log "Common causes of 'NotFound' errors:" -Level "ERROR"
+            Write-Log "  - The site URL does not exist: $initialUrl" -Level "ERROR"
+            Write-Log "  - The Entra ID app (ClientId: $ClientId) needs 'http://localhost' as a redirect URI (for interactive auth)" -Level "ERROR"
+            Write-Log "  - The app does not have SharePoint API permissions (Sites.Read.All) with admin consent granted" -Level "ERROR"
+            Write-Log "  - If enumerating all sites, the app needs SharePoint admin center access; use -SpecificSites to skip admin" -Level "ERROR"
+            throw
+        }
     }
     else {
         Write-Log "No -ClientId provided. PnP PowerShell requires a registered Entra ID App ClientId for interactive auth." -Level "ERROR"
@@ -316,7 +347,7 @@ try {
         throw "ClientId is required for PnP PowerShell interactive authentication."
     }
 
-    Write-Log "Connected to SharePoint Admin Center successfully!" -Level "SUCCESS"
+    Write-Log "Connected successfully to: $initialUrl" -Level "SUCCESS"
 
     # Verify connection
     try {
