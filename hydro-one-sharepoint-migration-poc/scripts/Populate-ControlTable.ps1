@@ -521,7 +521,7 @@ function Insert-ControlTableRecord {
 
     # Pre-check: does the row already exist?
     try {
-        $existsQuery = "SELECT COUNT(*) AS RowCount FROM dbo.MigrationControl WHERE SiteUrl = '$($params.SiteUrl -replace "'","''")' AND LibraryName = '$($params.LibraryName -replace "'","''")'"
+        $existsQuery = "SELECT COUNT(*) AS [RowCount] FROM dbo.MigrationControl WHERE SiteUrl = '$($params.SiteUrl -replace "'","''")' AND LibraryName = '$($params.LibraryName -replace "'","''")'"
         $existsResult = Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $existsQuery
         $existed = ($existsResult.RowCount -gt 0)
         Write-Log "      [SQL] Pre-check: row $(if ($existed) { 'EXISTS - will UPDATE' } else { 'does NOT exist - will INSERT' })" -Level "INFO"
@@ -878,7 +878,7 @@ try {
         Write-Log "[SQL-DIAG]   PASS - Table found: $($tableCheck.TABLE_SCHEMA).$($tableCheck.TABLE_NAME)" -Level "SUCCESS"
 
         # Check current row count and status distribution
-        $rowCount = Invoke-Sqlcmd -ConnectionString $sqlConnectionString -Query "SELECT COUNT(*) AS RowCount FROM dbo.MigrationControl" -ErrorAction Stop
+        $rowCount = Invoke-Sqlcmd -ConnectionString $sqlConnectionString -Query "SELECT COUNT(*) AS [RowCount] FROM dbo.MigrationControl" -ErrorAction Stop
         Write-Log "[SQL-DIAG]   Current row count: $($rowCount.RowCount)" -Level "INFO"
 
         if ($rowCount.RowCount -gt 0) {
