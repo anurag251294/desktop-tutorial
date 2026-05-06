@@ -131,40 +131,82 @@ export FACTORY_NAME="adf-hydroone-migration-prod"
 
 ### 4. Populate-ControlTable.ps1
 
-**Purpose:** Connects to SharePoint via PnP PowerShell, enumerates all sites and document libraries, calculates file counts and total sizes, and upserts rows into the `MigrationControl` SQL table.
+**Purpose:** Connects to SharePoint via PnP PowerShell, enumerates all sites and document libraries, calculates file counts and total sizes, and upserts rows into the `MigrationControl` SQL table. Includes comprehensive pre-flight diagnostics, detailed logging, and support for both Azure AD Integrated and SQL authentication.
 
 **When:** Before each migration batch, or to refresh the site inventory.
 
-**Auth:** SharePoint admin access (interactive or certificate-based). Azure AD Integrated auth for SQL.
+**Auth:**
+- **SharePoint:** Interactive browser login (default) or certificate-based auth via `-ClientId` + `-CertificateThumbprint` + `-TenantId`
+- **SQL:** Azure AD Integrated (default) or SQL authentication via `-SqlUsername` + `-SqlPassword`. Use SQL auth in ADFS/federated environments where AD Integrated fails.
 
 **Parameters:**
 
 | Parameter               | Required | Default | Description                                      |
 |-------------------------|----------|---------|--------------------------------------------------|
-| `SharePointTenantUrl`   | Yes      | --      | Root SharePoint URL                              |
-| `SqlServerName`         | Yes      | --      | Azure SQL server FQDN                            |
+| `SharePointTenantUrl`   | Yes      | --      | Tenant root URL (e.g. `https://hydroone.sharepoint.com`). Do **not** include `/sites/...` — use `-SpecificSites` for that. |
+| `ClientId`              | Yes      | --      | Azure AD App Registration Client ID with `Sites.Read.All` permission |
+| `SqlServerName`         | Yes      | --      | Azure SQL server name (without `.database.windows.net`) |
 | `SqlDatabaseName`       | Yes      | --      | Database containing MigrationControl table       |
-| `SiteFilter`            | No       | `*`     | Wildcard filter for site URLs                    |
-| `ExcludeSites`          | No       | --      | Comma-separated list of site URLs to skip        |
-| `SpecificSites`         | No       | --      | Comma-separated list of specific site URLs only  |
-| `UseInteractiveAuth`    | No       | switch  | Use browser-based interactive login              |
-| `ClientId`              | No       | --      | App ID for unattended (certificate) auth         |
-| `CertificateThumbprint` | No      | --      | Certificate thumbprint for unattended auth       |
+| `SpecificSites`         | No       | --      | Array of site paths to target, e.g. `@("/sites/MySite")`. If omitted, enumerates all sites via the admin center. |
+| `ExcludeSites`          | No       | --      | Array of site paths to skip                      |
+| `CertificateThumbprint` | No      | --      | Certificate thumbprint for non-interactive PnP auth |
+| `TenantId`              | No       | --      | Azure AD tenant ID (required with `-CertificateThumbprint`) |
+| `SqlUsername`            | No       | --      | SQL login username for SQL authentication        |
+| `SqlPassword`           | No       | --      | SQL login password (SecureString). If `-SqlUsername` is provided without this, you will be prompted. |
 
-**Example (interactive):**
+**Example (specific sites + SQL auth — recommended for initial testing):**
 
 ```powershell
 ./Populate-ControlTable.ps1 -SharePointTenantUrl "https://hydroone.sharepoint.com" `
-                             -SqlServerName "sql-hydroone-migration-prod.database.windows.net" `
-                             -SqlDatabaseName "MigrationDB" `
-                             -UseInteractiveAuth
+                             -ClientId "<your-app-client-id>" `
+                             -SpecificSites @("/sites/MySite1", "/sites/MySite2") `
+                             -SqlServerName "sql-hydroone-migration-dev" `
+                             -SqlDatabaseName "MigrationControl" `
+                             -SqlUsername "sqladmin" `
+                             -SqlPassword (ConvertTo-SecureString "YourPassword" -AsPlainText -Force)
+```
+
+**Example (all sites + AD Integrated SQL auth):**
+
+```powershell
+./Populate-ControlTable.ps1 -SharePointTenantUrl "https://hydroone.sharepoint.com" `
+                             -ClientId "<your-app-client-id>" `
+                             -SqlServerName "sql-hydroone-migration-dev" `
+                             -SqlDatabaseName "MigrationControl"
+```
+
+**Example (certificate-based PnP auth — non-interactive / automation):**
+
+```powershell
+./Populate-ControlTable.ps1 -SharePointTenantUrl "https://hydroone.sharepoint.com" `
+                             -ClientId "<your-app-client-id>" `
+                             -CertificateThumbprint "<thumbprint>" `
+                             -TenantId "<sharepoint-tenant-id>" `
+                             -SpecificSites @("/sites/MySite1") `
+                             -SqlServerName "sql-hydroone-migration-dev" `
+                             -SqlDatabaseName "MigrationControl" `
+                             -SqlUsername "sqladmin" `
+                             -SqlPassword (ConvertTo-SecureString "YourPassword" -AsPlainText -Force)
 ```
 
 **Key behaviors:**
-- **Upserts** -- safe to re-run without duplicating rows.
-- Skips empty libraries (0 files).
-- Assigns migration priority based on library size (smaller libraries first).
-- Auto-installs `PnP.PowerShell` and `SqlServer` modules if missing.
+- **6-step SQL pre-flight check** -- DNS resolution, TCP connectivity, authentication, table existence, permissions, and INSERT dry-run (with ROLLBACK).
+- **Network diagnostics** -- Tests connectivity to `login.microsoftonline.com`, `graph.microsoft.com`, and SharePoint Online.
+- **Upserts** -- safe to re-run without duplicating rows (IF NOT EXISTS / ELSE pattern).
+- Skips empty libraries (0 files) and system libraries.
+- Assigns migration priority based on library size (<100 MB → P10, <1 GB → P50, <10 GB → P100, >10 GB → P200).
+- **Timestamped log file** -- every run writes to `Populate-ControlTable_YYYYMMDD_HHmmss.log` with full environment diagnostics, per-site/library details, and exception stack traces.
+- Auto-detects if a site URL was passed as `-SharePointTenantUrl` and extracts the site path to `-SpecificSites`.
+
+**Common errors:**
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| `Client with IP address 'x.x.x.x' is not allowed` | SQL firewall | Add your IP: `az sql server firewall-rule create` |
+| `Failed to authenticate NT Authority\Anonymous Logon` | ADFS/federated environment | Use `-SqlUsername` and `-SqlPassword` |
+| `(403) Forbidden` on SharePoint | Missing admin consent | Grant admin consent (Step 3 in README) |
+| `(404) Not Found` | Site URL in tenant URL parameter | Use `-SpecificSites` for site paths |
+| `No such host is known` | Wrong SQL server name | Verify: `nslookup <server>.database.windows.net` |
 
 ---
 
@@ -276,7 +318,12 @@ export FACTORY_NAME="adf-hydroone-migration-prod"
 | Admin consent not granted                | Step 3 skipped                      | Azure Portal > App registrations > Grant consent |
 | SQL connection timeout                   | Firewall rule missing               | Add client IP to SQL Server firewall            |
 | PnP.PowerShell not found                 | Module not installed                | `Install-Module PnP.PowerShell -Scope CurrentUser` |
+| `Failed to authenticate NT Authority\Anonymous Logon` | ADFS/federated environment breaks AD Integrated SQL auth | Use `-SqlUsername` and `-SqlPassword` for SQL auth |
+| `Client with IP address 'x.x.x.x' is not allowed` | SQL firewall blocking client IP | `az sql server firewall-rule create --start-ip-address <IP> --end-ip-address <IP>` |
+| `(404) Not Found` on SharePoint admin URL | Site URL passed as tenant URL, or app lacks admin center access | Use `-SpecificSites` to bypass admin center enumeration |
+| `No such host is known` for SQL server   | Wrong SQL server name               | Verify with `nslookup <server>.database.windows.net` |
+| `Cannot convert System.Object[] to System.Int32` | Outdated Populate-ControlTable.ps1 | Pull the latest version from the repository |
 
 ---
 
-*Last updated: 2026-03-27*
+*Last updated: 2026-05-06*

@@ -26,6 +26,8 @@ The proof-of-concept was **successfully validated on February 18, 2026**:
 
 All production features (delta query pagination, deep folder traversal, token refresh, child pipeline pattern, SQL audit logging, incremental sync with deltaLink persistence) were verified in this test.
 
+**Control Table Population** — Successfully validated on May 5, 2026 against Hydro One's SharePoint environment (`/sites/JSTestCommunicationSite`). The `Populate-ControlTable.ps1` script successfully enumerated sites, collected library statistics, and upserted records into Azure SQL using SQL authentication.
+
 ---
 
 ## Solution Architecture

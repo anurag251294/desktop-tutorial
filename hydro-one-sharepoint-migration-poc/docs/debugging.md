@@ -36,6 +36,7 @@ This guide is organized **by error code or symptom**. When you encounter an issu
 | Token expiration during migration | [Section 15](#15-token-expiration-during-long-running-migrations) | OAuth token lifetime |
 | Pipeline timeout | [Section 16](#16-pipeline-timeout) | ADF timeout settings |
 | File locked / checked out | [Section 17](#17-file-locked--checked-out) | SharePoint file locks |
+| Populate-ControlTable.ps1 errors (SQL firewall, ADFS auth, 404, DNS) | [Section 18](#18-populate-controltableps1-errors) | PowerShell script |
 
 ---
 
@@ -838,6 +839,91 @@ curl -v -H "Authorization: Bearer <token>" \
 ```
 
 Include the `request-id` and `Date` response headers in any Microsoft support ticket.
+
+---
+
+### 18. Populate-ControlTable.ps1 Errors
+
+These errors occur when running the `Populate-ControlTable.ps1` script to enumerate SharePoint sites/libraries and populate the SQL control table.
+
+#### 18a. SQL Firewall: "Client with IP address 'x.x.x.x' is not allowed to access the server"
+
+**Symptom:** SQL pre-flight check fails at Step 2 (TCP connectivity) or Step 3 (authentication).
+
+**Root Cause:** Azure SQL Server firewall does not have a rule for your client IP.
+
+**Resolution:**
+```bash
+az sql server firewall-rule create \
+    --name "AllowMyIP" \
+    --server <sql-server-name> \
+    --resource-group <resource-group> \
+    --start-ip-address <YOUR_IP> \
+    --end-ip-address <YOUR_IP>
+```
+
+#### 18b. ADFS Authentication: "Failed to authenticate the user NT Authority\Anonymous Logon in Active Directory"
+
+**Symptom:** SQL pre-flight Step 3 fails. Error code `0xparsing_wstrust_response_failed`.
+
+**Root Cause:** The environment uses ADFS/federated authentication, which is incompatible with `ActiveDirectoryIntegrated` SQL auth mode.
+
+**Resolution:** Use SQL authentication instead:
+```powershell
+-SqlUsername "sqladmin" -SqlPassword (ConvertTo-SecureString "YourPassword" -AsPlainText -Force)
+```
+
+#### 18c. SharePoint 404: "The remote server returned an error: (404) Not Found"
+
+**Symptom:** PnP connection fails when connecting to the SharePoint admin center.
+
+**Root Cause:** Either:
+1. A full site URL (e.g. `https://tenant.sharepoint.com/sites/MySite`) was passed as `-SharePointTenantUrl` instead of just the tenant root
+2. The app registration does not have SharePoint admin center access
+
+**Resolution:**
+- Pass only the tenant root as `-SharePointTenantUrl` (e.g. `https://hydroone.sharepoint.com`)
+- Use `-SpecificSites @("/sites/MySite")` to target specific sites and bypass admin center enumeration
+
+#### 18d. SQL DNS: "No such host is known"
+
+**Symptom:** SQL pre-flight Step 1 (DNS) or Step 2 (TCP) fails.
+
+**Root Cause:** Wrong SQL server name.
+
+**Resolution:**
+```bash
+nslookup <server-name>.database.windows.net
+# If this fails, verify the server name in Azure Portal > SQL servers
+```
+
+#### 18e. SharePoint 403: "The remote server returned an error: (403) Forbidden"
+
+**Symptom:** PnP PowerShell connection or site enumeration fails.
+
+**Root Cause:** Admin consent not granted for `Sites.Read.All` on the app registration.
+
+**Resolution:** Follow Step 3 in the README — a Global Administrator must grant admin consent in Azure Portal.
+
+#### 18f. "MigrationControl table does not exist"
+
+**Symptom:** SQL pre-flight Step 4 fails.
+
+**Root Cause:** DDL scripts have not been run against the database.
+
+**Resolution:** Run Step 5 from the README:
+```bash
+sqlcmd -S <server>.database.windows.net -d MigrationControl -i sql/create_control_table.sql -G
+```
+
+#### 18g. Log File Location
+
+Every run of `Populate-ControlTable.ps1` creates a timestamped log file in the script directory:
+```
+Populate-ControlTable_YYYYMMDD_HHmmss.log
+```
+
+The log contains full environment diagnostics, SQL pre-flight results, per-site/library details, and exception stack traces. Always include this log file when reporting issues.
 
 ---
 
