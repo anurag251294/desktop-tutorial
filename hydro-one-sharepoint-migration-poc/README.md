@@ -625,7 +625,7 @@ adf-hydroone-migration-dev    EXTERNAL_USER    db_datawriter
 
 Deploy linked services, datasets, and pipelines to Azure Data Factory.
 
-> **IMPORTANT:** The `arm-template.json` only deploys the ADF instance, linked services, and datasets. **It does NOT deploy pipelines.** Pipelines are in separate ARM templates under `adf-templates/pipelines/` and must be deployed separately. Use the deployment script below which handles everything in the correct order.
+> **IMPORTANT:** The `arm-template.json` only deploys the ADF instance, linked services, and **some** datasets. **It does NOT deploy all datasets or any pipelines.** The dataset `DS_Graph_Content_Download` and all 6 pipelines are in separate ARM templates and must be deployed individually. Use the deployment script below which handles everything in the correct order.
 
 **Option A: Automated deployment script (recommended)**
 
@@ -644,7 +644,9 @@ This deploys all resources in dependency order: 4 Linked Services → 5 Datasets
 
 **Option B: Manual deployment (if bash is not available)**
 
-First deploy the core resources (linked services + datasets):
+Deploy in this exact order. Each step depends on the previous one.
+
+**Step B1: Deploy ADF instance + core linked services + some datasets**
 
 ```bash
 az deployment group create \
@@ -653,15 +655,34 @@ az deployment group create \
     --parameters @config/parameters.dev.json
 ```
 
-Then deploy each pipeline individually **in this order** (child pipelines before parents):
+**Step B2: Deploy remaining datasets (NOT included in arm-template.json)**
+
+> **CRITICAL:** The `DS_Graph_Content_Download` dataset is required by the pipelines but is NOT included in `arm-template.json`. You MUST deploy it separately before deploying pipelines, or you will get: `"invalid reference 'ds_graph_content_download'"`.
 
 ```bash
-# 1. PL_Copy_File_Batch (no deps)
+# Deploy all 3 dataset templates (safe to re-run — idempotent)
+az deployment group create --resource-group rg-hydroone-migration-dev \
+    --template-file adf-templates/datasets/DS_SQL_ControlTables.json \
+    --parameters factoryName="adf-hydroone-migration-dev"
+
+az deployment group create --resource-group rg-hydroone-migration-dev \
+    --template-file adf-templates/datasets/DS_ADLS_Sink.json \
+    --parameters factoryName="adf-hydroone-migration-dev"
+
+az deployment group create --resource-group rg-hydroone-migration-dev \
+    --template-file adf-templates/datasets/DS_Graph_Content_Download.json \
+    --parameters factoryName="adf-hydroone-migration-dev"
+```
+
+**Step B3: Deploy pipelines (child pipelines before parents)**
+
+```bash
+# 1. PL_Copy_File_Batch (no deps — deploy FIRST)
 az deployment group create --resource-group rg-hydroone-migration-dev \
     --template-file adf-templates/pipelines/PL_Copy_File_Batch.json \
     --parameters factoryName="adf-hydroone-migration-dev"
 
-# 2. PL_Process_Subfolder
+# 2. PL_Process_Subfolder (depends on PL_Copy_File_Batch)
 az deployment group create --resource-group rg-hydroone-migration-dev \
     --template-file adf-templates/pipelines/PL_Process_Subfolder.json \
     --parameters factoryName="adf-hydroone-migration-dev"
@@ -687,7 +708,25 @@ az deployment group create --resource-group rg-hydroone-migration-dev \
     --parameters factoryName="adf-hydroone-migration-dev"
 ```
 
-After deployment, verify all 6 pipelines appear in ADF Studio under the **Author** tab.
+#### 7c. Verify Deployment
+
+After deployment, verify in ADF Studio:
+
+```bash
+# List all datasets (expect 5+)
+az datafactory dataset list --resource-group rg-hydroone-migration-dev \
+    --factory-name adf-hydroone-migration-dev --query "[].name" -o tsv
+
+# List all pipelines (expect 6)
+az datafactory pipeline list --resource-group rg-hydroone-migration-dev \
+    --factory-name adf-hydroone-migration-dev --query "[].name" -o tsv
+```
+
+**Expected datasets:** `DS_SQL_MigrationControl`, `DS_SQL_AuditLog`, `DS_ADLS_Binary_Sink`, `DS_SharePoint_Binary_HTTP`, `DS_ADLS_Parquet_Metadata`, `DS_Graph_Content_Download` (and any from the separate dataset templates)
+
+**Expected pipelines:** `PL_Copy_File_Batch`, `PL_Process_Subfolder`, `PL_Migrate_Single_Library`, `PL_Incremental_Sync`, `PL_Validation`, `PL_Master_Migration_Orchestrator`
+
+If any are missing, re-run the corresponding deployment command above.
 
 > **Note:** The `config/parameters.dev.json` file ships with **test environment values** (POC tenant). You must update all parameter values to match your actual Azure resource names before deploying. See the parameter descriptions in `adf-templates/arm-template.json` for what each value represents.
 
