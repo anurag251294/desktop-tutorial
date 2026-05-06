@@ -334,7 +334,37 @@ sqlcmd -S sql-hydroone-migration-test.database.windows.net \
 
 ### Step 5: Populate Control Table
 
-Insert test data to validate the pipeline. The following example uses the working SQL insert format:
+#### Option A: Automated population via script (recommended)
+
+Use `Populate-ControlTable.ps1` to automatically enumerate SharePoint sites/libraries and populate the control table:
+
+```powershell
+# Prerequisites: Install-Module PnP.PowerShell, SqlServer -Scope CurrentUser -Force
+# Ensure your client IP is added to the SQL Server firewall first
+
+# Specific sites + SQL auth (recommended for ADFS/federated environments):
+.\scripts\Populate-ControlTable.ps1 `
+    -SharePointTenantUrl "https://hydroone.sharepoint.com" `
+    -ClientId "<your-app-client-id>" `
+    -SpecificSites @("/sites/SalesAndMarketing") `
+    -SqlServerName "sql-hydroone-migration-test" `
+    -SqlDatabaseName "MigrationControl" `
+    -SqlUsername "sqladmin" `
+    -SqlPassword (ConvertTo-SecureString "YourPassword" -AsPlainText -Force)
+```
+
+The script runs a 6-step SQL pre-flight check, enumerates sites and libraries, calculates file counts and sizes, assigns priority, and upserts records. Every run writes a detailed log file: `Populate-ControlTable_YYYYMMDD_HHmmss.log`.
+
+> **Common issues:**
+> - `Client with IP address 'x.x.x.x' is not allowed` → Add SQL firewall rule for your IP
+> - `Failed to authenticate NT Authority\Anonymous Logon` → Use `-SqlUsername`/`-SqlPassword` for SQL auth
+> - `(404) Not Found` → Use `-SpecificSites` instead of relying on admin center enumeration
+
+For full parameter reference, see `docs/scripts-reference.md` Section 4, or `README.md` Step 8.
+
+#### Option B: Manual SQL insert (single library test)
+
+For quick testing with a single library, insert directly:
 
 ```sql
 INSERT INTO dbo.MigrationControl (SiteUrl, LibraryName, SiteTitle, LibraryTitle, Status, Priority, EnableIncrementalSync, CreatedBy)

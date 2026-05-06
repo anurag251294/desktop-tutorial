@@ -126,7 +126,20 @@ VALUES ('https://tenant.sharepoint.com/sites/NewSite', 'Documents', '<driveId>',
 ```
 
 Option B: Re-run the `Populate-ControlTable.ps1` script, which enumerates all sites and
-libraries via Graph API and inserts any that are not already in the table.
+libraries via PnP PowerShell and upserts any that are not already in the table:
+
+```powershell
+.\scripts\Populate-ControlTable.ps1 `
+    -SharePointTenantUrl "https://hydroone.sharepoint.com" `
+    -ClientId "<your-app-client-id>" `
+    -SpecificSites @("/sites/NewSite") `
+    -SqlServerName "sql-hydroone-migration-dev" `
+    -SqlDatabaseName "MigrationControl" `
+    -SqlUsername "sqladmin" `
+    -SqlPassword (ConvertTo-SecureString "YourPassword" -AsPlainText -Force)
+```
+
+For full parameter reference, see `docs/scripts-reference.md` Section 4 or `README.md` Step 8.
 
 ### How do I re-run a failed library?
 
@@ -264,6 +277,42 @@ failed files and decide whether to retry (re-run incremental sync) or handle the
 See `debugging.md` in the `docs/` directory for a comprehensive catalog of error patterns
 encountered during the POC, including HTTP status codes, ADF error messages, and
 step-by-step resolution procedures.
+
+### Populate-ControlTable.ps1 fails with "Failed to authenticate NT Authority\Anonymous Logon"
+
+This happens in ADFS/federated authentication environments where Azure AD Integrated SQL auth
+is not supported. Use SQL authentication instead by adding `-SqlUsername` and `-SqlPassword`:
+
+```powershell
+-SqlUsername "sqladmin" -SqlPassword (ConvertTo-SecureString "YourPassword" -AsPlainText -Force)
+```
+
+### Populate-ControlTable.ps1 fails with "Client with IP address is not allowed"
+
+Your client machine's IP is not in the Azure SQL Server firewall rules. Add it:
+
+```bash
+az sql server firewall-rule create \
+    --name "AllowMyIP" --server <sql-server-name> --resource-group <rg-name> \
+    --start-ip-address <YOUR_IP> --end-ip-address <YOUR_IP>
+```
+
+### Populate-ControlTable.ps1 fails with "(404) Not Found"
+
+This usually means a full site URL (e.g. `https://tenant.sharepoint.com/sites/MySite`) was
+passed as `-SharePointTenantUrl`. Only pass the tenant root URL. Use `-SpecificSites` for
+site paths:
+
+```powershell
+-SharePointTenantUrl "https://hydroone.sharepoint.com" `
+-SpecificSites @("/sites/MySite")
+```
+
+### Where is the Populate-ControlTable.ps1 log file?
+
+Every run writes a timestamped log in the script directory: `Populate-ControlTable_YYYYMMDD_HHmmss.log`.
+The log includes full environment diagnostics, SQL pre-flight results, per-site/library details,
+and exception stack traces. Always include this log when reporting issues.
 
 ---
 
