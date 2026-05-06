@@ -420,16 +420,133 @@ Or use the deployment script:
 
 ### Step 8: Populate the Control Table
 
-Enumerate SharePoint sites and document libraries, and populate the SQL control table:
+Enumerate SharePoint sites and document libraries, and populate the SQL control table.
+
+#### 8a. Prerequisites
+
+Before running the script, ensure the following are installed and available:
+
+```powershell
+# Install required PowerShell modules (run once)
+Install-Module -Name PnP.PowerShell -Scope CurrentUser -Force
+Install-Module -Name SqlServer    -Scope CurrentUser -Force
+
+# Verify modules are available
+Get-Module -ListAvailable PnP.PowerShell, SqlServer
+```
+
+You also need:
+- The **Azure AD App Registration Client ID** (from Step 2) with `Sites.Read.All` permission and admin consent granted
+- A **certificate** installed in your local certificate store (for certificate-based PnP auth), **or** use `-Interactive` for browser-based login
+- The SQL server must have a **firewall rule** allowing your client IP (check the error message for your IP if blocked)
+
+#### 8b. Add SQL Server Firewall Rule for Your Client IP
+
+If you see an error like `Client with IP address 'x.x.x.x' is not allowed to access the server`, add your IP:
+
+```bash
+az sql server firewall-rule create \
+    --name "AllowMyIP" \
+    --server sql-hydroone-migration-dev \
+    --resource-group rg-hydroone-migration-dev \
+    --start-ip-address <YOUR_IP> \
+    --end-ip-address <YOUR_IP>
+```
+
+#### 8c. Run the Script — Choose Your Authentication Options
+
+**Option A: Specific site(s) + SQL Authentication (recommended for initial testing)**
+
+Use this when you want to target specific sites and your environment uses ADFS/federated authentication (which prevents AD Integrated SQL auth):
 
 ```powershell
 .\scripts\Populate-ControlTable.ps1 `
     -SharePointTenantUrl "https://hydroone.sharepoint.com" `
+    -ClientId "<your-app-client-id>" `
+    -SpecificSites @("/sites/MySite1", "/sites/MySite2") `
+    -SqlServerName "sql-hydroone-migration-dev" `
+    -SqlDatabaseName "MigrationControl" `
+    -SqlUsername "sqladmin" `
+    -SqlPassword (ConvertTo-SecureString "YourPassword" -AsPlainText -Force)
+```
+
+**Option B: All sites + Azure AD Integrated SQL auth**
+
+Use this when you want to enumerate all sites and your Azure AD account has direct SQL access:
+
+```powershell
+.\scripts\Populate-ControlTable.ps1 `
+    -SharePointTenantUrl "https://hydroone.sharepoint.com" `
+    -ClientId "<your-app-client-id>" `
     -SqlServerName "sql-hydroone-migration-dev" `
     -SqlDatabaseName "MigrationControl"
 ```
 
-This script connects to SharePoint Online via PnP PowerShell, enumerates all site collections and document libraries (excluding system libraries), calculates file counts and sizes, assigns migration priority (smaller libraries first), and inserts/updates records in the `MigrationControl` table.
+**Option C: Certificate-based PnP auth (non-interactive / automation)**
+
+```powershell
+.\scripts\Populate-ControlTable.ps1 `
+    -SharePointTenantUrl "https://hydroone.sharepoint.com" `
+    -ClientId "<your-app-client-id>" `
+    -CertificateThumbprint "<thumbprint>" `
+    -TenantId "<sharepoint-tenant-id>" `
+    -SpecificSites @("/sites/MySite1") `
+    -SqlServerName "sql-hydroone-migration-dev" `
+    -SqlDatabaseName "MigrationControl" `
+    -SqlUsername "sqladmin" `
+    -SqlPassword (ConvertTo-SecureString "YourPassword" -AsPlainText -Force)
+```
+
+#### 8d. Script Parameters Reference
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `-SharePointTenantUrl` | Yes | Tenant root URL, e.g. `https://hydroone.sharepoint.com`. Do **not** include `/sites/...` — use `-SpecificSites` for that. |
+| `-ClientId` | Yes | Azure AD App Registration Client ID with `Sites.Read.All` permission |
+| `-SqlServerName` | Yes | Azure SQL server name (without `.database.windows.net`) |
+| `-SqlDatabaseName` | Yes | SQL database name (e.g. `MigrationControl`) |
+| `-SpecificSites` | No | Array of site paths to target, e.g. `@("/sites/MySite")`. If omitted, enumerates all sites via the admin center. |
+| `-ExcludeSites` | No | Array of site paths to skip |
+| `-CertificateThumbprint` | No | Certificate thumbprint for non-interactive PnP auth |
+| `-TenantId` | No | Azure AD tenant ID (required with `-CertificateThumbprint`) |
+| `-SqlUsername` | No | SQL login username. Use this instead of AD Integrated auth when running in ADFS/federated environments. |
+| `-SqlPassword` | No | SQL login password (SecureString). If `-SqlUsername` is provided without this, you will be prompted. |
+
+#### 8e. What the Script Does
+
+1. **Pre-flight diagnostics** — Tests network connectivity (DNS, TCP port 1433), SQL authentication, table existence, permissions, and a dry-run INSERT/ROLLBACK
+2. **SharePoint enumeration** — Connects via PnP PowerShell, lists site collections (or uses `-SpecificSites`), enumerates document libraries per site
+3. **Statistics collection** — Counts files, folders, total size, and largest file per library
+4. **Priority assignment** — Assigns priority based on library size (smaller libraries get higher priority for faster initial results): <100 MB → P10, <1 GB → P50, <10 GB → P100, >10 GB → P200
+5. **SQL upsert** — Inserts new records or updates existing ones in `dbo.MigrationControl` using IF NOT EXISTS / ELSE pattern
+
+#### 8f. Output and Logging
+
+Every run produces a timestamped log file in the script directory:
+
+```
+Populate-ControlTable_20260505_171200.log
+```
+
+The log includes:
+- Full environment diagnostics (OS, PowerShell version, modules, network connectivity)
+- SQL pre-flight check results (6-step validation)
+- Per-site and per-library enumeration details
+- SQL upsert payloads and results
+- Summary statistics (sites processed, libraries found, total files, total size)
+- Full exception details with stack traces on any error
+
+#### 8g. Common Errors and Solutions
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| `Client with IP address 'x.x.x.x' is not allowed` | SQL firewall blocking your IP | Add firewall rule (see Step 8b) |
+| `Failed to authenticate NT Authority\Anonymous Logon` | ADFS/federated environment incompatible with AD Integrated auth | Use `-SqlUsername` and `-SqlPassword` for SQL auth |
+| `The remote server returned an error: (403) Forbidden` | App lacks admin consent or `Sites.Read.All` permission | Grant admin consent (see Step 3) |
+| `The remote server returned an error: (404) Not Found` | Wrong tenant URL or site doesn't exist | Verify `-SharePointTenantUrl` is the tenant root (not a site URL). Use `-SpecificSites` for site paths. |
+| `No such host is known` | Wrong SQL server name | Verify server name: `nslookup <server>.database.windows.net` |
+| `MigrationControl table does not exist` | DDL scripts not run yet | Run Step 5 first |
+| `Cannot convert System.Object[] to System.Int32` | Outdated script version | Pull the latest version from this repository |
 
 ### Step 9: Run a Pilot Migration
 
