@@ -655,9 +655,18 @@ az deployment group create \
     --parameters @config/parameters.dev.json
 ```
 
-**Step B2: Deploy remaining datasets (NOT included in arm-template.json)**
+**Step B2: Deploy linked services NOT included in arm-template.json**
 
-> **CRITICAL:** The `DS_Graph_Content_Download` dataset is required by the pipelines but is NOT included in `arm-template.json`. You MUST deploy it separately before deploying pipelines, or you will get: `"invalid reference 'ds_graph_content_download'"`.
+> **CRITICAL:** The `LS_HTTP_Graph_Download` linked service and `DS_Graph_Content_Download` dataset are required by the pipelines but are NOT in `arm-template.json`. The arm-template creates similar resources with different names (`LS_SharePointOnline_HTTP`, `DS_SharePoint_Binary_HTTP`), but the pipelines reference the names below. You MUST deploy these separately.
+
+```bash
+# Deploy the LS_HTTP_Graph_Download linked service (required by DS_Graph_Content_Download)
+az deployment group create --resource-group rg-hydroone-migration-dev \
+    --template-file adf-templates/linkedServices/LS_HTTP_Graph_Download.json \
+    --parameters factoryName="adf-hydroone-migration-dev"
+```
+
+**Step B3: Deploy remaining datasets**
 
 ```bash
 # Deploy all 3 dataset templates (safe to re-run — idempotent)
@@ -674,7 +683,7 @@ az deployment group create --resource-group rg-hydroone-migration-dev \
     --parameters factoryName="adf-hydroone-migration-dev"
 ```
 
-**Step B3: Deploy pipelines (child pipelines before parents)**
+**Step B4: Deploy pipelines (child pipelines before parents)**
 
 ```bash
 # 1. PL_Copy_File_Batch (no deps — deploy FIRST)
