@@ -81,12 +81,12 @@ function Write-Section {
 }
 
 function Invoke-Az {
-    param([string[]]$Args, [string]$Description)
+    param([string[]]$AzArgs, [string]$Description)
     Write-Host "[$Description]" -ForegroundColor Yellow
-    Write-Host "  > az $($Args -join ' ')" -ForegroundColor DarkGray
-    & az @Args
+    Write-Host "  > az $($AzArgs -join ' ')" -ForegroundColor DarkGray
+    & az @AzArgs
     if ($LASTEXITCODE -ne 0) {
-        throw "Azure CLI command failed (exit $LASTEXITCODE): az $($Args -join ' ')"
+        throw "Azure CLI command failed (exit $LASTEXITCODE): az $($AzArgs -join ' ')"
     }
 }
 
@@ -101,10 +101,10 @@ Write-Host "Skip consent:$SkipConsent"
 if (-not $SkipLogin) {
     Write-Section "Step 1: Sign in to Azure"
     if ($TenantId) {
-        Invoke-Az -Args @("login", "--tenant", $TenantId) -Description "az login --tenant $TenantId"
+        Invoke-Az -AzArgs @("login", "--tenant", $TenantId) -Description "az login --tenant $TenantId"
     }
     else {
-        Invoke-Az -Args @("login") -Description "az login (interactive)"
+        Invoke-Az -AzArgs @("login") -Description "az login (interactive)"
     }
 }
 else {
@@ -113,7 +113,11 @@ else {
 
 # Confirm tenant
 Write-Section "Step 2: Verify active tenant"
-$account = az account show --output json | ConvertFrom-Json
+$accountJson = az account show --output json 2>$null
+if ($LASTEXITCODE -ne 0 -or -not $accountJson) {
+    throw "Not signed in to Azure CLI. Run 'az login' first."
+}
+$account = $accountJson | ConvertFrom-Json
 Write-Host "Signed in as: $($account.user.name)"
 Write-Host "Tenant ID:    $($account.tenantId)"
 Write-Host "Tenant name:  $($account.user.name -replace '.*@','')"
@@ -135,14 +139,14 @@ Write-Host "Found app: $($app.displayName) (AppId: $($app.appId), ObjectId: $($a
 # ---------------------------------------------------------------------------
 Write-Section "Step 4: Add Microsoft Graph delegated permissions"
 
-Invoke-Az -Args @(
+Invoke-Az -AzArgs @(
     "ad", "app", "permission", "add",
     "--id", $AppId,
     "--api", $GraphResourceId,
     "--api-permissions", "$GraphSitesReadAll=Scope"
 ) -Description "Add Microsoft Graph: Sites.Read.All (Delegated)"
 
-Invoke-Az -Args @(
+Invoke-Az -AzArgs @(
     "ad", "app", "permission", "add",
     "--id", $AppId,
     "--api", $GraphResourceId,
@@ -152,7 +156,7 @@ Invoke-Az -Args @(
 # ---------------------------------------------------------------------------
 Write-Section "Step 5: Add SharePoint delegated permission"
 
-Invoke-Az -Args @(
+Invoke-Az -AzArgs @(
     "ad", "app", "permission", "add",
     "--id", $AppId,
     "--api", $SpoResourceId,
@@ -163,7 +167,7 @@ Invoke-Az -Args @(
 if (-not $SkipConsent) {
     Write-Section "Step 6: Grant admin consent (requires Global Admin)"
     try {
-        Invoke-Az -Args @("ad", "app", "permission", "admin-consent", "--id", $AppId) `
+        Invoke-Az -AzArgs @("ad", "app", "permission", "admin-consent", "--id", $AppId) `
             -Description "Grant admin consent for tenant"
         Write-Host ""
         Write-Host "[OK] Admin consent granted." -ForegroundColor Green
@@ -188,7 +192,15 @@ az ad app permission list --id $AppId --output table
 
 Write-Host ""
 Write-Host "Granted scopes (delegated consent):" -ForegroundColor Yellow
-az ad app permission list-grants --id $AppId --show-resource-name --output table
+try {
+    az ad app permission list-grants --id $AppId --output table 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "  (Could not retrieve grant list — verify in Azure Portal)" -ForegroundColor DarkGray
+    }
+}
+catch {
+    Write-Host "  (Could not retrieve grant list — verify in Azure Portal)" -ForegroundColor DarkGray
+}
 
 Write-Section "Done"
 Write-Host "Wait 1-2 minutes for token caches to refresh, then test with:" -ForegroundColor Green

@@ -102,9 +102,10 @@ try {
         Connect-AzAccount -TenantId $TenantId
     }
 
-    # Check if app already exists
+    # Check if app already exists (filter for exact match — Get-AzADApplication does startsWith)
     Write-Log "Checking for existing app registration..." -Level "INFO"
-    $existingApp = Get-AzADApplication -DisplayName $AppDisplayName -ErrorAction SilentlyContinue
+    $existingApps = @(Get-AzADApplication -DisplayName $AppDisplayName -ErrorAction SilentlyContinue)
+    $existingApp = $existingApps | Where-Object { $_.DisplayName -eq $AppDisplayName } | Select-Object -First 1
 
     if ($existingApp) {
         Write-Log "App registration '$AppDisplayName' already exists. AppId: $($existingApp.AppId)" -Level "WARNING"
@@ -151,6 +152,9 @@ try {
         -EndDate $endDate
 
     $clientSecret = $secret.SecretText
+    if (-not $clientSecret) {
+        throw "Failed to retrieve client secret text. This can happen with older Az module versions. Please update the Az.Resources module (Update-Module Az.Resources) and retry."
+    }
     Write-Log "Client secret created. Expires: $endDate" -Level "SUCCESS"
 
     # Store in Key Vault
@@ -230,7 +234,7 @@ try {
         secretName           = "sharepoint-client-secret"
         secretExpiry         = $endDate.ToString("yyyy-MM-ddTHH:mm:ssZ")
         createdAt            = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
-    } | ConvertTo-Json | Out-File $configPath
+    } | ConvertTo-Json | Out-File $configPath -Encoding UTF8
 
     Write-Log "Configuration saved to: $configPath" -Level "SUCCESS"
     Write-Log "Setup completed successfully!" -Level "SUCCESS"

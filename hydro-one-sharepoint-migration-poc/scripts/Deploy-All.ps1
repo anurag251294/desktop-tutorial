@@ -560,6 +560,8 @@ if (Should-RunStep 7) {
         Write-Step "7e. Verifying ADF deployment..."
         $dsCount = (az datafactory dataset list --resource-group $rgName --factory-name $adfName --query "length(@)" -o tsv 2>$null)
         $plCount = (az datafactory pipeline list --resource-group $rgName --factory-name $adfName --query "length(@)" -o tsv 2>$null)
+        if (-not $dsCount) { $dsCount = "0" }
+        if (-not $plCount) { $plCount = "0" }
         Write-Step "  Datasets:  $dsCount deployed"
         Write-Step "  Pipelines: $plCount deployed"
         if ([int]$plCount -ge 6) {
@@ -647,56 +649,61 @@ if (Should-RunStep 9) {
     # Check 1: Resource Group exists
     try {
         $rg = az group show --name $rgName --query "name" -o tsv 2>$null
-        $checks += @{ Name = "Resource Group"; Status = if ($rg) { "PASS" } else { "FAIL" } }
+        $checks += @{ Name = "Resource Group"; Status = $(if ($rg) { "PASS" } else { "FAIL" }) }
     }
     catch { $checks += @{ Name = "Resource Group"; Status = "FAIL" } }
 
     # Check 2: ADF exists with managed identity
     try {
         $mi = az datafactory show --resource-group $rgName --name $adfName --query "identity.type" -o tsv 2>$null
-        $checks += @{ Name = "ADF Managed Identity"; Status = if ($mi -eq "SystemAssigned") { "PASS" } else { "FAIL" } }
+        $checks += @{ Name = "ADF Managed Identity"; Status = $(if ($mi -eq "SystemAssigned") { "PASS" } else { "FAIL" }) }
     }
     catch { $checks += @{ Name = "ADF Managed Identity"; Status = "FAIL" } }
 
     # Check 3: Pipelines deployed
     try {
         $plCount = az datafactory pipeline list --resource-group $rgName --factory-name $adfName --query "length(@)" -o tsv 2>$null
-        $checks += @{ Name = "ADF Pipelines ($plCount/6)"; Status = if ([int]$plCount -ge 6) { "PASS" } else { "FAIL" } }
+        if (-not $plCount) { $plCount = "0" }
+        $checks += @{ Name = "ADF Pipelines ($plCount/6)"; Status = $(if ([int]$plCount -ge 6) { "PASS" } else { "FAIL" }) }
     }
     catch { $checks += @{ Name = "ADF Pipelines"; Status = "FAIL" } }
 
     # Check 4: SQL connectivity
     try {
         if ($SqlUsername) {
+            $pwToUse = if ($SqlPassword) { $SqlPassword } elseif ($SqlAdminPassword) { $SqlAdminPassword } else { $null }
+            if (-not $pwToUse) {
+                throw "No SQL password available for verification"
+            }
             $plainPw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto(
-                [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($SqlPassword))
+                [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($pwToUse))
             $sqlTest = & sqlcmd -S $sqlFqdn -d $sqlDatabase -U $SqlUsername -P $plainPw -Q "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES" -h -1 -W 2>$null
         }
         else {
             $sqlTest = & sqlcmd -S $sqlFqdn -d $sqlDatabase -G -Q "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES" -h -1 -W 2>$null
         }
         $tableCount = ($sqlTest | Where-Object { $_ -match '^\d+$' } | Select-Object -First 1)
-        $checks += @{ Name = "SQL Tables ($tableCount)"; Status = if ([int]$tableCount -ge 6) { "PASS" } else { "WARN" } }
+        $checks += @{ Name = "SQL Tables ($tableCount)"; Status = $(if ([int]$tableCount -ge 6) { "PASS" } else { "WARN" }) }
     }
     catch { $checks += @{ Name = "SQL Connectivity"; Status = "FAIL" } }
 
-    # Check 5: Control table has data
+    # Check 5: Control table has data (reuse $plainPw from Check 4)
     try {
-        if ($SqlUsername) {
+        if ($SqlUsername -and $plainPw) {
             $rowCount = & sqlcmd -S $sqlFqdn -d $sqlDatabase -U $SqlUsername -P $plainPw -Q "SELECT COUNT(*) FROM dbo.MigrationControl" -h -1 -W 2>$null
         }
         else {
             $rowCount = & sqlcmd -S $sqlFqdn -d $sqlDatabase -G -Q "SELECT COUNT(*) FROM dbo.MigrationControl" -h -1 -W 2>$null
         }
         $rows = ($rowCount | Where-Object { $_ -match '^\d+$' } | Select-Object -First 1)
-        $checks += @{ Name = "Control Table Rows ($rows)"; Status = if ([int]$rows -gt 0) { "PASS" } else { "WARN" } }
+        $checks += @{ Name = "Control Table Rows ($rows)"; Status = $(if ([int]$rows -gt 0) { "PASS" } else { "WARN" }) }
     }
     catch { $checks += @{ Name = "Control Table"; Status = "FAIL" } }
 
     # Check 6: Storage account
     try {
         $hns = az storage account show --name $storageName --query "isHnsEnabled" -o tsv 2>$null
-        $checks += @{ Name = "ADLS Gen2 (HNS=$hns)"; Status = if ($hns -eq "true") { "PASS" } else { "FAIL" } }
+        $checks += @{ Name = "ADLS Gen2 (HNS=$hns)"; Status = $(if ($hns -eq "true") { "PASS" } else { "FAIL" }) }
     }
     catch { $checks += @{ Name = "ADLS Gen2"; Status = "FAIL" } }
 
