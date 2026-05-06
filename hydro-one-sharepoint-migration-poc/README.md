@@ -312,17 +312,75 @@ The ADF System-Assigned Managed Identity requires:
 
 ### Step 1: Provision Azure Resources
 
-Run the setup script to create all required Azure resources with RBAC assignments:
+#### 1a. Prerequisites
+
+```bash
+# Login to Azure CLI
+az login
+
+# Set the target subscription
+az account set --subscription "<subscription-id>"
+
+# Verify you have Contributor access
+az role assignment list --assignee $(az ad signed-in-user show --query id -o tsv) --scope /subscriptions/<subscription-id> --query "[].roleDefinitionName" -o tsv
+
+# Register required resource providers (run once)
+az provider register --namespace Microsoft.DataFactory
+az provider register --namespace Microsoft.Storage
+az provider register --namespace Microsoft.Sql
+az provider register --namespace Microsoft.KeyVault
+```
+
+#### 1b. Run the Setup Script
 
 ```powershell
 .\scripts\Setup-AzureResources.ps1 -Environment "dev" -Location "canadacentral"
 ```
 
-This creates the Resource Group, ADF (with System-Assigned Managed Identity), ADLS Gen2 (with hierarchical namespace), Azure SQL Server and Database, and Key Vault. It also configures RBAC roles for the ADF Managed Identity.
+**Parameters:**
+| Parameter | Required | Default | Description |
+|-----------|----------|---------|-------------|
+| `-Environment` | Yes | — | Target environment: `dev`, `test`, or `prod` |
+| `-Location` | No | `canadacentral` | Azure region (must be Canada Central for data residency) |
+| `-SubscriptionId` | No | Current context | Azure subscription ID |
+| `-SqlAdminUsername` | No | `sqladmin` | SQL Server admin login |
+| `-SqlAdminPassword` | No | Auto-generated | SQL Server admin password (stored in Key Vault) |
+
+**Resources created:**
+| Resource | Name | Notes |
+|----------|------|-------|
+| Resource Group | `rg-hydroone-migration-dev` | Container for all resources |
+| Azure Data Factory | `adf-hydroone-migration-dev` | System-Assigned Managed Identity enabled |
+| ADLS Gen2 Storage | `sthydroonemigdev` | Hierarchical namespace enabled, `sharepoint-migration` container created |
+| Azure SQL Server | `sql-hydroone-migration-dev` | With database `MigrationControl` |
+| Azure Key Vault | `kv-hydroone-mig-dev` | Stores SQL password and SP client secret |
+
+#### 1c. Verify Resources
+
+```bash
+# List all resources in the group
+az resource list --resource-group rg-hydroone-migration-dev -o table
+
+# Verify ADF has a managed identity
+az datafactory show --resource-group rg-hydroone-migration-dev \
+    --name adf-hydroone-migration-dev --query "identity" -o json
+
+# Verify ADLS has hierarchical namespace
+az storage account show --name sthydroonemigdev \
+    --query "isHnsEnabled" -o tsv
+# Expected: true
+```
+
+> **Save these values** — you will need the resource names in subsequent steps. Note the SQL admin password if auto-generated (stored in Key Vault as `sql-admin-password`).
 
 ### Step 2: Register the SharePoint App and Store Credentials
 
-Register an Azure AD application in the **SharePoint tenant** and store its credentials in Key Vault:
+#### 2a. Prerequisites
+
+- You must have **Application Administrator** or **Global Administrator** role in the **SharePoint tenant** (not the MCAPS/Azure tenant)
+- The Key Vault from Step 1 must exist
+
+#### 2b. Run the Registration Script
 
 ```powershell
 .\scripts\Register-SharePointApp.ps1 `
@@ -330,37 +388,89 @@ Register an Azure AD application in the **SharePoint tenant** and store its cred
     -KeyVaultName "kv-hydroone-mig-dev"
 ```
 
-This creates the app registration with `Sites.Read.All` and `Files.Read.All` Graph API permissions, generates a client secret, and stores it in Key Vault.
+**Parameters:**
+| Parameter | Required | Default | Description |
+|-----------|----------|---------|-------------|
+| `-TenantId` | Yes | — | Azure AD Tenant ID of the **SharePoint tenant** |
+| `-KeyVaultName` | Yes | — | Key Vault name (from Step 1) |
+| `-AppDisplayName` | No | `HydroOne-SPO-Migration` | Display name for the app registration |
+| `-SecretValidityYears` | No | `2` | Client secret expiry in years |
 
-### Step 3: Grant Admin Consent (CRITICAL -- Requires Global Administrator)
+**What this creates:**
+1. Azure AD App Registration (`HydroOne-SPO-Migration`) in the SharePoint tenant
+2. Client secret (stored in Key Vault as `sharepoint-client-secret`)
+3. API permission requests: `Sites.Read.All` and `Files.Read.All` on Microsoft Graph
 
-A **Global Administrator** in the SharePoint tenant must grant admin consent for the app's Graph API permissions. Without this, all Graph API calls will return HTTP 401/403 and no migration can proceed.
+#### 2c. Verify and Record
 
-1. Sign in to [Azure Portal](https://portal.azure.com) as Global Administrator (in the SharePoint tenant)
-2. Navigate to **Azure Active Directory** > **App registrations**
+```bash
+# Verify secrets are in Key Vault
+az keyvault secret list --vault-name kv-hydroone-mig-dev -o table
+
+# Record the Client ID — you will need it for Steps 3, 7, and 8
+az ad app list --display-name "HydroOne-SPO-Migration" --query "[0].appId" -o tsv
+```
+
+> **IMPORTANT:** Write down the **Client ID** (Application ID). You will need it for:
+> - Step 7 (`servicePrincipalId` in parameters.dev.json)
+> - Step 8 (`-ClientId` for Populate-ControlTable.ps1)
+
+### Step 3: Grant Admin Consent (CRITICAL — Requires Global Administrator)
+
+> **HARD BLOCKER:** Without admin consent, all Graph API calls return HTTP 401/403. No migration pipeline will work. This step **cannot be automated** — it requires a Global Administrator to click a button in the Azure Portal.
+
+#### 3a. Grant Consent
+
+1. Sign in to [Azure Portal](https://portal.azure.com) as **Global Administrator** (in the **SharePoint tenant**)
+2. Navigate to **Azure Active Directory** → **App registrations**
 3. Select the migration app (e.g., `HydroOne-SPO-Migration`)
-4. Click **API permissions**
-5. Click **Grant admin consent for [tenant name]**
-6. Confirm by clicking **Yes**
-7. Verify all permissions show a green checkmark with status **"Granted"**
+4. Click **API permissions** in the left menu
+5. You should see `Sites.Read.All` and `Files.Read.All` with orange warning icons (⚠ "Not granted")
+6. Click **Grant admin consent for [tenant name]**
+7. Confirm by clicking **Yes**
+
+#### 3b. Verify Consent
+
+After granting, verify:
+- Both permissions show a **green checkmark** ✅
+- Status column shows **"Granted for [tenant name]"**
+- If the checkmark is missing, consent was not granted — try again or check you are signed in as Global Admin
+
+#### 3c. Test Graph API Access (optional)
+
+```bash
+# Get a token for the app
+TOKEN=$(curl -s -X POST "https://login.microsoftonline.com/<tenant-id>/oauth2/v2.0/token" \
+    -d "client_id=<client-id>&client_secret=<client-secret>&scope=https://graph.microsoft.com/.default&grant_type=client_credentials" \
+    | jq -r '.access_token')
+
+# Test listing sites (should return 200 with site data)
+curl -s -H "Authorization: Bearer $TOKEN" \
+    "https://graph.microsoft.com/v1.0/sites?search=*&\$top=5" | jq '.value[].displayName'
+```
+
+If this returns site names, consent is confirmed.
 
 ### Step 4: Enable Network Access
 
-Ensure ADF can reach all resources. For the POC environment, enable public network access:
+Ensure ADF can reach all resources. For the POC environment, enable public network access.
+
+#### 4a. Enable Public Access on All Resources
 
 ```bash
-# Storage Account
+# Storage Account — allow public access
 az storage account update \
     --name sthydroonemigdev \
     --resource-group rg-hydroone-migration-dev \
     --public-network-access Enabled
 
-# SQL Server (plus AllowAzureServices firewall rule)
+# SQL Server — enable public network access
 az sql server update \
     --name sql-hydroone-migration-dev \
     --resource-group rg-hydroone-migration-dev \
     --enable-public-network true
 
+# SQL Server — allow Azure services (required for ADF Managed Identity connections)
 az sql server firewall-rule create \
     --name "AllowAzureServices" \
     --server sql-hydroone-migration-dev \
@@ -368,21 +478,46 @@ az sql server firewall-rule create \
     --start-ip-address 0.0.0.0 \
     --end-ip-address 0.0.0.0
 
-# Key Vault
+# SQL Server — allow YOUR client IP (required for running scripts locally)
+# Replace <YOUR_IP> with your actual IP (check at https://whatismyip.com)
+az sql server firewall-rule create \
+    --name "AllowMyIP" \
+    --server sql-hydroone-migration-dev \
+    --resource-group rg-hydroone-migration-dev \
+    --start-ip-address <YOUR_IP> \
+    --end-ip-address <YOUR_IP>
+
+# Key Vault — allow public access
 az keyvault update \
     --name kv-hydroone-mig-dev \
     --resource-group rg-hydroone-migration-dev \
     --public-network-access Enabled
 ```
 
-> For production, use the Terraform configurations in `terraform/` to set up private endpoints and VNet integration instead of public network access.
+#### 4b. Verify Connectivity
+
+```bash
+# Test DNS resolution for SQL
+nslookup sql-hydroone-migration-dev.database.windows.net
+
+# Test Key Vault access
+az keyvault secret list --vault-name kv-hydroone-mig-dev -o table
+
+# Test Storage access
+az storage container list --account-name sthydroonemigdev --auth-mode login -o table
+```
+
+> **For production:** Use the Terraform configurations in `terraform/` to set up private endpoints and VNet integration instead of public network access. See `docs/terraform-private-endpoints.md`.
 
 ### Step 5: Initialize the SQL Database
 
-Run the SQL scripts to create control tables, audit tables, and stored procedures:
+Create the control tables, audit tables, and stored procedures in Azure SQL.
+
+#### 5a. Run DDL Scripts
+
+**Using Azure AD auth (`-G` flag):**
 
 ```bash
-# Connect to Azure SQL and run the DDL scripts in order:
 # 1. Create control tables (MigrationControl, IncrementalWatermark, BatchLog, SyncLog)
 sqlcmd -S sql-hydroone-migration-dev.database.windows.net -d MigrationControl \
     -i sql/create_control_table.sql -G
@@ -392,15 +527,98 @@ sqlcmd -S sql-hydroone-migration-dev.database.windows.net -d MigrationControl \
     -i sql/create_audit_log_table.sql -G
 ```
 
+**Using SQL auth (if Azure AD / ADFS auth fails):**
+
+```bash
+# Use -U and -P instead of -G
+sqlcmd -S sql-hydroone-migration-dev.database.windows.net -d MigrationControl \
+    -U sqladmin -P "<password>" \
+    -i sql/create_control_table.sql
+
+sqlcmd -S sql-hydroone-migration-dev.database.windows.net -d MigrationControl \
+    -U sqladmin -P "<password>" \
+    -i sql/create_audit_log_table.sql
+```
+
+> **Note:** The SQL admin password was either set manually in Step 1 or auto-generated and stored in Key Vault. Retrieve it with:
+> ```bash
+> az keyvault secret show --vault-name kv-hydroone-mig-dev --name sql-admin-password --query value -o tsv
+> ```
+
+#### 5b. Verify Tables Were Created
+
+```bash
+sqlcmd -S sql-hydroone-migration-dev.database.windows.net -d MigrationControl \
+    -U sqladmin -P "<password>" \
+    -Q "SELECT TABLE_SCHEMA, TABLE_NAME FROM INFORMATION_SCHEMA.TABLES ORDER BY TABLE_NAME"
+```
+
+**Expected output (6 tables):**
+```
+TABLE_SCHEMA  TABLE_NAME
+------------- ----------------------
+dbo           BatchLog
+dbo           IncrementalWatermark
+dbo           MigrationAuditLog
+dbo           MigrationControl
+dbo           SyncLog
+dbo           ValidationLog
+```
+
+If any tables are missing, re-run the DDL scripts.
+
 ### Step 6: Grant ADF Managed Identity Access to SQL
 
-Run this SQL command in the `MigrationControl` database:
+The ADF Managed Identity needs database permissions to read/write the control and audit tables during pipeline execution.
+
+#### 6a. Get the ADF Managed Identity Name
+
+The managed identity name matches the ADF name (e.g., `adf-hydroone-migration-dev`). Verify:
+
+```bash
+az datafactory show --resource-group rg-hydroone-migration-dev \
+    --name adf-hydroone-migration-dev \
+    --query "identity.principalId" -o tsv
+```
+
+#### 6b. Create the Database User and Assign Roles
+
+Connect to the `MigrationControl` database and run:
 
 ```sql
+-- Create the ADF user from the managed identity
 CREATE USER [adf-hydroone-migration-dev] FROM EXTERNAL PROVIDER;
+
+-- Grant read/write access to all tables
 ALTER ROLE db_datareader ADD MEMBER [adf-hydroone-migration-dev];
 ALTER ROLE db_datawriter ADD MEMBER [adf-hydroone-migration-dev];
+
+-- Grant execute permission for stored procedures
 GRANT EXECUTE ON SCHEMA::dbo TO [adf-hydroone-migration-dev];
+```
+
+> **Note:** The `CREATE USER ... FROM EXTERNAL PROVIDER` command requires you to be connected as an **Azure AD admin** on the SQL server. If you get an error, verify the AD admin is set:
+> ```bash
+> az sql server ad-admin list --server sql-hydroone-migration-dev --resource-group rg-hydroone-migration-dev
+> ```
+
+#### 6c. Verify Permissions
+
+```sql
+-- Verify the user exists and has correct roles
+SELECT dp.name, dp.type_desc, r.name AS role_name
+FROM sys.database_principals dp
+LEFT JOIN sys.database_role_members rm ON dp.principal_id = rm.member_principal_id
+LEFT JOIN sys.database_principals r ON rm.role_principal_id = r.principal_id
+WHERE dp.name = 'adf-hydroone-migration-dev';
+```
+
+**Expected output:**
+```
+name                          type_desc        role_name
+----------------------------- ---------------- ---------------
+adf-hydroone-migration-dev    EXTERNAL_USER    db_datareader
+adf-hydroone-migration-dev    EXTERNAL_USER    db_datawriter
 ```
 
 ### Step 7: Deploy ADF ARM Templates
@@ -605,53 +823,183 @@ The log includes:
 
 ### Step 9: Run a Pilot Migration
 
-Start with a single small library to validate the end-to-end flow:
+Start with a single small library to validate the end-to-end flow before running the full migration.
 
-1. In the Azure Portal, navigate to your Data Factory
-2. Open the **Author** tab and select `PL_Master_Migration_Orchestrator`
-3. Click **Debug** or **Add Trigger > Trigger Now**
-4. Monitor progress in the **Monitor** tab
+#### 9a. Select a Pilot Library
 
-Alternatively, filter the control table to a single library for the pilot:
+Choose the smallest library from your control table:
 
 ```sql
--- Set all libraries to 'Excluded' except the pilot
+-- Find the smallest library for piloting
+SELECT TOP 5 SiteUrl, LibraryName, FileCount,
+    CAST(TotalSizeBytes / 1048576.0 AS DECIMAL(10,2)) AS SizeMB, Status
+FROM dbo.MigrationControl
+WHERE Status = 'Pending'
+ORDER BY TotalSizeBytes ASC;
+```
+
+#### 9b. Isolate the Pilot Library
+
+Set all libraries to `Excluded` except the one you want to pilot:
+
+```sql
+-- Exclude everything first
 UPDATE dbo.MigrationControl SET Status = 'Excluded' WHERE Status = 'Pending';
 
 -- Enable only the pilot library
 UPDATE dbo.MigrationControl SET Status = 'Pending'
-WHERE SiteUrl = '/sites/SalesAndMarketing' AND LibraryName = 'Shared Documents';
+WHERE SiteUrl = '/sites/JSTestCommunicationSite' AND LibraryName = 'Shared Documents';
+
+-- Verify only 1 library is pending
+SELECT SiteUrl, LibraryName, FileCount, Status
+FROM dbo.MigrationControl WHERE Status = 'Pending';
 ```
+
+#### 9c. Verify ADF Linked Service Connections
+
+Before running the pipeline, test all linked service connections in ADF:
+
+1. Go to **Azure Portal** → **Data Factory** → **Manage** tab → **Linked services**
+2. Click each linked service and click **Test connection**:
+   - `LS_AzureKeyVault` → Should connect via Managed Identity
+   - `LS_AzureBlobStorage` → Should connect to ADLS Gen2 via Managed Identity
+   - `LS_AzureSqlDatabase` → Should connect to SQL via Managed Identity
+   - `LS_HTTP_Graph_Download` → May show "Anonymous" (this is expected — auth is handled in the pipeline via Bearer token)
+
+If any connection fails, check:
+- Managed Identity RBAC roles (Step 1)
+- Network access / firewall rules (Step 4)
+- SQL user creation (Step 6)
+
+#### 9d. Trigger the Pipeline
+
+1. Go to **Azure Portal** → **Data Factory** → **Author** tab
+2. Expand **Pipelines** in the left tree
+3. Select **`PL_Master_Migration_Orchestrator`**
+4. Click **Debug** (for testing) or **Add Trigger → Trigger Now** (for a tracked run)
+5. If prompted for parameters, use defaults or set:
+   - `BatchSize`: `1` (process 1 library at a time for the pilot)
+   - `ParallelLibraries`: `1` (no parallelism for the pilot)
+
+#### 9e. Monitor the Pipeline
+
+1. Go to the **Monitor** tab in ADF
+2. Click on the running pipeline to see activity-level details
+3. Each activity shows its status (In Progress, Succeeded, Failed)
+4. The flow should be: `PL_Master_Migration_Orchestrator` → `PL_Migrate_Single_Library` → `PL_Copy_File_Batch` (multiple iterations)
+
+**What to watch for:**
+- **Token acquisition** — First activity acquires an OAuth2 token from Key Vault + Azure AD
+- **Drive resolution** — Resolves the SharePoint library to a Graph API drive ID
+- **Delta query pagination** — The Until loop pages through all files in the library
+- **File copy** — Each page triggers `PL_Copy_File_Batch` which copies files in parallel
+
+#### 9f. Troubleshoot Failures
+
+If the pipeline fails, click the **failed activity** → **Output** or **Error** to see details.
+
+| Error | Likely Cause | Fix |
+|-------|-------------|-----|
+| HTTP 401 on token request | Client secret expired or wrong in Key Vault | Re-register the app (Step 2) |
+| HTTP 403 on Graph API call | Admin consent not granted | Complete Step 3 |
+| HTTP 404 on Graph API call | Wrong site URL in control table, or library doesn't exist | Verify SiteUrl in `MigrationControl` table |
+| ADLS write failure (403) | ADF Managed Identity lacks Storage Blob Data Contributor role | Check RBAC (Step 1) |
+| SQL write failure | ADF Managed Identity lacks db_datawriter role | Check Step 6 |
+| Key Vault access denied | ADF Managed Identity lacks Key Vault Secrets User role | Check RBAC (Step 1) |
 
 ### Step 10: Validate Migration Results
 
-After the pilot completes, validate the results:
+After the pilot completes, validate that all files were migrated correctly.
 
-```powershell
-.\scripts\Validate-Migration.ps1 `
-    -SqlServerName "sql-hydroone-migration-dev" `
-    -SqlDatabaseName "MigrationControl"
-```
+#### 10a. Check Pipeline Run Summary
 
-Or run validation queries directly:
+In ADF **Monitor** tab, verify:
+- Pipeline status: **Succeeded**
+- Activity run count matches expected (1 library → 1 `PL_Migrate_Single_Library` + N `PL_Copy_File_Batch` runs)
+
+#### 10b. Check Control Table Status
 
 ```sql
--- Check migration status per library
-SELECT SiteUrl, LibraryName, Status, FileCount, TotalSizeBytes
+-- Library-level status
+SELECT SiteUrl, LibraryName, Status, FileCount, TotalSizeBytes,
+    CAST(TotalSizeBytes / 1048576.0 AS DECIMAL(10,2)) AS SizeMB
 FROM dbo.MigrationControl
 ORDER BY Status, SiteUrl;
+-- Status should be 'Completed' for the pilot library
+```
 
--- Check per-file audit log
-SELECT FileName, SourcePath, DestinationPath, MigrationStatus, ErrorMessage
+#### 10c. Check Audit Log (Per-File Details)
+
+```sql
+-- File-level migration results
+SELECT FileName, SourcePath, DestinationPath, MigrationStatus,
+    FileSize, ErrorMessage, [Timestamp]
 FROM dbo.MigrationAuditLog
 ORDER BY [Timestamp] DESC;
 
--- Verify deltaLink was stored (for incremental sync)
+-- Count successes vs failures
+SELECT MigrationStatus, COUNT(*) AS FileCount
+FROM dbo.MigrationAuditLog
+GROUP BY MigrationStatus;
+-- Expected: all 'Succeeded', 0 'Failed'
+```
+
+#### 10d. Verify Files in ADLS
+
+```bash
+# List migrated files in ADLS
+az storage fs file list \
+    --account-name sthydroonemigdev \
+    --file-system sharepoint-migration \
+    --path "JSTestCommunicationSite/Shared Documents" \
+    --auth-mode login -o table
+
+# Count files
+az storage fs file list \
+    --account-name sthydroonemigdev \
+    --file-system sharepoint-migration \
+    --path "JSTestCommunicationSite/Shared Documents" \
+    --auth-mode login --query "length(@)"
+```
+
+Compare the count with the `FileCount` in the `MigrationControl` table.
+
+#### 10e. Verify DeltaLink (for Incremental Sync)
+
+```sql
+-- Verify deltaLink was stored
 SELECT SiteUrl, LibraryName, DriveId,
-    CASE WHEN DeltaLink IS NOT NULL THEN 'Stored' ELSE 'Missing' END AS DeltaLinkStatus,
+    CASE WHEN DeltaLink IS NOT NULL THEN 'Stored' ELSE 'MISSING' END AS DeltaLinkStatus,
+    LEN(DeltaLink) AS DeltaLinkLength,
     LastSyncTime
 FROM dbo.IncrementalWatermark;
+-- DeltaLinkStatus should be 'Stored' — this enables incremental sync
 ```
+
+#### 10f. Run the Validation Script (Optional)
+
+```powershell
+.\scripts\Validate-Migration.ps1 `
+    -SharePointTenantUrl "https://hydroone.sharepoint.com" `
+    -SqlServerName "sql-hydroone-migration-dev" `
+    -SqlDatabaseName "MigrationControl" `
+    -StorageAccountName "sthydroonemigdev" `
+    -OutputCsv "./pilot-validation-report.csv"
+```
+
+This compares file counts and sizes between SharePoint (source) and ADLS (destination) per library and generates a validation report.
+
+#### 10g. Next Steps After Successful Pilot
+
+Once the pilot is validated:
+
+1. **Re-enable remaining libraries** for migration:
+   ```sql
+   UPDATE dbo.MigrationControl SET Status = 'Pending' WHERE Status = 'Excluded';
+   ```
+2. **Run in batches** — Increase `ParallelLibraries` to 4 and run the master pipeline again
+3. **Monitor throughput** — Use `scripts/Monitor-Migration.ps1` for real-time progress
+4. **Set up incremental sync** — After initial migration completes, schedule `PL_Incremental_Sync` for daily delta syncs (see the [Incremental Sync](#incremental-sync) section below)
 
 ---
 
