@@ -405,7 +405,28 @@ GRANT EXECUTE ON SCHEMA::dbo TO [adf-hydroone-migration-dev];
 
 ### Step 7: Deploy ADF ARM Templates
 
-Deploy linked services, datasets, and pipelines to Azure Data Factory:
+Deploy linked services, datasets, and pipelines to Azure Data Factory.
+
+> **IMPORTANT:** The `arm-template.json` only deploys the ADF instance, linked services, and datasets. **It does NOT deploy pipelines.** Pipelines are in separate ARM templates under `adf-templates/pipelines/` and must be deployed separately. Use the deployment script below which handles everything in the correct order.
+
+**Option A: Automated deployment script (recommended)**
+
+```bash
+./scripts/Deploy-ADF-Templates.sh \
+    --factory "adf-hydroone-migration-dev" \
+    --resource-group "rg-hydroone-migration-dev" \
+    --storage-account "sthydroonemigdev" \
+    --sql-server "sql-hydroone-migration-dev" \
+    --sql-database "MigrationControl" \
+    --key-vault "kv-hydroone-mig-dev" \
+    --subscription "<subscription-id>"
+```
+
+This deploys all resources in dependency order: 4 Linked Services → 5 Datasets → 6 Pipelines.
+
+**Option B: Manual deployment (if bash is not available)**
+
+First deploy the core resources (linked services + datasets):
 
 ```bash
 az deployment group create \
@@ -414,11 +435,43 @@ az deployment group create \
     --parameters @config/parameters.dev.json
 ```
 
-Or use the deployment script:
+Then deploy each pipeline individually **in this order** (child pipelines before parents):
 
 ```bash
-./scripts/Deploy-ADF-Templates.sh
+# 1. PL_Copy_File_Batch (no deps)
+az deployment group create --resource-group rg-hydroone-migration-dev \
+    --template-file adf-templates/pipelines/PL_Copy_File_Batch.json \
+    --parameters factoryName="adf-hydroone-migration-dev"
+
+# 2. PL_Process_Subfolder
+az deployment group create --resource-group rg-hydroone-migration-dev \
+    --template-file adf-templates/pipelines/PL_Process_Subfolder.json \
+    --parameters factoryName="adf-hydroone-migration-dev"
+
+# 3. PL_Migrate_Single_Library (depends on PL_Copy_File_Batch)
+az deployment group create --resource-group rg-hydroone-migration-dev \
+    --template-file adf-templates/pipelines/PL_Migrate_Single_Library.json \
+    --parameters factoryName="adf-hydroone-migration-dev"
+
+# 4. PL_Incremental_Sync (depends on PL_Copy_File_Batch)
+az deployment group create --resource-group rg-hydroone-migration-dev \
+    --template-file adf-templates/pipelines/PL_Incremental_Sync.json \
+    --parameters factoryName="adf-hydroone-migration-dev"
+
+# 5. PL_Validation (standalone)
+az deployment group create --resource-group rg-hydroone-migration-dev \
+    --template-file adf-templates/pipelines/PL_Validation.json \
+    --parameters factoryName="adf-hydroone-migration-dev"
+
+# 6. PL_Master_Migration_Orchestrator (depends on PL_Migrate_Single_Library — deploy LAST)
+az deployment group create --resource-group rg-hydroone-migration-dev \
+    --template-file adf-templates/pipelines/PL_Master_Migration_Orchestrator.json \
+    --parameters factoryName="adf-hydroone-migration-dev"
 ```
+
+After deployment, verify all 6 pipelines appear in ADF Studio under the **Author** tab.
+
+> **Note:** The `config/parameters.dev.json` file ships with **test environment values** (POC tenant). You must update all parameter values to match your actual Azure resource names before deploying. See the parameter descriptions in `adf-templates/arm-template.json` for what each value represents.
 
 ### Step 8: Populate the Control Table
 
