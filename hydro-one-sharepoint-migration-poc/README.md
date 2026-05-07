@@ -28,6 +28,8 @@ All production features (delta query pagination, deep folder traversal, token re
 
 **Control Table Population** — Successfully validated on May 5, 2026 against Hydro One's SharePoint environment (`/sites/JSTestCommunicationSite`). The `Populate-ControlTable.ps1` script successfully enumerated sites, collected library statistics, and upserted records into Azure SQL using SQL authentication.
 
+**Production Readiness** — All 8 PowerShell scripts reviewed, tested, and hardened on May 6, 2026. Critical bugs fixed across `Setup-AzureResources.ps1` (missing managed identity), `Register-SharePointApp.ps1` (app lookup collision), `Monitor-Migration.ps1` (DBNull crashes), `Validate-Migration.ps1` (SQL injection, silent failures), `Deploy-All.ps1` (variable scoping, null casts), and `Grant-DelegatedPermissions.ps1` (parameter shadowing). All scripts are now production-ready.
+
 ---
 
 ## Solution Architecture
@@ -101,12 +103,14 @@ hydro-one-sharepoint-migration-poc/
 │   ├── create_audit_log_table.sql  # MigrationAuditLog, ValidationLog tables + stored procedures
 │   └── migration_progress_queries.sql  # 25+ monitoring and dashboard queries
 ├── scripts/                        # PowerShell and Bash automation
-│   ├── Setup-AzureResources.ps1    # Provisions RG, ADF, ADLS, SQL, Key Vault with RBAC
-│   ├── Register-SharePointApp.ps1  # Creates Service Principal in SharePoint tenant
-│   ├── Populate-ControlTable.ps1   # Enumerates SharePoint sites/libraries into SQL control table
-│   ├── Deploy-ADF-Templates.sh     # ARM template deployment via Azure CLI
-│   ├── Monitor-Migration.ps1       # Real-time migration progress dashboard
-│   └── Validate-Migration.ps1      # Post-migration file count/size validation
+│   ├── Deploy-All.ps1              # MASTER SCRIPT — runs Steps 1-9 end-to-end automatically
+│   ├── Setup-AzureResources.ps1    # Step 1: Provisions RG, ADF, ADLS, SQL, Key Vault with RBAC
+│   ├── Register-SharePointApp.ps1  # Step 2: Creates Service Principal in SharePoint tenant
+│   ├── Grant-DelegatedPermissions.ps1 # Step 3: Adds delegated permissions + admin consent
+│   ├── Populate-ControlTable.ps1   # Step 8: Enumerates SharePoint sites/libraries into SQL control table
+│   ├── Deploy-ADF-Templates.sh     # Step 7: ARM template deployment via Azure CLI (bash)
+│   ├── Monitor-Migration.ps1       # Operations: Real-time migration progress dashboard
+│   └── Validate-Migration.ps1      # Step 10: Post-migration file count/size validation
 ├── terraform/                      # Infrastructure-as-Code for private networking
 │   ├── main.tf                     # Provider config and data sources
 │   ├── variables.tf                # Input variables
@@ -310,6 +314,131 @@ The ADF System-Assigned Managed Identity requires:
 
 ## Deployment Steps
 
+### Quick Start: Automated Deployment with Deploy-All.ps1
+
+The `Deploy-All.ps1` master script runs **all 9 deployment steps automatically** in the correct order. This is the recommended approach for both dev and production environments.
+
+#### Full Deployment (All 9 Steps)
+
+```powershell
+.\scripts\Deploy-All.ps1 `
+    -Environment "prod" `
+    -SubscriptionId "<azure-subscription-id>" `
+    -SharePointTenantId "<sharepoint-azure-ad-tenant-id>" `
+    -SharePointTenantUrl "https://hydroone.sharepoint.com" `
+    -SpecificSites @("/sites/MySite1", "/sites/MySite2") `
+    -SqlUsername "sqladmin" `
+    -SqlPassword (ConvertTo-SecureString "YourSqlPassword" -AsPlainText -Force)
+```
+
+#### Resume from a Specific Step
+
+If a step fails, fix the issue and resume from that step without re-running earlier steps:
+
+```powershell
+# Resume from Step 5 (SQL setup) onward
+.\scripts\Deploy-All.ps1 `
+    -Environment "prod" `
+    -SubscriptionId "<subscription-id>" `
+    -SharePointTenantId "<tenant-id>" `
+    -SharePointTenantUrl "https://hydroone.sharepoint.com" `
+    -ClientId "<app-client-id-from-step-2>" `
+    -StartFromStep 5
+```
+
+#### Run Only Specific Steps
+
+```powershell
+# Only run Steps 7-8 (ADF deploy + control table)
+.\scripts\Deploy-All.ps1 `
+    -Environment "prod" `
+    -SubscriptionId "<subscription-id>" `
+    -SharePointTenantUrl "https://hydroone.sharepoint.com" `
+    -ClientId "<app-client-id>" `
+    -StartFromStep 7 -StopAfterStep 8 `
+    -SqlUsername "sqladmin" -SqlPassword (ConvertTo-SecureString "Pass" -AsPlainText -Force)
+```
+
+#### Deploy-All.ps1 Parameters
+
+| Parameter | Required | Default | Description |
+|-----------|----------|---------|-------------|
+| `-Environment` | Yes | — | Target environment: `dev`, `test`, or `prod` |
+| `-SubscriptionId` | Yes | — | Azure subscription ID |
+| `-Location` | No | `canadacentral` | Azure region |
+| `-SharePointTenantId` | For Steps 2-3 | — | Azure AD Tenant ID of the SharePoint tenant |
+| `-SharePointTenantUrl` | No | `https://hydroone.sharepoint.com` | SharePoint tenant root URL |
+| `-SqlAdminUsername` | No | `sqladmin` | SQL Server admin login |
+| `-SqlAdminPassword` | No | Prompted | SQL Server admin password (SecureString) |
+| `-ClientId` | For Steps 7-8 | Auto-detected from Step 2 | Azure AD App Registration Client ID |
+| `-SpecificSites` | No | All sites | Array of site paths, e.g. `@("/sites/MySite")` |
+| `-SqlUsername` | No | — | SQL login for control table scripts (use in ADFS environments) |
+| `-SqlPassword` | No | — | SQL login password (SecureString) |
+| `-StartFromStep` | No | `1` | Start from a specific step (1-9) |
+| `-StopAfterStep` | No | `9` | Stop after a specific step (1-9) |
+
+#### What Each Step Does
+
+| Step | Name | Script/Action | What It Creates |
+|------|------|---------------|-----------------|
+| 1 | Provision Azure Resources | `Setup-AzureResources.ps1` | Resource Group, ADF (with Managed Identity), ADLS Gen2, SQL Server + DB, Key Vault, RBAC assignments |
+| 2 | Register SharePoint App | `Register-SharePointApp.ps1` | Azure AD App Registration, Client Secret in Key Vault, Service Principal |
+| 3 | Admin Consent | Opens browser for manual consent | Admin consent for Graph API permissions (Sites.Read.All, Files.Read.All) |
+| 4 | Enable Network Access | Azure CLI commands | Public network access on Storage/SQL/KV, SQL firewall rules, auto-detects your IP |
+| 5 | Initialize SQL Database | `sqlcmd` DDL scripts | 6 tables: MigrationControl, MigrationAuditLog, IncrementalWatermark, BatchLog, SyncLog, ValidationLog |
+| 6 | Grant ADF MI SQL Access | `sqlcmd` grant query | SQL user for ADF Managed Identity with db_datareader, db_datawriter, EXECUTE |
+| 7 | Deploy ADF ARM Templates | Azure CLI deployments | 4 Linked Services → 3 Datasets → 6 Pipelines (in dependency order) |
+| 8 | Populate Control Table | `Populate-ControlTable.ps1` | Enumerates SharePoint sites/libraries → inserts records into MigrationControl |
+| 9 | Final Verification | Automated health checks | Validates: Resource Group, ADF Managed Identity, 6 pipelines, SQL connectivity, control table data, ADLS HNS |
+
+#### Deploy-All.ps1 Output
+
+The script produces:
+- **Console output** with color-coded status for each step (green = success, red = failed, yellow = skipped/warning)
+- **Log file** at `scripts/Deploy-All_YYYYMMDD_HHmmss.log` with full details
+- **Final summary** showing all 9 steps with pass/fail status and total duration
+
+Example summary:
+```
+============================================================
+  DEPLOYMENT SUMMARY
+============================================================
+  Duration: 8.3 minutes
+
+  Step 1  [SUCCESS]  Provision Azure Resources
+  Step 2  [SUCCESS]  Register SharePoint App
+  Step 3  [SUCCESS]  Admin Consent
+  Step 4  [SUCCESS]  Enable Network Access
+  Step 5  [SUCCESS]  Initialize SQL Database
+  Step 6  [SUCCESS]  Grant ADF MI SQL Access
+  Step 7  [SUCCESS]  Deploy ADF ARM Templates
+  Step 8  [SUCCESS]  Populate Control Table
+  Step 9  [SUCCESS]  Final Verification
+
+  DEPLOYMENT COMPLETE — Ready to run pilot migration (Step 9 in README)
+============================================================
+```
+
+#### Troubleshooting Deploy-All.ps1
+
+| Error | Step | Cause | Fix |
+|-------|------|-------|-----|
+| `Not logged in to Azure` | 1 | Azure CLI / PowerShell not authenticated | Run `az login` and `Connect-AzAccount` first |
+| `-SharePointTenantId is required` | 2 | Missing parameter | Add `-SharePointTenantId "<tenant-id>"` |
+| `az deployment group create failed` | 7 | ARM template error | Check template JSON syntax. Review the log file for the full Azure error. |
+| `Client with IP address is not allowed` | 8 | SQL firewall blocking your IP | Step 4 should auto-add your IP. If it failed, add manually (see Step 4a) |
+| `Failed to authenticate NT Authority\Anonymous Logon` | 8 | ADFS environment, AD Integrated auth not supported | Add `-SqlUsername "sqladmin" -SqlPassword (ConvertTo-SecureString "pw" -AsPlainText -Force)` |
+| `$plCount: Cannot convert to int` | 7/9 | Azure CLI returned no output (resource doesn't exist yet) | This was fixed in the latest version. Pull latest code. |
+| `SecretText is null` | 2 | Older Az module doesn't return secret text | Run `Update-Module Az.Resources` and retry |
+
+---
+
+### Manual Deployment Steps (Step-by-Step)
+
+If you prefer to run each step individually (or need to troubleshoot a specific step), follow the detailed instructions below.
+
+---
+
 ### Step 1: Provision Azure Resources
 
 #### 1a. Prerequisites
@@ -450,6 +579,60 @@ curl -s -H "Authorization: Bearer $TOKEN" \
 ```
 
 If this returns site names, consent is confirmed.
+
+#### 3d. Grant Delegated Permissions (Required for Populate-ControlTable.ps1)
+
+The `Populate-ControlTable.ps1` script uses **interactive PnP PowerShell** (delegated flow), which requires **Delegated** permissions in addition to the Application permissions granted above. Application permissions only work for ADF's app-only flow.
+
+Run the `Grant-DelegatedPermissions.ps1` script to add the required delegated permissions:
+
+```powershell
+.\scripts\Grant-DelegatedPermissions.ps1 `
+    -AppId "<app-client-id>" `
+    -TenantId "<sharepoint-tenant-id>"
+```
+
+**Parameters:**
+
+| Parameter | Required | Default | Description |
+|-----------|----------|---------|-------------|
+| `-AppId` | No | `aa1cf16f-...` | App (client) ID of the migration app |
+| `-TenantId` | No | Current session | Tenant ID of the SharePoint tenant |
+| `-SkipLogin` | No | `$false` | Skip `az login` (use existing session) |
+| `-SkipConsent` | No | `$false` | Add permissions but don't grant consent (for non-Global Admin) |
+
+**What this script does:**
+
+1. Signs in to Azure CLI (or uses existing session with `-SkipLogin`)
+2. Verifies the app exists in the tenant
+3. Adds Microsoft Graph delegated permissions: `Sites.Read.All`, `User.Read`
+4. Adds SharePoint delegated permission: `AllSites.Read`
+5. Grants admin consent for all delegated permissions (requires Global Admin)
+6. Displays the final permission state for verification
+
+**If you don't have Global Admin:**
+
+```powershell
+# Add permissions only (someone else will grant consent)
+.\scripts\Grant-DelegatedPermissions.ps1 `
+    -AppId "<app-client-id>" `
+    -TenantId "<sharepoint-tenant-id>" `
+    -SkipConsent
+
+# Then have a Global Admin run:
+az ad app permission admin-consent --id "<app-client-id>"
+```
+
+**Verify delegated permissions are working:**
+
+```powershell
+# Test PnP connectivity with the app
+Connect-PnPOnline -Url "https://hydroone.sharepoint.com/sites/MySite" `
+    -Interactive -ClientId "<app-client-id>"
+Get-PnPList | Select-Object Title, BaseTemplate, Hidden, ItemCount | Format-Table -AutoSize
+```
+
+If you see document libraries listed, delegated permissions are working correctly.
 
 ### Step 4: Enable Network Access
 
@@ -1029,13 +1212,39 @@ FROM dbo.IncrementalWatermark;
 ```powershell
 .\scripts\Validate-Migration.ps1 `
     -SharePointTenantUrl "https://hydroone.sharepoint.com" `
-    -SqlServerName "sql-hydroone-migration-dev" `
-    -SqlDatabaseName "MigrationControl" `
     -StorageAccountName "sthydroonemigdev" `
-    -OutputCsv "./pilot-validation-report.csv"
+    -ContainerName "sharepoint-migration" `
+    -SqlServerName "sql-hydroone-migration-dev" `
+    -SqlDatabaseName "MigrationControl"
 ```
 
-This compares file counts and sizes between SharePoint (source) and ADLS (destination) per library and generates a validation report.
+**Validate-Migration.ps1 Parameters:**
+
+| Parameter | Required | Default | Description |
+|-----------|----------|---------|-------------|
+| `-SharePointTenantUrl` | Yes | — | SharePoint tenant root URL |
+| `-StorageAccountName` | Yes | — | ADLS Gen2 storage account name |
+| `-ContainerName` | Yes | — | ADLS container (e.g. `sharepoint-migration`) |
+| `-SqlServerName` | Yes | — | Azure SQL Server name |
+| `-SqlDatabaseName` | Yes | — | Database name |
+| `-SampleSize` | No | `100` | Number of files for random checksum validation |
+| `-SkipChecksumValidation` | No | `$false` | Skip the MD5 checksum comparison |
+| `-ReportOutputPath` | No | Auto-generated | Path for the HTML validation report |
+
+**What the script does:**
+
+1. Queries the `MigrationControl` table for all completed libraries
+2. For each library, connects to SharePoint (PnP) and counts files
+3. Counts the corresponding files in ADLS Gen2
+4. Compares counts: exact match = PASS, <5% difference = WARNING, >5% = FAIL
+5. Updates `ValidationStatus` in the SQL control table
+6. Generates an HTML report with color-coded results
+
+**Output files:**
+- `validation-report-YYYYMMDD-HHmmss.html` — Visual report with pass/fail per library
+- `validation-report-YYYYMMDD-HHmmss.log` — Detailed log with all comparisons
+
+> **Note:** The validation script requires PnP PowerShell interactive login. It will prompt for SharePoint authentication for each site.
 
 #### 10g. Next Steps After Successful Pilot
 
@@ -1081,11 +1290,36 @@ For production, configure a trigger to run incremental sync on a schedule:
 Use the monitoring script for a live dashboard:
 
 ```powershell
+# One-time progress report
 .\scripts\Monitor-Migration.ps1 `
-    -SqlServerName "sql-hydroone-migration-dev" `
+    -ResourceGroupName "rg-hydroone-migration-prod" `
+    -DataFactoryName "adf-hydroone-migration-prod" `
+    -SqlServerName "sql-hydroone-migration-prod" `
+    -SqlDatabaseName "MigrationControl"
+
+# Continuous live dashboard (refreshes every 60 seconds)
+.\scripts\Monitor-Migration.ps1 `
+    -ResourceGroupName "rg-hydroone-migration-prod" `
+    -DataFactoryName "adf-hydroone-migration-prod" `
+    -SqlServerName "sql-hydroone-migration-prod" `
     -SqlDatabaseName "MigrationControl" `
-    -RefreshInterval 10
+    -ContinuousMonitor `
+    -RefreshIntervalSeconds 30
 ```
+
+**Monitor-Migration.ps1 Parameters:**
+
+| Parameter | Required | Default | Description |
+|-----------|----------|---------|-------------|
+| `-ResourceGroupName` | Yes | — | Azure Resource Group containing ADF |
+| `-DataFactoryName` | Yes | — | Name of the Azure Data Factory |
+| `-SqlServerName` | Yes | — | Azure SQL Server name (without `.database.windows.net`) |
+| `-SqlDatabaseName` | Yes | — | Database name (e.g. `MigrationControl`) |
+| `-HoursBack` | No | `24` | How many hours back to check for pipeline runs |
+| `-ContinuousMonitor` | No | `$false` | Enable live dashboard mode (auto-refresh) |
+| `-RefreshIntervalSeconds` | No | `60` | Refresh interval in seconds (for continuous mode) |
+
+> **Note:** The monitoring script currently uses Azure AD Integrated auth for SQL. If you are in an ADFS environment, you may need to modify the connection string in the script or use the SQL monitoring queries directly in SSMS.
 
 ### SQL Monitoring Queries
 
@@ -1199,6 +1433,231 @@ For the detailed week-by-week plan, task assignments, risk register, and RACI ma
 
 ---
 
+## Production Deployment Guide
+
+This section covers the specific considerations and steps for deploying to **production**.
+
+### Production vs. Dev Differences
+
+| Area | Dev/POC | Production |
+|------|---------|------------|
+| **Environment parameter** | `-Environment "dev"` | `-Environment "prod"` |
+| **Resource naming** | `rg-hydroone-migration-dev` | `rg-hydroone-migration-prod` |
+| **Network access** | Public endpoints | **Private endpoints** (via Terraform) |
+| **SQL tier** | S1 Standard | **S2 or higher** (scale based on concurrent pipelines) |
+| **Storage redundancy** | LRS | **GRS or ZRS** (geo/zone-redundant) |
+| **Key Vault** | Standard | Standard + **soft delete** + **purge protection** |
+| **ADF concurrency** | 1-4 parallel libraries | 4-8 parallel libraries (increase `ParallelLibraries`) |
+| **Monitoring** | Manual / ad-hoc | **Scheduled Monitor-Migration.ps1** + Azure Monitor alerts |
+| **Client secret** | 2-year expiry | Set **Key Vault expiry alerts** 30 days before |
+| **SQL auth** | `sqladmin` login | **Azure AD auth** with service accounts (no SQL passwords in scripts) |
+
+### Step-by-Step Production Deployment
+
+#### 1. Prepare Parameters
+
+Before running anything, collect these values:
+
+```
+Azure Subscription ID:           ________________________________
+SharePoint Tenant ID:            ________________________________
+SharePoint Tenant URL:           https://hydroone.sharepoint.com
+App Client ID (from existing):   ________________________________
+SQL Admin Password:              ________________________________
+Target Sites (comma-separated):  ________________________________
+```
+
+#### 2. Run the Master Script
+
+```powershell
+# Full production deployment
+.\scripts\Deploy-All.ps1 `
+    -Environment "prod" `
+    -Location "canadacentral" `
+    -SubscriptionId "<prod-subscription-id>" `
+    -SharePointTenantId "<sharepoint-tenant-id>" `
+    -SharePointTenantUrl "https://hydroone.sharepoint.com" `
+    -SqlAdminUsername "sqladmin" `
+    -SqlAdminPassword (ConvertTo-SecureString "<strong-password>" -AsPlainText -Force) `
+    -SpecificSites @("/sites/Site1", "/sites/Site2", "/sites/Site3") `
+    -SqlUsername "sqladmin" `
+    -SqlPassword (ConvertTo-SecureString "<strong-password>" -AsPlainText -Force)
+```
+
+#### 3. Post-Deployment Checklist
+
+After `Deploy-All.ps1` completes with all steps `[SUCCESS]`, verify:
+
+- [ ] All 6 ADF pipelines visible in ADF Studio > Author > Pipelines
+- [ ] All 4 linked services test connection successfully (ADF Studio > Manage > Linked Services)
+- [ ] Control table has rows: `SELECT COUNT(*) FROM dbo.MigrationControl WHERE Status = 'Pending'`
+- [ ] Key Vault has 3 secrets: `sharepoint-client-id`, `sharepoint-client-secret`, `sharepoint-tenant-id`
+- [ ] ADLS container `sharepoint-migration` exists
+- [ ] ADF Managed Identity has Storage Blob Data Contributor + Key Vault Secrets User roles
+- [ ] SQL user `adf-hydroone-migration-prod` has db_datareader + db_datawriter + EXECUTE
+
+#### 4. Enable Private Networking (Production Only)
+
+For production, replace public endpoints with private endpoints:
+
+```bash
+cd terraform/
+
+# Update terraform.tfvars with production values
+# Then:
+terraform init
+terraform plan -out=tfplan
+terraform apply tfplan
+```
+
+This creates:
+- VNet with ADF integration subnet
+- Private endpoints for ADLS Gen2, Azure SQL, Key Vault
+- Private DNS zones for `.blob.core.windows.net`, `.database.windows.net`, `.vault.azure.net`
+
+After applying, disable public network access:
+
+```bash
+az storage account update --name sthydroonemigprod --resource-group rg-hydroone-migration-prod --public-network-access Disabled
+az sql server update --name sql-hydroone-migration-prod --resource-group rg-hydroone-migration-prod --enable-public-network false
+az keyvault update --name kv-hydroone-mig-prod --resource-group rg-hydroone-migration-prod --public-network-access Disabled
+```
+
+See `docs/terraform-private-endpoints.md` for full instructions.
+
+#### 5. Configure Monitoring Alerts
+
+Set up Azure Monitor alerts for production:
+
+```bash
+# Alert on ADF pipeline failure
+az monitor metrics alert create \
+    --name "ADF-Pipeline-Failure" \
+    --resource-group rg-hydroone-migration-prod \
+    --scopes "/subscriptions/<sub-id>/resourceGroups/rg-hydroone-migration-prod/providers/Microsoft.DataFactory/factories/adf-hydroone-migration-prod" \
+    --condition "total PipelineFailedRuns > 0" \
+    --window-size 5m \
+    --action-group "<action-group-id>"
+```
+
+#### 6. Run Pilot in Production
+
+Before migrating all libraries, run a single small library as a pilot:
+
+```sql
+-- Set everything to Excluded first
+UPDATE dbo.MigrationControl SET Status = 'Excluded' WHERE Status = 'Pending';
+
+-- Enable only one small library
+UPDATE dbo.MigrationControl SET Status = 'Pending'
+WHERE LibraryName = 'Shared Documents' AND SiteUrl = '/sites/SmallestSite';
+
+-- Verify
+SELECT SiteUrl, LibraryName, FileCount, Status FROM dbo.MigrationControl WHERE Status = 'Pending';
+```
+
+Then trigger `PL_Master_Migration_Orchestrator` in ADF Studio > Author > Debug.
+
+#### 7. Scale Up for Bulk Migration
+
+After the pilot succeeds:
+
+```sql
+-- Re-enable all libraries
+UPDATE dbo.MigrationControl SET Status = 'Pending' WHERE Status = 'Excluded';
+
+-- Verify counts
+SELECT Status, COUNT(*) AS LibraryCount FROM dbo.MigrationControl GROUP BY Status;
+```
+
+Run the master pipeline with increased parallelism (set `ParallelLibraries` parameter to 4-8).
+
+#### 8. Set Up Incremental Sync Schedule
+
+After initial migration completes, set up a daily trigger:
+
+1. ADF Studio > Manage > Triggers > New
+2. Type: Schedule
+3. Recurrence: Daily at 2:00 AM EST
+4. Pipeline: `PL_Incremental_Sync`
+5. Publish and activate
+
+### Production Troubleshooting
+
+| Symptom | Check | Fix |
+|---------|-------|-----|
+| Pipeline hangs at token acquisition | Key Vault accessible? Secret expired? | Check KV firewall, regenerate secret |
+| Throttling (HTTP 429) | Graph API rate limit hit | Reduce `ParallelLibraries`, increase `ThrottleDelaySeconds`, request limit increase from Microsoft |
+| Files copied but audit log empty | SQL connectivity from ADF | Test LS_AzureSqlDatabase connection, check firewall |
+| Incremental sync finds 0 changes | Normal if nothing changed | Check `IncrementalWatermark.LastSyncTime` is recent |
+| ADF Managed Identity error | Identity not assigned | Run `az datafactory update --name <adf> --resource-group <rg> --identity-type SystemAssigned` |
+| SQL timeout during bulk migration | S1 tier too small | Scale up: `az sql db update --name MigrationControl --server <sql> --resource-group <rg> --service-objective S2` |
+
+---
+
+## All Scripts Reference
+
+| Script | Purpose | Key Parameters |
+|--------|---------|----------------|
+| `Deploy-All.ps1` | Master deployment — runs Steps 1-9 end-to-end | `-Environment`, `-SubscriptionId`, `-SharePointTenantId`, `-StartFromStep`, `-StopAfterStep` |
+| `Setup-AzureResources.ps1` | Creates all Azure resources (RG, ADF, ADLS, SQL, KV) with RBAC | `-Environment`, `-Location`, `-SubscriptionId`, `-SqlAdminPassword` |
+| `Register-SharePointApp.ps1` | Creates Azure AD app registration, client secret, stores in Key Vault | `-TenantId`, `-KeyVaultName`, `-AppDisplayName`, `-SecretValidityYears` |
+| `Grant-DelegatedPermissions.ps1` | Adds delegated SharePoint/Graph permissions for PnP PowerShell | `-AppId`, `-TenantId`, `-SkipLogin`, `-SkipConsent` |
+| `Populate-ControlTable.ps1` | Enumerates SharePoint sites/libraries and populates SQL control table | `-SharePointTenantUrl`, `-ClientId`, `-SqlServerName`, `-SpecificSites`, `-SqlUsername`, `-SqlPassword` |
+| `Deploy-ADF-Templates.sh` | Deploys ADF ARM templates in dependency order (bash) | `--factory`, `--resource-group`, `--storage-account`, `--sql-server` |
+| `Monitor-Migration.ps1` | Real-time migration progress dashboard (continuous or one-shot) | `-ResourceGroupName`, `-DataFactoryName`, `-SqlServerName`, `-ContinuousMonitor` |
+| `Validate-Migration.ps1` | Post-migration validation: compares SP file counts/sizes with ADLS | `-SharePointTenantUrl`, `-StorageAccountName`, `-ContainerName`, `-SqlServerName` |
+
+### Script Execution Order
+
+For a complete deployment, scripts are executed in this order (handled automatically by `Deploy-All.ps1`):
+
+```
+1. Setup-AzureResources.ps1          ─── Creates Azure infrastructure
+2. Register-SharePointApp.ps1        ─── Creates app + secrets
+3. Grant-DelegatedPermissions.ps1    ─── Adds delegated permissions
+   └── (Manual: Admin consent in browser)
+4. (Azure CLI: network/firewall rules)
+5. (sqlcmd: DDL scripts for tables)
+6. (sqlcmd: ADF MI SQL access)
+7. (Azure CLI: ARM template deployments)
+8. Populate-ControlTable.ps1         ─── Fills control table
+9. (Verification checks)
+
+── After deployment ──
+10. (ADF: Run PL_Master_Migration_Orchestrator)
+11. Monitor-Migration.ps1            ─── Watch progress
+12. Validate-Migration.ps1           ─── Verify results
+```
+
+### Known Issues Fixed (May 2026)
+
+These bugs were identified and fixed in all scripts. If you encounter them, ensure you have the latest version:
+
+| Script | Bug | Symptom | Status |
+|--------|-----|---------|--------|
+| `Setup-AzureResources.ps1` | Missing `-Identity` flag on `Set-AzDataFactoryV2` | ADF created without Managed Identity, script crashes at RBAC step with null PrincipalId | **Fixed** |
+| `Setup-AzureResources.ps1` | `-ErrorAction SilentlyContinue` on RBAC | Real RBAC errors silently swallowed | **Fixed** |
+| `Register-SharePointApp.ps1` | `Get-AzADApplication -DisplayName` does startsWith match | Could return wrong app if names overlap (e.g., "MyApp" matches "MyApp-2") | **Fixed** |
+| `Register-SharePointApp.ps1` | `$secret.SecretText` null on older Az modules | Script continues with null secret, Key Vault store fails | **Fixed** |
+| `Monitor-Migration.ps1` | DBNull from SQL used in arithmetic (`-gt`, division) | "Cannot compare because it is not IComparable" crash | **Fixed** |
+| `Monitor-Migration.ps1` | `.ErrorMessage.Substring()` on null/DBNull | Null reference crash when ErrorMessage column is NULL | **Fixed** |
+| `Monitor-Migration.ps1` | `$Failures.Count` unreliable for single DataRow | `.Count` returns column count instead of row count | **Fixed** |
+| `Validate-Migration.ps1` | `Connect-PnPOnline -ErrorAction SilentlyContinue` | PnP connection failures silently ignored, script continues with stale connection | **Fixed** |
+| `Validate-Migration.ps1` | SQL injection in UPDATE query | Unsanitized `$result.Status` interpolated into SQL | **Fixed** |
+| `Validate-Migration.ps1` | `Measure-Object -Sum` returns null when no blobs | Null `.Sum` used in arithmetic | **Fixed** |
+| `Deploy-All.ps1` | `$plainPw` variable not in scope in Step 9 | Crash during verification when using SQL auth | **Fixed** |
+| `Deploy-All.ps1` | Bare `if` expressions in hashtable values | PowerShell syntax error: `if` is a statement, not an expression | **Fixed** |
+| `Deploy-All.ps1` | `[int]$null` cast when az CLI returns empty | Cast crash when ADF/pipelines don't exist yet | **Fixed** |
+| `Grant-DelegatedPermissions.ps1` | `$Args` parameter shadows PowerShell automatic variable | `$Args` is always overwritten by PowerShell; function gets wrong values | **Fixed** |
+| `Grant-DelegatedPermissions.ps1` | `--show-resource-name` invalid flag on `list-grants` | Azure CLI error on verification step | **Fixed** |
+| `Populate-ControlTable.ps1` | `CHARACTER_MAXIMUM_LENGTH` DBNull in `-gt` comparison | "Cannot compare because it is not IComparable" crash | **Fixed** |
+| `Populate-ControlTable.ps1` | `[long](if ...)` PowerShell cast syntax | `if` is not an expression; needs `[long]$(if ...)` | **Fixed** |
+| `Populate-ControlTable.ps1` | `switch` fall-through returning array | "Cannot convert System.Object[] to System.Int32" | **Fixed** |
+| `Populate-ControlTable.ps1` | Hardcoded `Auth=AD Integrated` in diagnostic logs | Logs showed wrong auth mode when using SQL auth | **Fixed** |
+
+---
+
 ## Documentation
 
 ### Core Documentation
@@ -1222,6 +1681,15 @@ For the detailed week-by-week plan, task assignments, risk register, and RACI ma
 | [SQL Schema Reference](docs/sql-schema.md) | ER diagram, table descriptions, stored procedures, computed columns, and indexes |
 | [FAQ](docs/faq.md) | Frequently asked questions covering migration operations, troubleshooting, and security |
 | [Changelog](docs/changelog.md) | Version history documenting the evolution from v1.0 to the current production-ready POC |
+
+### Getting Help
+
+- **Script errors**: Check the timestamped log file in the `scripts/` directory. Every script generates a detailed log.
+- **ADF pipeline errors**: ADF Monitor > Pipeline runs > Click failed run > Activity runs > Click error icon
+- **SQL errors**: Query `dbo.MigrationAuditLog WHERE MigrationStatus = 'Failed'` for per-file details
+- **Detailed troubleshooting**: See `docs/debugging.md` for error-code-indexed resolution steps
+- **FAQ**: See `docs/faq.md` for common questions about pausing, resuming, retrying, and skipping
+- **Architecture decisions**: See `docs/architecture-decisions.md` for why specific patterns were chosen
 
 ---
 
