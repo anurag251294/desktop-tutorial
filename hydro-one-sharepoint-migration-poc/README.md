@@ -1164,7 +1164,7 @@ ORDER BY Status, SiteUrl;
 ```sql
 -- File-level migration results
 SELECT FileName, SourcePath, DestinationPath, MigrationStatus,
-    FileSize, ErrorMessage, [Timestamp]
+    FileSizeBytes, FileSizeMB, ErrorDetails, [Timestamp]
 FROM dbo.MigrationAuditLog
 ORDER BY [Timestamp] DESC;
 
@@ -1172,7 +1172,7 @@ ORDER BY [Timestamp] DESC;
 SELECT MigrationStatus, COUNT(*) AS FileCount
 FROM dbo.MigrationAuditLog
 GROUP BY MigrationStatus;
--- Expected: all 'Succeeded', 0 'Failed'
+-- Expected: all 'Success', 0 'Failed'
 ```
 
 #### 10d. Verify Files in ADLS
