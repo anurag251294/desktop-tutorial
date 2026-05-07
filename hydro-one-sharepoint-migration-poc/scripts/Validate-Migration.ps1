@@ -81,7 +81,7 @@ function Write-Log {
 
     # Also log to file if path specified
     if ($script:LogFile) {
-        "[$timestamp] [$Level] $Message" | Out-File $script:LogFile -Append
+        "[$timestamp] [$Level] $Message" | Out-File $script:LogFile -Append -Encoding UTF8
     }
 }
 
@@ -312,7 +312,7 @@ foreach ($library in $libraries) {
 
     $validationResults += $result
 
-    # Update validation status in SQL (parameterized via SQLCMD variables to prevent injection)
+    # Update validation status in SQL (values sanitized via single-quote doubling)
     $safeStatus = $result.Status -replace "'", "''"
     $safeDetails = $result.Details -replace "'", "''"
     $updateQuery = @"

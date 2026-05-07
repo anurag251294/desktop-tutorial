@@ -266,7 +266,7 @@ if (Should-RunStep 3) {
     Write-Step ""
     Write-Step "========== STEP 3/9: Admin Consent (MANUAL STEP) ==========" "HEADER"
 
-    if ($ClientId) {
+    if ($ClientId -and $SharePointTenantId) {
         $consentUrl = "https://login.microsoftonline.com/$SharePointTenantId/adminconsent?client_id=$ClientId"
         Write-Step "Opening admin consent page in your browser..." "WARNING"
         Write-Step "URL: $consentUrl"
@@ -281,6 +281,14 @@ if (Should-RunStep 3) {
         Read-Host "`nPress ENTER after granting admin consent to continue"
         Write-Step "Admin consent acknowledged." "SUCCESS"
         $stepResults[3] = "SUCCESS"
+    }
+    elseif ($ClientId -and -not $SharePointTenantId) {
+        Write-Step "Client ID is available but -SharePointTenantId was not provided." "WARNING"
+        Write-Step "Cannot construct consent URL without the tenant ID." "WARNING"
+        Write-Step "Grant admin consent manually in Azure Portal:" "WARNING"
+        Write-Step "  https://portal.azure.com > Azure AD > App registrations > HydroOne-SPO-Migration > API permissions > Grant admin consent" "WARNING"
+        Read-Host "`nPress ENTER after granting admin consent to continue"
+        $stepResults[3] = "MANUAL"
     }
     else {
         Write-Step "Client ID not available. Grant admin consent manually:" "WARNING"
@@ -363,7 +371,9 @@ if (Should-RunStep 5) {
                     [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($SqlAdminPassword))
             }
             else {
-                Read-Host "Enter SQL password for '$SqlUsername'"
+                [System.Runtime.InteropServices.Marshal]::PtrToStringAuto(
+                    [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR(
+                        (Read-Host "Enter SQL password for '$SqlUsername'" -AsSecureString)))
             }
             $sqlAuthArgs = @("-U", $SqlUsername, "-P", $plainPw)
             Write-Step "Using SQL authentication (user: $SqlUsername)"
@@ -500,7 +510,7 @@ if (Should-RunStep 7) {
                 Write-Step "  Deploying $ls..."
                 $lsParams = @("--resource-group", $rgName, "--template-file", $lsFile, "--parameters", "factoryName=$adfName")
                 # Add extra params for specific linked services
-                if ($ls -eq "LS_KeyVault") { $lsParams += @("keyVaultName=$kvName", "keyVaultResourceGroup=$rgName", "subscriptionId=$SubscriptionId") }
+                if ($ls -eq "LS_KeyVault") { $lsParams += @("keyVaultName=$kvName") }
                 if ($ls -eq "LS_AzureBlobStorage") { $lsParams += @("storageAccountName=$storageName") }
                 if ($ls -eq "LS_AzureSqlDatabase") { $lsParams += @("sqlServerName=$sqlServer", "sqlDatabaseName=$sqlDatabase") }
                 az deployment group create @lsParams --name "ls-$(($ls -replace '_','-').ToLower())" -o none 2>&1 | ForEach-Object { Write-Step "    $_" }

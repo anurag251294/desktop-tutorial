@@ -127,6 +127,18 @@
                                             "ThrottleDelaySeconds": {
                                                 "value": "@pipeline().parameters.ThrottleDelaySeconds",
                                                 "type": "Expression"
+                                            },
+                                            "ServicePrincipalId": {
+                                                "value": "@pipeline().parameters.ServicePrincipalId",
+                                                "type": "Expression"
+                                            },
+                                            "ServicePrincipalTenantId": {
+                                                "value": "@pipeline().parameters.ServicePrincipalTenantId",
+                                                "type": "Expression"
+                                            },
+                                            "KeyVaultUrl": {
+                                                "value": "@pipeline().parameters.KeyVaultUrl",
+                                                "type": "Expression"
                                             }
                                         }
                                     }
@@ -303,7 +315,19 @@
                     },
                     "SharePointTenantUrl": {
                         "type": "string",
-                        "defaultValue": "https://m365x52073746.sharepoint.com"
+                        "defaultValue": "https://hydroone.sharepoint.com"
+                    },
+                    "ServicePrincipalId": {
+                        "type": "string",
+                        "defaultValue": ""
+                    },
+                    "ServicePrincipalTenantId": {
+                        "type": "string",
+                        "defaultValue": ""
+                    },
+                    "KeyVaultUrl": {
+                        "type": "string",
+                        "defaultValue": ""
                     },
                     "PageSize": {
                         "type": "int",

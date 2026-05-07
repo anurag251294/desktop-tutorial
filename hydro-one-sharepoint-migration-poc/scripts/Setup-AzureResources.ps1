@@ -291,7 +291,7 @@ try {
         location            = $Location
         environment         = $Environment
         deployedAt          = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
-    } | ConvertTo-Json | Out-File $outputPath
+    } | ConvertTo-Json | Out-File $outputPath -Encoding UTF8
 
     Write-Log "Deployment details saved to: $outputPath" -Level "SUCCESS"
     Write-Log "Setup completed successfully!" -Level "SUCCESS"

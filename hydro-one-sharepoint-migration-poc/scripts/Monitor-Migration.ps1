@@ -259,18 +259,23 @@ try {
             Write-Log "MIGRATION PROGRESS REPORT" -Level "HEADER"
             Write-Log "========================================" -Level "HEADER"
 
+            # Guard against DBNull from SQL
+            $rptFailed = if ($progress.FailedLibraries -is [System.DBNull] -or $null -eq $progress.FailedLibraries) { 0 } else { [int]$progress.FailedLibraries }
+            $rptFailedFiles = if ($progress.FailedFiles -is [System.DBNull] -or $null -eq $progress.FailedFiles) { 0 } else { [int]$progress.FailedFiles }
+            $rptMigratedBytes = if ($progress.MigratedFileSizeBytes -is [System.DBNull] -or $null -eq $progress.MigratedFileSizeBytes) { 0 } else { [long]$progress.MigratedFileSizeBytes }
+
             Write-Log "Library Progress:" -Level "INFO"
             Write-Log "  Total Libraries: $($progress.TotalLibraries)" -Level "INFO"
             Write-Log "  Completed: $($progress.CompletedLibraries)" -Level "SUCCESS"
             Write-Log "  In Progress: $($progress.InProgressLibraries)" -Level "INFO"
-            Write-Log "  Failed: $($progress.FailedLibraries)" -Level $(if ($progress.FailedLibraries -gt 0) { "ERROR" } else { "INFO" })
+            Write-Log "  Failed: $rptFailed" -Level $(if ($rptFailed -gt 0) { "ERROR" } else { "INFO" })
             Write-Log "  Pending: $($progress.PendingLibraries)" -Level "INFO"
 
             Write-Log "" -Level "INFO"
             Write-Log "File Progress:" -Level "INFO"
             Write-Log "  Successful Files: $($progress.SuccessfulFiles)" -Level "SUCCESS"
-            Write-Log "  Failed Files: $($progress.FailedFiles)" -Level $(if ($progress.FailedFiles -gt 0) { "ERROR" } else { "INFO" })
-            Write-Log "  Migrated Size: $([math]::Round($progress.MigratedFileSizeBytes / 1GB, 2)) GB" -Level "INFO"
+            Write-Log "  Failed Files: $rptFailedFiles" -Level $(if ($rptFailedFiles -gt 0) { "ERROR" } else { "INFO" })
+            Write-Log "  Migrated Size: $([math]::Round($rptMigratedBytes / 1GB, 2)) GB" -Level "INFO"
 
             Write-Log "" -Level "INFO"
             Write-Log "Pipeline Runs (Last $HoursBack hours):" -Level "INFO"
