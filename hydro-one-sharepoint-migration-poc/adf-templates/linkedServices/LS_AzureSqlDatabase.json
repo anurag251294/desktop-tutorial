@@ -39,10 +39,6 @@
                 "typeProperties": {
                     "connectionString": "[concat('Server=tcp:', parameters('sqlServerName'), '.database.windows.net,1433;Initial Catalog=', parameters('sqlDatabaseName'), ';')]",
                     "authenticationType": "ManagedIdentity"
-                },
-                "connectVia": {
-                    "referenceName": "AutoResolveIntegrationRuntime",
-                    "type": "IntegrationRuntimeReference"
                 }
             }
         }
