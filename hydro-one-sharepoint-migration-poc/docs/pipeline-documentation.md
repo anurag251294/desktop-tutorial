@@ -1082,7 +1082,35 @@ The `usp_UpdateWatermark` stored procedure is updated to accept `@DeltaLink` and
 - Throughput metrics (GB/hour)
 - Continuous refresh mode
 
-### 12.4 Validate-Migration.ps1
+### 12.4 Populate-ControlTable.ps1
+
+**File:** `scripts/Populate-ControlTable.ps1`
+
+**Purpose:** Enumerates SharePoint Online sites and document libraries via PnP PowerShell, calculates file counts and sizes, and upserts records into the `MigrationControl` SQL table. Includes comprehensive pre-flight diagnostics and detailed logging.
+
+**Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `-SharePointTenantUrl` | String | Tenant root URL (e.g. `https://hydroone.sharepoint.com`) |
+| `-ClientId` | String | Azure AD App Registration Client ID |
+| `-SqlServerName` | String | Azure SQL server name (without `.database.windows.net`) |
+| `-SqlDatabaseName` | String | SQL database name |
+| `-SpecificSites` | String[] | Array of site paths to target (optional) |
+| `-ExcludeSites` | String[] | Array of site paths to skip (optional) |
+| `-CertificateThumbprint` | String | Certificate thumbprint for non-interactive auth (optional) |
+| `-TenantId` | String | Azure AD tenant ID, required with `-CertificateThumbprint` (optional) |
+| `-SqlUsername` | String | SQL login username for SQL auth (optional) |
+| `-SqlPassword` | SecureString | SQL login password (optional) |
+
+**Key Features:**
+- 6-step SQL pre-flight check (DNS, TCP, auth, table, permissions, INSERT dry-run)
+- Network connectivity tests (login.microsoftonline.com, graph.microsoft.com, SharePoint)
+- Automatic priority assignment based on library size
+- Upsert pattern (IF NOT EXISTS / ELSE) — safe to re-run
+- Timestamped log file output: `Populate-ControlTable_YYYYMMDD_HHmmss.log`
+- Supports both Azure AD Integrated and SQL authentication
+
+### 12.5 Validate-Migration.ps1
 
 **File:** `scripts/Validate-Migration.ps1`
 

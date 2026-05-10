@@ -19,14 +19,17 @@ BEGIN
 END
 GO
 
--- Drop table if exists (for clean deployment)
+-- Create MigrationControl table
+-- NOTE: This drops and recreates the table. For production re-runs where data must be
+-- preserved, comment out the DROP block below and use ALTER TABLE to add new columns.
 IF OBJECT_ID('dbo.MigrationControl', 'U') IS NOT NULL
 BEGIN
+    IF EXISTS (SELECT 1 FROM dbo.MigrationControl)
+        PRINT 'WARNING: dbo.MigrationControl has data. Dropping and recreating will DESTROY existing rows.'
     DROP TABLE dbo.MigrationControl
 END
 GO
 
--- Create MigrationControl table
 CREATE TABLE dbo.MigrationControl
 (
     -- Primary Key
@@ -83,7 +86,7 @@ CREATE TABLE dbo.MigrationControl
 
     -- Constraints
     CONSTRAINT UQ_MigrationControl_SiteLibrary UNIQUE (SiteUrl, LibraryName),
-    CONSTRAINT CK_MigrationControl_Status CHECK (Status IN ('Pending', 'InProgress', 'Completed', 'Failed', 'Skipped', 'Paused')),
+    CONSTRAINT CK_MigrationControl_Status CHECK (Status IN ('Pending', 'InProgress', 'Completed', 'Failed', 'Skipped', 'Paused', 'Excluded')),
     CONSTRAINT CK_MigrationControl_ValidationStatus CHECK (ValidationStatus IS NULL OR ValidationStatus IN ('Pending', 'Validated', 'Discrepancy'))
 )
 GO
@@ -107,6 +110,8 @@ GO
 -- Create IncrementalWatermark table for tracking delta sync
 IF OBJECT_ID('dbo.IncrementalWatermark', 'U') IS NOT NULL
 BEGIN
+    IF EXISTS (SELECT 1 FROM dbo.IncrementalWatermark)
+        PRINT 'WARNING: dbo.IncrementalWatermark has data. Dropping and recreating will DESTROY existing rows.'
     DROP TABLE dbo.IncrementalWatermark
 END
 GO
@@ -116,9 +121,11 @@ CREATE TABLE dbo.IncrementalWatermark
     Id                  INT IDENTITY(1,1) PRIMARY KEY,
     SiteUrl             NVARCHAR(500) NOT NULL,
     LibraryName         NVARCHAR(255) NOT NULL,
-    LastModifiedDate    DATETIME2 NOT NULL,          -- High watermark for modified date filter
-    LastSyncTime        DATETIME2 NOT NULL,          -- When sync was performed
-    FilesProcessed      INT NULL,                    -- Files processed in last sync
+    DriveId             NVARCHAR(100) NULL,           -- Graph API drive ID for the library
+    DeltaLink           NVARCHAR(MAX) NULL,            -- @odata.deltaLink for incremental sync
+    LastModifiedDate    DATETIME2 NOT NULL,             -- High watermark for modified date filter
+    LastSyncTime        DATETIME2 NOT NULL,             -- When sync was performed
+    FilesProcessed      INT NULL,                       -- Files processed in last sync
 
     CONSTRAINT UQ_IncrementalWatermark_SiteLibrary UNIQUE (SiteUrl, LibraryName)
 )
@@ -305,7 +312,9 @@ CREATE PROCEDURE dbo.usp_UpdateWatermark
     @SiteUrl NVARCHAR(500),
     @LibraryName NVARCHAR(255),
     @LastModifiedDate DATETIME2,
-    @LastSyncTime DATETIME2
+    @LastSyncTime DATETIME2,
+    @DeltaLink NVARCHAR(MAX) = NULL,
+    @DriveId NVARCHAR(100) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -316,10 +325,12 @@ BEGIN
     WHEN MATCHED THEN
         UPDATE SET
             LastModifiedDate = @LastModifiedDate,
-            LastSyncTime = @LastSyncTime
+            LastSyncTime = @LastSyncTime,
+            DeltaLink = ISNULL(@DeltaLink, target.DeltaLink),
+            DriveId = ISNULL(@DriveId, target.DriveId)
     WHEN NOT MATCHED THEN
-        INSERT (SiteUrl, LibraryName, LastModifiedDate, LastSyncTime)
-        VALUES (@SiteUrl, @LibraryName, @LastModifiedDate, @LastSyncTime);
+        INSERT (SiteUrl, LibraryName, LastModifiedDate, LastSyncTime, DeltaLink, DriveId)
+        VALUES (@SiteUrl, @LibraryName, @LastModifiedDate, @LastSyncTime, @DeltaLink, @DriveId);
 END
 GO
 

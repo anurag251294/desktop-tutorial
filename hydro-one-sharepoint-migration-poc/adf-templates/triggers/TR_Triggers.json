@@ -40,6 +40,10 @@
                             "ParallelLibraries": 4,
                             "MaxRetries": 3,
                             "TargetContainerName": "sharepoint-migration",
+                            "SharePointTenantUrl": "https://hydroone.sharepoint.com",
+                            "ServicePrincipalId": "[REPLACE_WITH_APP_CLIENT_ID]",
+                            "ServicePrincipalTenantId": "[REPLACE_WITH_SP_TENANT_ID]",
+                            "KeyVaultUrl": "[REPLACE_WITH_KEYVAULT_URL]",
                             "PageSize": 200,
                             "CopyBatchCount": 10,
                             "ThrottleDelaySeconds": 2
@@ -78,6 +82,9 @@
                     "parameters": {
                         "SharePointTenantUrl": "https://hydroone.sharepoint.com",
                         "ContainerName": "sharepoint-migration",
+                        "ServicePrincipalId": "[REPLACE_WITH_APP_CLIENT_ID]",
+                        "ServicePrincipalTenantId": "[REPLACE_WITH_SP_TENANT_ID]",
+                        "KeyVaultUrl": "[REPLACE_WITH_KEYVAULT_URL]",
                         "PageSize": 200,
                         "ThrottleDelaySeconds": 2,
                         "CopyBatchCount": 10
@@ -168,6 +175,10 @@
                             "ParallelLibraries": 8,
                             "MaxRetries": 3,
                             "TargetContainerName": "sharepoint-migration",
+                            "SharePointTenantUrl": "https://hydroone.sharepoint.com",
+                            "ServicePrincipalId": "[REPLACE_WITH_APP_CLIENT_ID]",
+                            "ServicePrincipalTenantId": "[REPLACE_WITH_SP_TENANT_ID]",
+                            "KeyVaultUrl": "[REPLACE_WITH_KEYVAULT_URL]",
                             "PageSize": 200,
                             "CopyBatchCount": 10,
                             "ThrottleDelaySeconds": 2

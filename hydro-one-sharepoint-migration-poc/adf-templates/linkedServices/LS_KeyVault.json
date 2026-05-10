@@ -13,18 +13,6 @@
             "metadata": {
                 "description": "Name of the Azure Key Vault"
             }
-        },
-        "keyVaultResourceGroup": {
-            "type": "string",
-            "metadata": {
-                "description": "Resource group containing the Key Vault"
-            }
-        },
-        "subscriptionId": {
-            "type": "string",
-            "metadata": {
-                "description": "Azure Subscription ID"
-            }
         }
     },
     "resources": [

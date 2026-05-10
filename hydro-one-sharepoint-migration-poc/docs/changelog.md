@@ -5,7 +5,34 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [2.0] - 2026-02-18 (Current - Production-Ready POC)
+## [2.1] - 2026-05-06 (Current - Populate-ControlTable Hardening)
+
+### Fixed
+
+- **CRITICAL: SQL upsert never executed** — `Insert-ControlTableRecord` used T-SQL `@VarName` parameter syntax, but `Invoke-Sqlcmd -Variable` requires SQLCMD `$(VarName)` syntax. Variables were never substituted, causing every INSERT to fail with "Must declare the scalar variable @SiteUrl." Converted to inline SQL with proper `N''` escaping.
+- **Priority calculation returned array** — PowerShell `switch` statement falls through all matching conditions (unlike C#). A library <100 MB matched 3 clauses, returning `@(10, 50, 100)` instead of `10`, causing "Cannot convert System.Object[] to System.Int32." Replaced with `if/elseif/else` chain.
+- **PowerShell subexpression syntax** — `[long](if (...) {...})` and bare `if` in hashtable values are invalid in PowerShell. Wrapped in `$(...)` subexpressions.
+- **"Cannot compare '' because it is not IComparable"** — `CHARACTER_MAXIMUM_LENGTH` from `INFORMATION_SCHEMA.COLUMNS` is `DBNull` for non-string columns (int, bigint). Added null and `[System.DBNull]` guards before numeric comparison.
+- **Hardcoded "Auth=AD Integrated" in diagnostic logs** — Two log lines always showed "AD Integrated" even when using SQL auth. Now uses the `$sqlAuthMode` variable.
+
+### Added
+
+- **SQL Authentication support** — New `-SqlUsername` and `-SqlPassword` parameters for environments where Azure AD Integrated auth fails (ADFS/federated).
+- **Extensive pre-flight diagnostics** — 6-step SQL validation (DNS, TCP, auth, table, permissions, INSERT dry-run with ROLLBACK).
+- **Network connectivity tests** — Validates HTTPS access to `login.microsoftonline.com`, `graph.microsoft.com`, and SharePoint before attempting connections.
+- **Timestamped log files** — Every run writes to `Populate-ControlTable_YYYYMMDD_HHmmss.log` with full environment info, per-site/library detail, and exception stack traces.
+- **Smart tenant URL detection** — Auto-extracts site path from tenant URL when customer passes a site URL (e.g. `https://hydroone.sharepoint.com/sites/MySite`) as `-SharePointTenantUrl`.
+- **JWT token inspection** — `Inspect-PnPAccessToken` decodes and logs access token claims for permission diagnostics.
+- **Certificate store validation** — `Test-CertificateInStore` verifies certificate existence, private key, and expiry.
+
+### Changed
+
+- Updated README Step 8 with detailed sub-steps (8a–8g): prerequisites, firewall rules, three authentication options, parameter reference, common errors table.
+- Updated `docs/scripts-reference.md` with new parameters and examples for `Populate-ControlTable.ps1`.
+
+---
+
+## [2.0] - 2026-02-18 (Production-Ready POC)
 
 ### End-to-End Validated
 

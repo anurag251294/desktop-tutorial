@@ -166,9 +166,9 @@ function Show-Dashboard {
     Write-Host "╚══════════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
     Write-Host ""
 
-    # Library Progress
-    $totalLibraries = $Progress.TotalLibraries
-    $completedLibraries = $Progress.CompletedLibraries
+    # Library Progress (guard against DBNull from SQL)
+    $totalLibraries = if ($Progress.TotalLibraries -is [System.DBNull] -or $null -eq $Progress.TotalLibraries) { 0 } else { [int]$Progress.TotalLibraries }
+    $completedLibraries = if ($Progress.CompletedLibraries -is [System.DBNull] -or $null -eq $Progress.CompletedLibraries) { 0 } else { [int]$Progress.CompletedLibraries }
     $libraryPercent = if ($totalLibraries -gt 0) { [math]::Round(($completedLibraries / $totalLibraries) * 100, 1) } else { 0 }
 
     Write-Host "📚 LIBRARY MIGRATION PROGRESS" -ForegroundColor Yellow
@@ -176,22 +176,26 @@ function Show-Dashboard {
     Write-Host "   Completed: $completedLibraries / $totalLibraries | In Progress: $($Progress.InProgressLibraries) | Failed: $($Progress.FailedLibraries) | Pending: $($Progress.PendingLibraries)"
     Write-Host ""
 
-    # Size Progress
-    $totalSizeTB = [math]::Round($Progress.TotalSizeBytes / 1TB, 2)
-    $migratedSizeTB = [math]::Round($Progress.MigratedFileSizeBytes / 1TB, 2)
-    $sizePercent = if ($Progress.TotalSizeBytes -gt 0) { [math]::Round(($Progress.MigratedFileSizeBytes / $Progress.TotalSizeBytes) * 100, 1) } else { 0 }
+    # Size Progress (guard against DBNull)
+    $totalSizeBytes = if ($Progress.TotalSizeBytes -is [System.DBNull] -or $null -eq $Progress.TotalSizeBytes) { 0 } else { [long]$Progress.TotalSizeBytes }
+    $migratedSizeBytes = if ($Progress.MigratedFileSizeBytes -is [System.DBNull] -or $null -eq $Progress.MigratedFileSizeBytes) { 0 } else { [long]$Progress.MigratedFileSizeBytes }
+    $totalSizeTB = [math]::Round($totalSizeBytes / 1TB, 2)
+    $migratedSizeTB = [math]::Round($migratedSizeBytes / 1TB, 2)
+    $sizePercent = if ($totalSizeBytes -gt 0) { [math]::Round(($migratedSizeBytes / $totalSizeBytes) * 100, 1) } else { 0 }
 
     Write-Host "💾 DATA MIGRATION PROGRESS" -ForegroundColor Yellow
     Write-Host "   $(Get-ProgressBar -Percent $sizePercent -Width 50)"
     Write-Host "   Migrated: $migratedSizeTB TB / $totalSizeTB TB"
     Write-Host ""
 
-    # File Statistics
+    # File Statistics (guard against DBNull)
+    $successfulFiles = if ($Progress.SuccessfulFiles -is [System.DBNull] -or $null -eq $Progress.SuccessfulFiles) { 0 } else { [int]$Progress.SuccessfulFiles }
+    $failedFiles = if ($Progress.FailedFiles -is [System.DBNull] -or $null -eq $Progress.FailedFiles) { 0 } else { [int]$Progress.FailedFiles }
     Write-Host "📄 FILE STATISTICS" -ForegroundColor Yellow
-    Write-Host "   ✅ Successful: $($Progress.SuccessfulFiles)"
-    Write-Host "   ❌ Failed: $($Progress.FailedFiles)"
-    $fileSuccessRate = if (($Progress.SuccessfulFiles + $Progress.FailedFiles) -gt 0) {
-        [math]::Round(($Progress.SuccessfulFiles / ($Progress.SuccessfulFiles + $Progress.FailedFiles)) * 100, 2)
+    Write-Host "   ✅ Successful: $successfulFiles"
+    Write-Host "   ❌ Failed: $failedFiles"
+    $fileSuccessRate = if (($successfulFiles + $failedFiles) -gt 0) {
+        [math]::Round(($successfulFiles / ($successfulFiles + $failedFiles)) * 100, 2)
     } else { 0 }
     Write-Host "   📊 Success Rate: $fileSuccessRate%"
     Write-Host ""
@@ -202,11 +206,15 @@ function Show-Dashboard {
     Write-Host ""
 
     # Recent Failures
-    if ($Failures -and $Failures.Count -gt 0) {
+    $failureList = @($Failures)
+    if ($failureList.Count -gt 0) {
         Write-Host "⚠️  RECENT FAILURES" -ForegroundColor Red
-        foreach ($failure in $Failures | Select-Object -First 5) {
+        foreach ($failure in $failureList | Select-Object -First 5) {
             Write-Host "   • $($failure.SiteUrl)/$($failure.LibraryName)" -ForegroundColor Red
-            Write-Host "     Retries: $($failure.RetryCount) | Error: $($failure.ErrorMessage.Substring(0, [Math]::Min(50, $failure.ErrorMessage.Length)))..." -ForegroundColor DarkRed
+            $errMsg = if ($failure.ErrorMessage -and $failure.ErrorMessage -isnot [System.DBNull]) {
+                $failure.ErrorMessage.Substring(0, [Math]::Min(50, $failure.ErrorMessage.Length))
+            } else { "(no error message)" }
+            Write-Host "     Retries: $($failure.RetryCount) | Error: $errMsg..." -ForegroundColor DarkRed
         }
     }
     else {
@@ -251,18 +259,23 @@ try {
             Write-Log "MIGRATION PROGRESS REPORT" -Level "HEADER"
             Write-Log "========================================" -Level "HEADER"
 
+            # Guard against DBNull from SQL
+            $rptFailed = if ($progress.FailedLibraries -is [System.DBNull] -or $null -eq $progress.FailedLibraries) { 0 } else { [int]$progress.FailedLibraries }
+            $rptFailedFiles = if ($progress.FailedFiles -is [System.DBNull] -or $null -eq $progress.FailedFiles) { 0 } else { [int]$progress.FailedFiles }
+            $rptMigratedBytes = if ($progress.MigratedFileSizeBytes -is [System.DBNull] -or $null -eq $progress.MigratedFileSizeBytes) { 0 } else { [long]$progress.MigratedFileSizeBytes }
+
             Write-Log "Library Progress:" -Level "INFO"
             Write-Log "  Total Libraries: $($progress.TotalLibraries)" -Level "INFO"
             Write-Log "  Completed: $($progress.CompletedLibraries)" -Level "SUCCESS"
             Write-Log "  In Progress: $($progress.InProgressLibraries)" -Level "INFO"
-            Write-Log "  Failed: $($progress.FailedLibraries)" -Level $(if ($progress.FailedLibraries -gt 0) { "ERROR" } else { "INFO" })
+            Write-Log "  Failed: $rptFailed" -Level $(if ($rptFailed -gt 0) { "ERROR" } else { "INFO" })
             Write-Log "  Pending: $($progress.PendingLibraries)" -Level "INFO"
 
             Write-Log "" -Level "INFO"
             Write-Log "File Progress:" -Level "INFO"
             Write-Log "  Successful Files: $($progress.SuccessfulFiles)" -Level "SUCCESS"
-            Write-Log "  Failed Files: $($progress.FailedFiles)" -Level $(if ($progress.FailedFiles -gt 0) { "ERROR" } else { "INFO" })
-            Write-Log "  Migrated Size: $([math]::Round($progress.MigratedFileSizeBytes / 1GB, 2)) GB" -Level "INFO"
+            Write-Log "  Failed Files: $rptFailedFiles" -Level $(if ($rptFailedFiles -gt 0) { "ERROR" } else { "INFO" })
+            Write-Log "  Migrated Size: $([math]::Round($rptMigratedBytes / 1GB, 2)) GB" -Level "INFO"
 
             Write-Log "" -Level "INFO"
             Write-Log "Pipeline Runs (Last $HoursBack hours):" -Level "INFO"
@@ -271,10 +284,11 @@ try {
             Write-Log "  Failed: $($pipelineRuns.Failed)" -Level $(if ($pipelineRuns.Failed -gt 0) { "ERROR" } else { "INFO" })
             Write-Log "  In Progress: $($pipelineRuns.InProgress)" -Level "INFO"
 
-            if ($failures -and $failures.Count -gt 0) {
+            $failuresList = @($failures)
+            if ($failuresList.Count -gt 0) {
                 Write-Log "" -Level "INFO"
                 Write-Log "Recent Failures:" -Level "ERROR"
-                foreach ($failure in $failures) {
+                foreach ($failure in $failuresList) {
                     Write-Log "  $($failure.SiteUrl)/$($failure.LibraryName) - Retries: $($failure.RetryCount)" -Level "ERROR"
                 }
             }

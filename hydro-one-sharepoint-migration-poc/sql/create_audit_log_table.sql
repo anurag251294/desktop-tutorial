@@ -12,9 +12,13 @@ Project:     Hydro One SharePoint Migration POC
 ================================================================================
 */
 
--- Drop table if exists (for clean deployment)
+-- Create MigrationAuditLog table
+-- NOTE: This drops and recreates the table. For production re-runs where data must be
+-- preserved, comment out the DROP block below and use ALTER TABLE to add new columns.
 IF OBJECT_ID('dbo.MigrationAuditLog', 'U') IS NOT NULL
 BEGIN
+    IF EXISTS (SELECT 1 FROM dbo.MigrationAuditLog)
+        PRINT 'WARNING: dbo.MigrationAuditLog has data. Dropping and recreating will DESTROY existing rows.'
     DROP TABLE dbo.MigrationAuditLog
 END
 GO
@@ -27,7 +31,7 @@ CREATE TABLE dbo.MigrationAuditLog
 
     -- File Information
     FileName                NVARCHAR(500) NOT NULL,              -- Original file name
-    FileExtension           AS RIGHT(FileName, CHARINDEX('.', REVERSE(FileName)) - 1) PERSISTED,  -- Computed extension
+    FileExtension           AS CASE WHEN CHARINDEX('.', FileName) > 0 THEN RIGHT(FileName, CHARINDEX('.', REVERSE(FileName)) - 1) ELSE '' END PERSISTED,  -- Computed extension (safe for files without dots)
     SourcePath              NVARCHAR(2000) NOT NULL,             -- Full SharePoint server-relative path
     DestinationPath         NVARCHAR(2000) NOT NULL,             -- Full ADLS path
 

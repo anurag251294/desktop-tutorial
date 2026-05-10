@@ -896,20 +896,83 @@ VALUES (
 
 ### 8.2 Automated Population (Full Scale)
 
+> **Prerequisites:** Before running this script:
+> - Install modules: `Install-Module PnP.PowerShell, SqlServer -Scope CurrentUser -Force`
+> - Ensure your client IP is added to the SQL Server firewall (see Phase 3, Step 3.5)
+> - Have the Azure AD App Registration Client ID ready (from Phase 2)
+
+**Option A: Specific sites + SQL Authentication (recommended for initial testing)**
+
+Use this when targeting specific sites, especially in ADFS/federated environments where AD Integrated SQL auth fails:
+
 ```powershell
 .\scripts\Populate-ControlTable.ps1 `
     -SharePointTenantUrl "https://{tenant}.sharepoint.com" `
+    -ClientId "<your-app-client-id>" `
+    -SpecificSites @("/sites/MySite1", "/sites/MySite2") `
     -SqlServerName "sql-hydroone-migration-{env}" `
     -SqlDatabaseName "MigrationControl" `
-    -UseInteractiveAuth
+    -SqlUsername "sqladmin" `
+    -SqlPassword (ConvertTo-SecureString "YourPassword" -AsPlainText -Force)
 ```
 
+**Option B: All sites + Azure AD Integrated SQL auth**
+
+```powershell
+.\scripts\Populate-ControlTable.ps1 `
+    -SharePointTenantUrl "https://{tenant}.sharepoint.com" `
+    -ClientId "<your-app-client-id>" `
+    -SqlServerName "sql-hydroone-migration-{env}" `
+    -SqlDatabaseName "MigrationControl"
+```
+
+**Option C: Certificate-based auth (non-interactive / automation)**
+
+```powershell
+.\scripts\Populate-ControlTable.ps1 `
+    -SharePointTenantUrl "https://{tenant}.sharepoint.com" `
+    -ClientId "<your-app-client-id>" `
+    -CertificateThumbprint "<thumbprint>" `
+    -TenantId "<sharepoint-tenant-id>" `
+    -SpecificSites @("/sites/MySite1") `
+    -SqlServerName "sql-hydroone-migration-{env}" `
+    -SqlDatabaseName "MigrationControl" `
+    -SqlUsername "sqladmin" `
+    -SqlPassword (ConvertTo-SecureString "YourPassword" -AsPlainText -Force)
+```
+
+**Parameters:**
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `-SharePointTenantUrl` | Yes | Tenant root URL (e.g. `https://hydroone.sharepoint.com`). Do **not** include `/sites/...`. |
+| `-ClientId` | Yes | Azure AD App Registration Client ID with `Sites.Read.All` permission |
+| `-SqlServerName` | Yes | Azure SQL server name (without `.database.windows.net`) |
+| `-SqlDatabaseName` | Yes | SQL database name (e.g. `MigrationControl`) |
+| `-SpecificSites` | No | Array of site paths, e.g. `@("/sites/MySite")`. If omitted, enumerates all sites via admin center. |
+| `-ExcludeSites` | No | Array of site paths to skip |
+| `-CertificateThumbprint` | No | Certificate thumbprint for non-interactive PnP auth |
+| `-TenantId` | No | Azure AD tenant ID (required with `-CertificateThumbprint`) |
+| `-SqlUsername` | No | SQL login username (use in ADFS/federated environments) |
+| `-SqlPassword` | No | SQL login password (SecureString) |
+
 This script:
-1. Connects to SharePoint Online
-2. Enumerates all site collections
-3. Lists all document libraries per site
-4. Gets file counts and sizes
-5. Inserts records into `MigrationControl` table
+1. Runs a 6-step SQL pre-flight check (DNS, TCP, auth, table, permissions, INSERT dry-run)
+2. Tests network connectivity to `login.microsoftonline.com`, `graph.microsoft.com`, and SharePoint
+3. Connects to SharePoint Online via PnP PowerShell
+4. Enumerates all site collections (or uses `-SpecificSites`)
+5. Lists all document libraries per site (skipping system libraries)
+6. Gets file counts, folder counts, total size, and largest file per library
+7. Assigns priority based on size (<100 MB → P10, <1 GB → P50, <10 GB → P100, >10 GB → P200)
+8. Upserts records into `MigrationControl` table (safe to re-run)
+
+**Output:** Every run writes a timestamped log file: `Populate-ControlTable_YYYYMMDD_HHmmss.log`
+
+> **Troubleshooting:** If the script fails, check the log file for detailed diagnostics. Common errors:
+> - `Client with IP address 'x.x.x.x' is not allowed` → Add SQL firewall rule
+> - `Failed to authenticate NT Authority\Anonymous Logon` → Use `-SqlUsername`/`-SqlPassword`
+> - `(404) Not Found` → Verify `-SharePointTenantUrl` is the tenant root, use `-SpecificSites` for site paths
+> - `No such host is known` → Verify SQL server name with `nslookup <server>.database.windows.net`
 
 ### 8.3 Verify Control Table
 

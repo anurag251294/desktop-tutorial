@@ -81,7 +81,7 @@ function Write-Log {
 
     # Also log to file if path specified
     if ($script:LogFile) {
-        "[$timestamp] [$Level] $Message" | Out-File $script:LogFile -Append
+        "[$timestamp] [$Level] $Message" | Out-File $script:LogFile -Append -Encoding UTF8
     }
 }
 
@@ -133,7 +133,8 @@ function Get-ADLSTotalSize {
         $ctx = New-AzStorageContext -StorageAccountName $StorageAccountName -UseConnectedAccount
         $blobs = Get-AzStorageBlob -Container $ContainerName -Context $ctx -Prefix $FolderPath
 
-        $totalSize = ($blobs | Measure-Object -Property Length -Sum).Sum
+        $measure = $blobs | Measure-Object -Property Length -Sum
+        $totalSize = if ($measure.Sum) { $measure.Sum } else { 0 }
         return $totalSize
     }
     catch {
@@ -239,7 +240,17 @@ foreach ($library in $libraries) {
     try {
         # Connect to SharePoint site
         $fullSiteUrl = "$SharePointTenantUrl$siteUrl"
-        Connect-PnPOnline -Url $fullSiteUrl -Interactive -ErrorAction SilentlyContinue
+        try {
+            Connect-PnPOnline -Url $fullSiteUrl -Interactive -ErrorAction Stop
+        }
+        catch {
+            Write-Log "  Failed to connect to SharePoint site: $fullSiteUrl — $_" -Level "ERROR"
+            $result.Status = "ERROR"
+            $result.Details = "PnP connection failed: $($_.Exception.Message)"
+            $failedCount++
+            $validationResults += $result
+            continue
+        }
 
         # Get current SharePoint file count
         $spFileCount = Get-SharePointFileCount -SiteUrl $fullSiteUrl -LibraryName $libraryName
@@ -301,15 +312,22 @@ foreach ($library in $libraries) {
 
     $validationResults += $result
 
-    # Update validation status in SQL
+    # Update validation status in SQL (values sanitized via single-quote doubling)
+    $safeStatus = $result.Status -replace "'", "''"
+    $safeDetails = $result.Details -replace "'", "''"
     $updateQuery = @"
 UPDATE dbo.MigrationControl
-SET ValidationStatus = '$($result.Status)',
-    DiscrepancyDetails = '$($result.Details -replace "'", "''")',
+SET ValidationStatus = N'$safeStatus',
+    DiscrepancyDetails = N'$safeDetails',
     ValidationTimestamp = GETUTCDATE()
-WHERE Id = $($library.Id)
+WHERE Id = $([int]$library.Id)
 "@
-    Invoke-Sqlcmd -ConnectionString $sqlConnectionString -Query $updateQuery -ErrorAction SilentlyContinue
+    try {
+        Invoke-Sqlcmd -ConnectionString $sqlConnectionString -Query $updateQuery -ErrorAction Stop
+    }
+    catch {
+        Write-Log "  Warning: Could not update validation status in SQL: $_" -Level "WARNING"
+    }
 }
 
 # Generate HTML Report

@@ -176,6 +176,7 @@ try {
         -ResourceGroupName $resourceGroupName `
         -Name $dataFactoryName `
         -Location $Location `
+        -Identity `
         -Tag $tags
     Write-Log "Data Factory created successfully." -Level "SUCCESS"
 
@@ -214,23 +215,52 @@ try {
     Write-Log "Configuring RBAC permissions..." -Level "INFO"
 
     # Get ADF Managed Identity
-    $adfIdentity = (Get-AzDataFactoryV2 -ResourceGroupName $resourceGroupName -Name $dataFactoryName).Identity.PrincipalId
+    $adfResource = Get-AzDataFactoryV2 -ResourceGroupName $resourceGroupName -Name $dataFactoryName
+    $adfIdentity = $adfResource.Identity.PrincipalId
+
+    if (-not $adfIdentity) {
+        Write-Log "ADF Managed Identity not found. This usually means -Identity was not set during creation." -Level "ERROR"
+        Write-Log "Attempting to enable Managed Identity on ADF..." -Level "WARNING"
+        Set-AzDataFactoryV2 -ResourceGroupName $resourceGroupName -Name $dataFactoryName -Identity | Out-Null
+        $adfResource = Get-AzDataFactoryV2 -ResourceGroupName $resourceGroupName -Name $dataFactoryName
+        $adfIdentity = $adfResource.Identity.PrincipalId
+        if (-not $adfIdentity) {
+            throw "Failed to enable Managed Identity on ADF '$dataFactoryName'. Enable it manually in Azure Portal."
+        }
+        Write-Log "Managed Identity enabled: $adfIdentity" -Level "SUCCESS"
+    }
 
     # Grant ADF Storage Blob Data Contributor on Storage Account
-    New-AzRoleAssignment `
-        -ObjectId $adfIdentity `
-        -RoleDefinitionName "Storage Blob Data Contributor" `
-        -Scope $storageAccount.Id `
-        -ErrorAction SilentlyContinue | Out-Null
-    Write-Log "Granted Storage Blob Data Contributor to ADF." -Level "SUCCESS"
+    Write-Log "Granting Storage Blob Data Contributor to ADF..."
+    try {
+        New-AzRoleAssignment `
+            -ObjectId $adfIdentity `
+            -RoleDefinitionName "Storage Blob Data Contributor" `
+            -Scope $storageAccount.Id | Out-Null
+        Write-Log "Granted Storage Blob Data Contributor to ADF." -Level "SUCCESS"
+    }
+    catch {
+        if ($_.Exception.Message -match "already exists") {
+            Write-Log "Storage Blob Data Contributor already assigned." -Level "WARNING"
+        }
+        else { throw }
+    }
 
     # Grant ADF Key Vault Secrets User on Key Vault
-    New-AzRoleAssignment `
-        -ObjectId $adfIdentity `
-        -RoleDefinitionName "Key Vault Secrets User" `
-        -Scope $keyVault.ResourceId `
-        -ErrorAction SilentlyContinue | Out-Null
-    Write-Log "Granted Key Vault Secrets User to ADF." -Level "SUCCESS"
+    Write-Log "Granting Key Vault Secrets User to ADF..."
+    try {
+        New-AzRoleAssignment `
+            -ObjectId $adfIdentity `
+            -RoleDefinitionName "Key Vault Secrets User" `
+            -Scope $keyVault.ResourceId | Out-Null
+        Write-Log "Granted Key Vault Secrets User to ADF." -Level "SUCCESS"
+    }
+    catch {
+        if ($_.Exception.Message -match "already exists") {
+            Write-Log "Key Vault Secrets User already assigned." -Level "WARNING"
+        }
+        else { throw }
+    }
 
     # Enable Azure AD authentication for SQL Database
     Write-Log "Note: Configure Azure AD admin for SQL Server manually in Azure Portal." -Level "WARNING"
@@ -261,7 +291,7 @@ try {
         location            = $Location
         environment         = $Environment
         deployedAt          = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
-    } | ConvertTo-Json | Out-File $outputPath
+    } | ConvertTo-Json | Out-File $outputPath -Encoding UTF8
 
     Write-Log "Deployment details saved to: $outputPath" -Level "SUCCESS"
     Write-Log "Setup completed successfully!" -Level "SUCCESS"

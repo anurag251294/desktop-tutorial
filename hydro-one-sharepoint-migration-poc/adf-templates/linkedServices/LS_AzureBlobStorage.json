@@ -31,10 +31,6 @@
                 "type": "AzureBlobFS",
                 "typeProperties": {
                     "url": "[concat('https://', parameters('storageAccountName'), '.dfs.core.windows.net/')]"
-                },
-                "connectVia": {
-                    "referenceName": "AutoResolveIntegrationRuntime",
-                    "type": "IntegrationRuntimeReference"
                 }
             }
         },
@@ -54,10 +50,6 @@
                 "typeProperties": {
                     "serviceEndpoint": "[concat('https://', parameters('storageAccountName'), '.blob.core.windows.net/')]",
                     "accountKind": "StorageV2"
-                },
-                "connectVia": {
-                    "referenceName": "AutoResolveIntegrationRuntime",
-                    "type": "IntegrationRuntimeReference"
                 }
             }
         }
