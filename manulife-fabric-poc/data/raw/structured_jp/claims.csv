@@ -1,0 +1,151 @@
+claim_id,policy_id,customer_id,claim_number,claim_date,claim_type,claim_amount,approved_amount,status,adjuster_name,resolution_date,denial_reason,notes
+CLM-00001,POL-00229,CUS-0124,JPN-937857,2024-08-06,Cancer Treatment,3797276,0,Under Review,Tatsuya Nakamura,,,
+CLM-00002,POL-00018,CUS-0119,JPN-410127,2026-01-15,Outpatient,604898,0,Denied,Yusuke Inoue,2026-01-31,Fraud suspected,Customer escalation
+CLM-00003,POL-00227,CUS-0025,JPN-105275,2025-02-11,Critical Illness,447306,352189,Approved,Ryota Ikeda,2025-03-04,,Customer escalation
+CLM-00004,POL-00166,CUS-0170,JPN-361557,2024-06-13,Hospitalisation,2494769,1959554,Approved,Ayaka Yamamoto,2024-07-03,,Routine review
+CLM-00005,POL-00180,CUS-0186,JPN-984364,2024-07-28,Annuity Withdrawal,4555950,3802277,Approved,Mayumi Matsumoto,2024-08-04,,Senior reviewer assigned
+CLM-00006,POL-00127,CUS-0019,JPN-603650,2023-02-05,Outpatient,4849619,3248708,Approved,Yusuke Inoue,2023-03-04,,Customer escalation
+CLM-00007,POL-00356,CUS-0194,JPN-168100,2023-04-20,Hospitalisation,311233,278386,Approved,Mio Okada,2023-05-17,,Routine review
+CLM-00008,POL-00285,CUS-0063,JPN-344382,2025-11-16,Critical Illness,3914306,3176452,Approved,Ryota Ikeda,2025-12-11,,
+CLM-00009,POL-00245,CUS-0052,JPN-373328,2025-04-03,Surgery,3969426,0,Pending,Yuto Nakajima,,,
+CLM-00010,POL-00393,CUS-0013,JPN-507357,2023-04-21,Surgery,2446657,2303634,Approved,Ryota Ikeda,2023-06-01,,Senior reviewer assigned
+CLM-00011,POL-00267,CUS-0127,JPN-268033,2023-12-15,Critical Illness,1770783,1380181,Approved,Riko Kimura,2024-01-18,,Routine review
+CLM-00012,POL-00018,CUS-0119,JPN-515986,2026-03-01,Surgery,423342,0,Denied,Mio Okada,2026-03-14,Pre-existing condition,Customer escalation
+CLM-00013,POL-00088,CUS-0150,JPN-374600,2024-12-10,Death Benefit,2557693,0,Pending,Ryota Ikeda,,,Senior reviewer assigned
+CLM-00014,POL-00338,CUS-0142,JPN-370046,2023-07-08,Annuity Withdrawal,3937205,0,Pending,Yusuke Inoue,,,Senior reviewer assigned
+CLM-00015,POL-00092,CUS-0040,JPN-260125,2023-03-12,Death Benefit,4030393,2700553,Approved,Riko Kimura,2023-04-10,,
+CLM-00016,POL-00206,CUS-0191,JPN-178443,2024-03-08,Critical Illness,4866238,0,Denied,Rin Nakajima,2024-03-24,Policy lapsed,Senior reviewer assigned
+CLM-00017,POL-00047,CUS-0150,JPN-408574,2025-02-05,Death Benefit,1507905,0,Pending,Mayumi Matsumoto,,,Routine review
+CLM-00018,POL-00191,CUS-0030,JPN-939095,2025-07-26,Annuity Withdrawal,3651230,2770672,Approved,Ayaka Yamamoto,2025-08-17,,
+CLM-00019,POL-00157,CUS-0065,JPN-342311,2025-01-04,Disability,1596156,1358799,Approved,Kaito Mori,2025-02-01,,Senior reviewer assigned
+CLM-00020,POL-00198,CUS-0022,JPN-389973,2024-10-18,Death Benefit,4938060,0,Pending,Yusuke Inoue,,,Customer escalation
+CLM-00021,POL-00345,CUS-0056,JPN-880252,2024-09-13,Disability,864885,0,Under Review,Rin Nakajima,,,Routine review
+CLM-00022,POL-00108,CUS-0108,JPN-824503,2025-08-24,Disability,1758555,0,Denied,Akira Goto,2025-09-11,Fraud suspected,Complex case
+CLM-00023,POL-00366,CUS-0128,JPN-147934,2024-12-16,Critical Illness,2020877,1843548,Approved,Akira Goto,2025-01-06,,Senior reviewer assigned
+CLM-00024,POL-00115,CUS-0155,JPN-236422,2023-08-19,Death Benefit,4292787,2814225,Approved,Ayaka Yamamoto,2023-09-17,,Routine review
+CLM-00025,POL-00044,CUS-0083,JPN-143296,2024-10-14,Surgery,4544478,0,Pending,Ayaka Yamamoto,,,Routine review
+CLM-00026,POL-00289,CUS-0037,JPN-808574,2025-10-25,Annuity Withdrawal,4671648,4518517,Approved,Riko Kimura,2025-11-06,,Complex case
+CLM-00027,POL-00218,CUS-0005,JPN-190769,2025-08-12,Cancer Treatment,3403392,2297140,Approved,Takeshi Goto,2025-08-22,,
+CLM-00028,POL-00307,CUS-0184,JPN-767578,2025-08-26,Critical Illness,3985148,2605241,Approved,Yusuke Inoue,2025-09-07,,Routine review
+CLM-00029,POL-00241,CUS-0107,JPN-805782,2024-05-06,Hospitalisation,2835462,0,Under Review,Takeshi Goto,,,Customer escalation
+CLM-00030,POL-00192,CUS-0066,JPN-612857,2024-01-28,Cancer Treatment,1893851,1475855,Approved,Yusuke Inoue,2024-02-05,,Customer escalation
+CLM-00031,POL-00075,CUS-0087,JPN-789960,2025-09-11,Outpatient,2516772,1852603,Approved,Takeshi Goto,2025-10-17,,Senior reviewer assigned
+CLM-00032,POL-00022,CUS-0081,JPN-290119,2024-06-03,Annuity Withdrawal,4669963,4624502,Approved,Mio Okada,2024-07-10,,Senior reviewer assigned
+CLM-00033,POL-00300,CUS-0141,JPN-817788,2025-10-21,Critical Illness,1885829,1311901,Approved,Haruki Watanabe,2025-11-29,,Customer escalation
+CLM-00034,POL-00324,CUS-0199,JPN-580732,2023-09-30,Critical Illness,606846,0,Pending,Takeshi Goto,,,
+CLM-00035,POL-00194,CUS-0058,JPN-197722,2025-04-25,Outpatient,3568548,2781217,Approved,Akira Goto,2025-05-03,,
+CLM-00036,POL-00168,CUS-0046,JPN-982284,2023-01-06,Death Benefit,2806292,0,Pending,Ayaka Yamamoto,,,
+CLM-00037,POL-00211,CUS-0054,JPN-440801,2025-12-31,Outpatient,1555865,1551847,Approved,Haruki Watanabe,2026-01-13,,
+CLM-00038,POL-00344,CUS-0194,JPN-813834,2025-07-04,Death Benefit,371131,0,Denied,Rin Nakajima,2025-07-16,Pre-existing condition,Routine review
+CLM-00039,POL-00377,CUS-0048,JPN-888184,2025-09-24,Critical Illness,2829082,2705481,Approved,Akira Goto,2025-11-05,,Routine review
+CLM-00040,POL-00090,CUS-0154,JPN-572984,2023-11-14,Critical Illness,3388301,2301802,Approved,Kaito Mori,2023-11-30,,Routine review
+CLM-00041,POL-00204,CUS-0083,JPN-188986,2025-06-03,Hospitalisation,3332674,0,Pending,Yuto Nakajima,,,Routine review
+CLM-00042,POL-00277,CUS-0168,JPN-937344,2024-10-15,Annuity Withdrawal,3554689,0,Denied,Kazuki Sato,2024-11-03,Pre-existing condition,Complex case
+CLM-00043,POL-00171,CUS-0073,JPN-596706,2023-08-14,Disability,790233,768746,Approved,Ayaka Yamamoto,2023-09-09,,Customer escalation
+CLM-00044,POL-00236,CUS-0178,JPN-565366,2025-03-18,Hospitalisation,4980843,3724655,Approved,Haruki Watanabe,2025-04-07,,Complex case
+CLM-00045,POL-00203,CUS-0102,JPN-429902,2026-03-04,Critical Illness,975967,0,Pending,Mayumi Matsumoto,,,Senior reviewer assigned
+CLM-00046,POL-00059,CUS-0109,JPN-487887,2024-08-24,Critical Illness,864808,673444,Approved,Tatsuya Nakamura,2024-09-16,,Senior reviewer assigned
+CLM-00047,POL-00194,CUS-0058,JPN-646939,2023-09-12,Annuity Withdrawal,2974948,2489133,Approved,Tatsuya Nakamura,2023-09-22,,Complex case
+CLM-00048,POL-00294,CUS-0192,JPN-521250,2023-01-09,Critical Illness,2876177,0,Denied,Yusuke Inoue,2023-01-25,Documentation incomplete,Customer escalation
+CLM-00049,POL-00229,CUS-0124,JPN-683844,2025-10-22,Critical Illness,2498767,2313855,Approved,Tatsuya Nakamura,2025-11-18,,Routine review
+CLM-00050,POL-00211,CUS-0054,JPN-494424,2025-03-12,Outpatient,2251809,0,Pending,Kaori Kato,,,
+CLM-00051,POL-00258,CUS-0014,JPN-183077,2025-07-03,Death Benefit,1250528,1180124,Approved,Kaito Mori,2025-07-15,,Routine review
+CLM-00052,POL-00101,CUS-0116,JPN-197734,2024-05-26,Annuity Withdrawal,2350236,0,Denied,Mio Okada,2024-06-14,Documentation incomplete,Senior reviewer assigned
+CLM-00053,POL-00170,CUS-0075,JPN-757575,2024-09-02,Disability,3011435,2237718,Approved,Kaito Mori,2024-10-13,,Senior reviewer assigned
+CLM-00054,POL-00011,CUS-0196,JPN-332133,2023-04-11,Surgery,539950,0,Denied,Ryota Ikeda,2023-04-19,Fraud suspected,Senior reviewer assigned
+CLM-00055,POL-00024,CUS-0012,JPN-916423,2023-05-31,Critical Illness,2748954,0,Under Review,Ryota Ikeda,,,Complex case
+CLM-00056,POL-00277,CUS-0168,JPN-426256,2023-11-13,Hospitalisation,2216708,0,Pending,Yuto Nakajima,,,Complex case
+CLM-00057,POL-00289,CUS-0037,JPN-898330,2024-09-20,Critical Illness,3247965,2922615,Approved,Mio Okada,2024-10-20,,Routine review
+CLM-00058,POL-00266,CUS-0051,JPN-991469,2023-11-26,Annuity Withdrawal,2862192,0,Denied,Mayumi Matsumoto,2023-12-11,Policy lapsed,Customer escalation
+CLM-00059,POL-00064,CUS-0078,JPN-525086,2023-07-18,Critical Illness,1959471,1791253,Approved,Mio Okada,2023-08-19,,Routine review
+CLM-00060,POL-00301,CUS-0155,JPN-198067,2024-03-04,Surgery,2366620,2238047,Approved,Riko Kimura,2024-04-12,,Routine review
+CLM-00061,POL-00305,CUS-0137,JPN-872120,2023-11-09,Outpatient,1932471,0,Denied,Kaori Kato,2023-12-08,Outside coverage,Complex case
+CLM-00062,POL-00260,CUS-0017,JPN-206226,2023-01-16,Disability,3276201,2145397,Approved,Yuto Nakajima,2023-02-26,,Complex case
+CLM-00063,POL-00170,CUS-0075,JPN-184813,2023-12-12,Cancer Treatment,258737,244018,Approved,Riko Kimura,2023-12-31,,
+CLM-00064,POL-00382,CUS-0039,JPN-334974,2023-05-19,Annuity Withdrawal,4261339,3443028,Approved,Kaito Mori,2023-06-14,,
+CLM-00065,POL-00116,CUS-0174,JPN-285192,2026-01-01,Disability,477296,0,Pending,Ryota Ikeda,,,Customer escalation
+CLM-00066,POL-00002,CUS-0040,JPN-171862,2023-10-14,Annuity Withdrawal,2746019,0,Under Review,Mayumi Matsumoto,,,Complex case
+CLM-00067,POL-00122,CUS-0106,JPN-868036,2025-03-27,Hospitalisation,2672816,2506549,Approved,Ayaka Yamamoto,2025-04-09,,Customer escalation
+CLM-00068,POL-00186,CUS-0199,JPN-437651,2025-03-13,Outpatient,3342965,2383478,Approved,Kaori Kato,2025-04-19,,Customer escalation
+CLM-00069,POL-00079,CUS-0117,JPN-234027,2025-12-10,Surgery,3609300,0,Under Review,Riko Kimura,,,
+CLM-00070,POL-00339,CUS-0196,JPN-253072,2025-11-07,Annuity Withdrawal,2986117,0,Denied,Yuto Nakajima,2025-11-14,Fraud suspected,Complex case
+CLM-00071,POL-00183,CUS-0031,JPN-497760,2023-12-30,Outpatient,1735293,0,Denied,Ryota Ikeda,2024-01-11,Pre-existing condition,Routine review
+CLM-00072,POL-00231,CUS-0138,JPN-825476,2024-06-24,Surgery,1843860,0,Under Review,Kaito Mori,,,Senior reviewer assigned
+CLM-00073,POL-00283,CUS-0075,JPN-557120,2023-07-23,Hospitalisation,4667990,4464043,Approved,Kaori Kato,2023-08-08,,Customer escalation
+CLM-00074,POL-00007,CUS-0125,JPN-162885,2026-03-23,Death Benefit,2684394,0,Pending,Mio Okada,,,Complex case
+CLM-00075,POL-00348,CUS-0052,JPN-474412,2024-09-11,Disability,911546,744697,Approved,Mayumi Matsumoto,2024-10-26,,Senior reviewer assigned
+CLM-00076,POL-00102,CUS-0029,JPN-959903,2023-11-01,Outpatient,245428,202137,Approved,Yusuke Inoue,2023-11-10,,Complex case
+CLM-00077,POL-00194,CUS-0058,JPN-135226,2025-01-01,Cancer Treatment,3532135,0,Pending,Kaito Mori,,,
+CLM-00078,POL-00149,CUS-0182,JPN-124632,2026-04-27,Critical Illness,895670,859310,Approved,Kazuki Sato,2026-05-05,,
+CLM-00079,POL-00167,CUS-0067,JPN-296541,2023-09-25,Hospitalisation,195216,132768,Approved,Takeshi Goto,2023-10-22,,
+CLM-00080,POL-00182,CUS-0023,JPN-385277,2023-03-25,Hospitalisation,4923022,0,Denied,Kaori Kato,2023-04-06,Policy lapsed,Complex case
+CLM-00081,POL-00060,CUS-0098,JPN-987846,2023-08-17,Hospitalisation,128924,128403,Approved,Ryota Ikeda,2023-09-01,,
+CLM-00082,POL-00365,CUS-0176,JPN-557311,2026-01-07,Cancer Treatment,2800941,0,Denied,Ayaka Yamamoto,2026-01-30,Documentation incomplete,Complex case
+CLM-00083,POL-00018,CUS-0119,JPN-626748,2026-04-18,Death Benefit,4075751,3412214,Approved,Akira Goto,2026-04-27,,
+CLM-00084,POL-00232,CUS-0167,JPN-223897,2025-11-05,Disability,3769674,0,Pending,Yuto Nakajima,,,Complex case
+CLM-00085,POL-00226,CUS-0087,JPN-666923,2024-12-25,Hospitalisation,2044311,1405628,Approved,Yusuke Inoue,2025-01-06,,
+CLM-00086,POL-00042,CUS-0047,JPN-943087,2023-11-29,Surgery,782781,518124,Approved,Ayaka Yamamoto,2023-12-20,,Complex case
+CLM-00087,POL-00368,CUS-0175,JPN-813547,2024-02-25,Outpatient,1562424,1486778,Approved,Haruki Watanabe,2024-03-03,,Routine review
+CLM-00088,POL-00124,CUS-0027,JPN-201402,2025-08-05,Outpatient,2363450,0,Pending,Kaito Mori,,,Senior reviewer assigned
+CLM-00089,POL-00260,CUS-0017,JPN-460403,2025-10-23,Hospitalisation,2839121,2237110,Approved,Kaori Kato,2025-10-30,,Customer escalation
+CLM-00090,POL-00289,CUS-0037,JPN-351830,2023-10-11,Hospitalisation,2555701,0,Denied,Mayumi Matsumoto,2023-11-09,Outside coverage,Customer escalation
+CLM-00091,POL-00198,CUS-0022,JPN-744188,2023-11-06,Annuity Withdrawal,1431698,0,Denied,Riko Kimura,2023-11-30,Pre-existing condition,Complex case
+CLM-00092,POL-00331,CUS-0148,JPN-319343,2023-05-03,Annuity Withdrawal,4008143,3132722,Approved,Kaori Kato,2023-05-19,,Senior reviewer assigned
+CLM-00093,POL-00046,CUS-0084,JPN-356171,2023-04-12,Disability,1811334,1345685,Approved,Ryota Ikeda,2023-05-17,,Complex case
+CLM-00094,POL-00315,CUS-0085,JPN-883257,2025-08-16,Hospitalisation,2501929,1715286,Approved,Kaori Kato,2025-09-01,,Routine review
+CLM-00095,POL-00123,CUS-0102,JPN-284810,2023-07-03,Outpatient,3062822,0,Pending,Kaori Kato,,,
+CLM-00096,POL-00093,CUS-0015,JPN-501546,2025-02-18,Surgery,648633,522648,Approved,Yuto Nakajima,2025-03-08,,Customer escalation
+CLM-00097,POL-00121,CUS-0115,JPN-882554,2025-04-27,Death Benefit,3892644,0,Pending,Ryota Ikeda,,,Customer escalation
+CLM-00098,POL-00327,CUS-0164,JPN-788959,2025-02-03,Surgery,4699298,0,Pending,Kazuki Sato,,,Customer escalation
+CLM-00099,POL-00080,CUS-0193,JPN-875019,2023-09-27,Hospitalisation,1464274,0,Denied,Rin Nakajima,2023-10-20,Pre-existing condition,Senior reviewer assigned
+CLM-00100,POL-00284,CUS-0170,JPN-409861,2025-05-19,Outpatient,2394736,1645947,Approved,Riko Kimura,2025-06-07,,
+CLM-00101,POL-00114,CUS-0018,JPN-643000,2023-07-01,Disability,1660759,1306846,Approved,Mayumi Matsumoto,2023-07-16,,Routine review
+CLM-00102,POL-00193,CUS-0011,JPN-816799,2024-01-16,Outpatient,3731148,0,Denied,Kaito Mori,2024-02-02,Pre-existing condition,Routine review
+CLM-00103,POL-00065,CUS-0003,JPN-715598,2026-02-02,Death Benefit,2937907,0,Denied,Rin Nakajima,2026-02-27,Fraud suspected,Senior reviewer assigned
+CLM-00104,POL-00165,CUS-0135,JPN-445241,2024-11-02,Cancer Treatment,3686314,0,Pending,Akira Goto,,,
+CLM-00105,POL-00246,CUS-0148,JPN-298912,2023-03-14,Outpatient,4829618,4051922,Approved,Kaori Kato,2023-04-06,,Complex case
+CLM-00106,POL-00317,CUS-0017,JPN-389896,2024-03-11,Death Benefit,2887576,2769977,Approved,Tatsuya Nakamura,2024-04-01,,Routine review
+CLM-00107,POL-00062,CUS-0097,JPN-438859,2024-11-14,Critical Illness,1321722,1202297,Approved,Yusuke Inoue,2024-12-25,,Complex case
+CLM-00108,POL-00127,CUS-0019,JPN-136282,2025-01-09,Critical Illness,902861,831227,Approved,Kaori Kato,2025-01-25,,Customer escalation
+CLM-00109,POL-00302,CUS-0106,JPN-162024,2025-01-12,Disability,3210328,2846768,Approved,Ayaka Yamamoto,2025-01-21,,Senior reviewer assigned
+CLM-00110,POL-00273,CUS-0037,JPN-104911,2025-10-04,Cancer Treatment,4939690,4929244,Approved,Takeshi Goto,2025-11-01,,Complex case
+CLM-00111,POL-00224,CUS-0184,JPN-325720,2023-08-03,Critical Illness,3717689,2814376,Approved,Yuto Nakajima,2023-09-17,,Routine review
+CLM-00112,POL-00217,CUS-0047,JPN-491053,2023-03-10,Critical Illness,2204816,2061206,Approved,Tatsuya Nakamura,2023-04-01,,Complex case
+CLM-00113,POL-00295,CUS-0196,JPN-545305,2025-03-14,Critical Illness,4601887,0,Denied,Kaito Mori,2025-04-09,Documentation incomplete,Complex case
+CLM-00114,POL-00354,CUS-0091,JPN-373430,2024-08-01,Cancer Treatment,853811,793733,Approved,Tatsuya Nakamura,2024-09-12,,Senior reviewer assigned
+CLM-00115,POL-00049,CUS-0191,JPN-944225,2025-01-04,Critical Illness,1983542,0,Pending,Mayumi Matsumoto,,,
+CLM-00116,POL-00376,CUS-0009,JPN-943335,2025-11-27,Cancer Treatment,2870960,0,Denied,Tatsuya Nakamura,2025-12-20,Outside coverage,
+CLM-00117,POL-00205,CUS-0048,JPN-527963,2023-10-13,Cancer Treatment,938685,680008,Approved,Mayumi Matsumoto,2023-11-07,,Customer escalation
+CLM-00118,POL-00364,CUS-0135,JPN-597632,2024-05-23,Hospitalisation,2460123,1882465,Approved,Ryota Ikeda,2024-06-08,,
+CLM-00119,POL-00134,CUS-0053,JPN-348360,2025-08-17,Surgery,997684,0,Denied,Kaito Mori,2025-09-04,Fraud suspected,Customer escalation
+CLM-00120,POL-00242,CUS-0022,JPN-914677,2025-05-16,Surgery,2866164,2358987,Approved,Riko Kimura,2025-06-05,,Routine review
+CLM-00121,POL-00222,CUS-0109,JPN-261799,2023-07-23,Critical Illness,2553210,2219879,Approved,Haruki Watanabe,2023-08-28,,Routine review
+CLM-00122,POL-00310,CUS-0079,JPN-510209,2025-05-25,Death Benefit,1011675,749697,Approved,Ayaka Yamamoto,2025-06-23,,
+CLM-00123,POL-00111,CUS-0060,JPN-850915,2025-08-18,Hospitalisation,1488883,0,Under Review,Rin Nakajima,,,Complex case
+CLM-00124,POL-00246,CUS-0148,JPN-639563,2025-08-09,Outpatient,444308,0,Denied,Yuto Nakajima,2025-08-23,Outside coverage,
+CLM-00125,POL-00080,CUS-0193,JPN-125300,2025-07-13,Death Benefit,3180434,0,Denied,Tatsuya Nakamura,2025-08-03,Pre-existing condition,Routine review
+CLM-00126,POL-00095,CUS-0083,JPN-926001,2023-01-08,Death Benefit,668846,0,Denied,Akira Goto,2023-01-27,Policy lapsed,Customer escalation
+CLM-00127,POL-00112,CUS-0041,JPN-111076,2023-02-10,Disability,516359,379427,Approved,Haruki Watanabe,2023-03-02,,Complex case
+CLM-00128,POL-00270,CUS-0081,JPN-591750,2025-08-05,Surgery,179642,0,Denied,Mayumi Matsumoto,2025-09-01,Outside coverage,Customer escalation
+CLM-00129,POL-00155,CUS-0024,JPN-855501,2026-03-25,Critical Illness,1151358,903521,Approved,Haruki Watanabe,2026-04-21,,
+CLM-00130,POL-00346,CUS-0036,JPN-962116,2024-07-11,Critical Illness,4302066,0,Denied,Yuto Nakajima,2024-07-27,Outside coverage,Complex case
+CLM-00131,POL-00311,CUS-0044,JPN-112503,2024-06-07,Cancer Treatment,4009715,3028817,Approved,Mayumi Matsumoto,2024-07-14,,Customer escalation
+CLM-00132,POL-00063,CUS-0174,JPN-437522,2026-01-22,Death Benefit,2502398,0,Denied,Tatsuya Nakamura,2026-02-07,Policy lapsed,Complex case
+CLM-00133,POL-00008,CUS-0132,JPN-513171,2024-04-23,Disability,1516577,1461225,Approved,Rin Nakajima,2024-05-22,,
+CLM-00134,POL-00024,CUS-0012,JPN-147335,2026-03-21,Surgery,1853722,0,Denied,Mayumi Matsumoto,2026-04-17,Outside coverage,Routine review
+CLM-00135,POL-00323,CUS-0008,JPN-116954,2024-02-27,Annuity Withdrawal,1903835,1901880,Approved,Mayumi Matsumoto,2024-03-17,,Customer escalation
+CLM-00136,POL-00063,CUS-0174,JPN-669235,2023-02-25,Annuity Withdrawal,1875886,0,Pending,Yusuke Inoue,,,
+CLM-00137,POL-00168,CUS-0046,JPN-636968,2023-10-14,Disability,1518312,0,Under Review,Mayumi Matsumoto,,,Customer escalation
+CLM-00138,POL-00397,CUS-0069,JPN-306551,2023-11-05,Critical Illness,1248339,0,Pending,Kaito Mori,,,Complex case
+CLM-00139,POL-00010,CUS-0136,JPN-628101,2024-05-23,Disability,4582494,0,Under Review,Haruki Watanabe,,,Senior reviewer assigned
+CLM-00140,POL-00264,CUS-0071,JPN-142556,2025-10-02,Outpatient,3515364,0,Pending,Haruki Watanabe,,,Senior reviewer assigned
+CLM-00141,POL-00164,CUS-0015,JPN-921446,2025-04-16,Outpatient,1682360,1384880,Approved,Akira Goto,2025-05-04,,Senior reviewer assigned
+CLM-00142,POL-00073,CUS-0048,JPN-449454,2023-12-05,Cancer Treatment,4419747,3232631,Approved,Haruki Watanabe,2024-01-16,,Routine review
+CLM-00143,POL-00131,CUS-0182,JPN-366558,2025-12-04,Surgery,1429182,0,Pending,Riko Kimura,,,Senior reviewer assigned
+CLM-00144,POL-00307,CUS-0184,JPN-247025,2025-02-26,Death Benefit,3295594,2347166,Approved,Yuto Nakajima,2025-03-22,,Senior reviewer assigned
+CLM-00145,POL-00211,CUS-0054,JPN-813699,2024-08-08,Surgery,4571372,0,Under Review,Akira Goto,,,Customer escalation
+CLM-00146,POL-00048,CUS-0011,JPN-347102,2024-11-23,Hospitalisation,2669967,0,Denied,Kazuki Sato,2024-12-01,Policy lapsed,
+CLM-00147,POL-00329,CUS-0062,JPN-140496,2023-07-24,Cancer Treatment,4662743,3895569,Approved,Kaori Kato,2023-08-16,,Complex case
+CLM-00148,POL-00364,CUS-0135,JPN-307901,2024-06-01,Cancer Treatment,1216314,1055894,Approved,Akira Goto,2024-06-27,,Customer escalation
+CLM-00149,POL-00124,CUS-0027,JPN-111815,2023-11-28,Critical Illness,3068557,0,Pending,Ryota Ikeda,,,Senior reviewer assigned
+CLM-00150,POL-00217,CUS-0047,JPN-355400,2023-06-04,Death Benefit,784170,0,Pending,Tatsuya Nakamura,,,Complex case

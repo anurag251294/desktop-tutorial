@@ -1,0 +1,31 @@
+advisor_id,first_name,last_name,email,branch_office,region,certification_level,specialization,hire_date,is_active,aum_total
+ADV-0001,Yuto,Nakajima,yuto.nakajima@manulife.co.jp,Nagoya Sakae,Chubu,Master,Health Insurance,2017-03-12,TRUE,28000947615
+ADV-0002,Rin,Hayashi,rin.hayashi@manulife.co.jp,Tokyo Marunouchi,Kanto,Principal,Estate Planning,2022-01-25,TRUE,21214923992
+ADV-0003,Ryo,Yamada,ryo.yamada@manulife.co.jp,Nagoya Sakae,Chubu,Principal,Estate Planning,2008-12-03,TRUE,20650288958
+ADV-0004,Takumi,Nakajima,takumi.nakajima@manulife.co.jp,Tokyo Marunouchi,Kanto,Master,Wealth Management,2016-10-28,TRUE,1358593963
+ADV-0005,Kaori,Mori,kaori.mori@manulife.co.jp,Yokohama Minato Mirai,Kanto,Junior,Group Pension,2018-11-11,TRUE,2449201005
+ADV-0006,Nana,Fujita,nana.fujita@manulife.co.jp,Kobe Sannomiya,Kansai,Junior,Wealth Management,2008-02-19,TRUE,15131524241
+ADV-0007,Takumi,Suzuki,takumi.suzuki@manulife.co.jp,Kobe Sannomiya,Kansai,Master,Estate Planning,2013-08-23,TRUE,24425225079
+ADV-0008,Riko,Ishikawa,riko.ishikawa@manulife.co.jp,Tokyo Marunouchi,Kanto,Junior,Estate Planning,2015-02-06,TRUE,24100112899
+ADV-0009,Yuto,Nakajima,yuto.nakajima@manulife.co.jp,Osaka Umeda,Kansai,Master,Wealth Management,2012-12-07,TRUE,24896936201
+ADV-0010,Yusuke,Hayashi,yusuke.hayashi@manulife.co.jp,Nagoya Sakae,Chubu,Master,Group Pension,2015-12-20,TRUE,29376539011
+ADV-0011,Kazuki,Watanabe,kazuki.watanabe@manulife.co.jp,Yokohama Minato Mirai,Kanto,Master,Wealth Management,2022-06-05,TRUE,29034194391
+ADV-0012,Yui,Suzuki,yui.suzuki@manulife.co.jp,Sendai Aoba,Tohoku,Junior,Wealth Management,2015-06-15,TRUE,25320335407
+ADV-0013,Misaki,Goto,misaki.goto@manulife.co.jp,Kyoto Karasuma,Kansai,Master,Variable Annuity,2022-10-04,TRUE,12430842553
+ADV-0014,Riko,Goto,riko.goto@manulife.co.jp,Tokyo Shibuya,Kanto,Senior,Group Pension,2009-05-13,TRUE,29360076583
+ADV-0015,Ryo,Ishikawa,ryo.ishikawa@manulife.co.jp,Osaka Umeda,Kansai,Junior,Wealth Management,2021-11-25,TRUE,24563406012
+ADV-0016,Mei,Mori,mei.mori@manulife.co.jp,Nagoya Sakae,Chubu,Master,Estate Planning,2016-06-26,FALSE,5722313764
+ADV-0017,Misaki,Tanaka,misaki.tanaka@manulife.co.jp,Tokyo Marunouchi,Kanto,Senior,Life Insurance,2014-12-18,TRUE,17931269951
+ADV-0018,Kazuki,Maeda,kazuki.maeda@manulife.co.jp,Sendai Aoba,Tohoku,Principal,Group Pension,2018-10-24,TRUE,17084804499
+ADV-0019,Nana,Nakajima,nana.nakajima@manulife.co.jp,Kobe Sannomiya,Kansai,Principal,Life Insurance,2012-05-12,TRUE,14311333110
+ADV-0020,Aoi,Fujita,aoi.fujita@manulife.co.jp,Tokyo Shibuya,Kanto,Master,Variable Annuity,2017-08-07,TRUE,28836361212
+ADV-0021,Kana,Ogawa,kana.ogawa@manulife.co.jp,Osaka Umeda,Kansai,Master,Variable Annuity,2021-03-14,TRUE,26101902612
+ADV-0022,Yuki,Maeda,yuki.maeda@manulife.co.jp,Kobe Sannomiya,Kansai,Principal,Health Insurance,2012-03-31,TRUE,8345985352
+ADV-0023,Sora,Mori,sora.mori@manulife.co.jp,Osaka Umeda,Kansai,Master,Wealth Management,2019-09-29,TRUE,16140475944
+ADV-0024,Jun,Nakamura,jun.nakamura@manulife.co.jp,Kobe Sannomiya,Kansai,Junior,Wealth Management,2008-04-19,TRUE,20625526715
+ADV-0025,Saki,Nakamura,saki.nakamura@manulife.co.jp,Yokohama Minato Mirai,Kanto,Senior,Wealth Management,2019-03-12,TRUE,7629103378
+ADV-0026,Mayumi,Sato,mayumi.sato@manulife.co.jp,Nagoya Sakae,Chubu,Junior,Group Pension,2019-06-23,TRUE,10888901533
+ADV-0027,Tsuyoshi,Ishikawa,tsuyoshi.ishikawa@manulife.co.jp,Sapporo Odori,Hokkaido,Principal,Group Pension,2023-01-22,TRUE,1333010171
+ADV-0028,Naoki,Nakamura,naoki.nakamura@manulife.co.jp,Kobe Sannomiya,Kansai,Master,Life Insurance,2011-08-15,TRUE,20337174076
+ADV-0029,Ayaka,Nakamura,ayaka.nakamura@manulife.co.jp,Tokyo Shibuya,Kanto,Senior,Wealth Management,2011-10-03,TRUE,20984413758
+ADV-0030,Tatsuya,Sato,tatsuya.sato@manulife.co.jp,Osaka Umeda,Kansai,Junior,Group Pension,2012-12-11,TRUE,13568053449

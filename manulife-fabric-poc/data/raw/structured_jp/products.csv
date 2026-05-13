@@ -1,0 +1,13 @@
+product_id,product_name,product_category,product_line,description,min_coverage,max_coverage,base_premium_rate,launch_date,is_active,risk_tier
+PRD-0001,Variable Annuity Plus,Investment,Wealth,Variable Annuity Plus - JPY-denominated insurance / investment product for the Japanese market,500000,50000000,0.022,2023-10-29,TRUE,Medium
+PRD-0002,Variable Annuity Conservative,Investment,Wealth,Variable Annuity Conservative - JPY-denominated insurance / investment product for the Japanese market,500000,30000000,0.015,2016-03-13,TRUE,Low
+PRD-0003,Whole Life with Disability Rider,Insurance,Life,Whole Life with Disability Rider - JPY-denominated insurance / investment product for the Japanese market,1000000,200000000,0.0085,2012-12-25,TRUE,Low
+PRD-0004,Term Life 20 (JP),Insurance,Life,Term Life 20 (JP) - JPY-denominated insurance / investment product for the Japanese market,500000,100000000,0.0018,2016-08-18,TRUE,Low
+PRD-0005,Endowment 15 (Kakushin),Insurance,Life,Endowment 15 (Kakushin) - JPY-denominated insurance / investment product for the Japanese market,1000000,50000000,0.0055,2018-11-24,TRUE,Low
+PRD-0006,Cancer Insurance Plus,Insurance,Health,Cancer Insurance Plus - JPY-denominated insurance / investment product for the Japanese market,500000,20000000,0.0095,2020-08-30,TRUE,Medium
+PRD-0007,Income Protection Standard,Insurance,Health,Income Protection Standard - JPY-denominated insurance / investment product for the Japanese market,100000,10000000,0.0072,2015-07-14,TRUE,Medium
+PRD-0008,Critical Illness Cover,Insurance,Health,Critical Illness Cover - JPY-denominated insurance / investment product for the Japanese market,500000,30000000,0.0088,2018-07-25,TRUE,Medium
+PRD-0009,Group Pension Plan,Investment,Group,Group Pension Plan - JPY-denominated insurance / investment product for the Japanese market,1000000,500000000,0.0035,2016-04-10,TRUE,Low
+PRD-0010,Single Premium Whole Life,Insurance,Life,Single Premium Whole Life - JPY-denominated insurance / investment product for the Japanese market,5000000,300000000,0.021,2020-08-21,TRUE,Low
+PRD-0011,Medical Insurance Comprehensive,Insurance,Health,Medical Insurance Comprehensive - JPY-denominated insurance / investment product for the Japanese market,100000,20000000,0.0048,2020-12-26,TRUE,Medium
+PRD-0012,Education Endowment,Insurance,Life,Education Endowment - JPY-denominated insurance / investment product for the Japanese market,1000000,30000000,0.0042,2023-06-30,TRUE,Low

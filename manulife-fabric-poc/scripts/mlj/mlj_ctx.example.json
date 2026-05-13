@@ -1,0 +1,16 @@
+{
+  "workspace_id": "ca416fea-52c1-4e06-82c6-509440817a11",
+  "lakehouse_id": "4b1fe0a9-e407-4ac5-b776-c8523533bb67",
+  "sql_endpoint_id": "437586c1-a74e-4830-b960-de5e3794cbc8",
+  "sql_endpoint_server": "cluwj7r47duuje4j6zubfr72k4-5jxudswbkide5awgkckebal2ce.datawarehouse.fabric.microsoft.com",
+  "capacity_id": "5d0e6ac2-80d1-4cce-95a4-00ebe8d2681e",
+  "notebooks": {
+    "01_Bronze_Ingestion": "2d416e30-f105-4384-8511-b0438c9b6887",
+    "02_Silver_Transformation": "227fea9b-41ad-4ec9-a2c6-a8858bbf82f3",
+    "03_Gold_Curated_Layer": "1a845030-c535-4153-81bf-d8c4c0f6ec88",
+    "04_Document_Processing": "41f81ded-6127-4465-8e20-833baa43e1d0",
+    "05_Data_Validation": "5eac01c3-e500-423d-98d9-0c3683592d53",
+    "06_MLJ_Curated_Marts": "ef0b8aae-390a-48af-b265-d393eb22f696"
+  },
+  "semantic_model_id": "81d455be-f812-4021-b79a-1f37c6dde90e"
+}

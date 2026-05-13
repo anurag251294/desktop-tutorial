@@ -1,0 +1,201 @@
+customer_id,first_name,last_name,email,phone,date_of_birth,gender,address_line1,city,province,postal_code,country,customer_segment,registration_date,is_active
+CUS-0001,Yuto,Fujita,yuto.fujita1@manulife.co.jp,080-4716-2175,1961-11-04,Male,2-13-8 chome,Ishinomaki,Miyagi,379-6593,Japan,Retail,2018-07-21,TRUE
+CUS-0002,Sora,Kato,sora.kato2@gmail.com,079-9874-7908,1953-12-29,Male,4-13-8 higashi-machi,Osaka,Osaka,307-1159,Japan,Mass Affluent,2023-02-04,TRUE
+CUS-0003,Naoki,Ishikawa,naoki.ishikawa3@manulife.co.jp,084-4048-7913,1994-07-19,Male,5-25-6 midori-ku,Ishinomaki,Miyagi,176-8040,Japan,Retail,2019-07-04,TRUE
+CUS-0004,Sora,Shimizu,sora.shimizu4@outlook.jp,082-3522-8970,1998-09-26,Male,2-21-19 hon-machi,Fukuyama,Hiroshima,397-9856,Japan,Retail,2019-04-18,TRUE
+CUS-0005,Rin,Ito,rin.ito5@gmail.com,074-1892-4424,2001-04-05,Female,5-29-8 ku-dori,Ichinomiya,Aichi,328-9610,Japan,Retail,2022-09-27,TRUE
+CUS-0006,Yusuke,Kobayashi,yusuke.kobayashi6@outlook.jp,071-2730-8960,1985-02-04,Male,3-9-13 nishi-machi,Matsudo,Chiba,667-7386,Japan,Retail,2022-07-08,TRUE
+CUS-0007,Akiko,Sasaki,akiko.sasaki7@manulife.co.jp,089-1064-6040,1982-10-01,Female,4-28-20 nishi-machi,Matsudo,Chiba,952-2140,Japan,Mass Affluent,2018-10-07,TRUE
+CUS-0008,Hina,Yamaguchi,hina.yamaguchi8@manulife.co.jp,082-3505-7178,1958-06-17,Female,4-23-5 hon-machi,Kurume,Fukuoka,179-1355,Japan,Retail,2023-04-01,TRUE
+CUS-0009,Mio,Yamamoto,mio.yamamoto9@gmail.com,088-4935-9559,2003-08-21,Female,4-25-7 nishi-machi,Nagoya,Aichi,502-3842,Japan,Mass Affluent,2019-09-14,TRUE
+CUS-0010,Mayumi,Ogawa,mayumi.ogawa10@manulife.co.jp,079-7754-8847,1996-02-24,Female,2-4-17 hon-machi,Ichinomiya,Aichi,960-2737,Japan,Retail,2022-09-02,TRUE
+CUS-0011,Shota,Nakajima,shota.nakajima11@outlook.jp,071-1524-5041,1993-12-30,Male,3-14-12 higashi-machi,Sagamihara,Kanagawa,950-1235,Japan,Retail,2023-08-09,TRUE
+CUS-0012,Rin,Nakajima,rin.nakajima12@manulife.co.jp,070-7678-7081,1973-10-10,Female,2-5-4 midori-ku,Sagamihara,Kanagawa,905-3858,Japan,Retail,2025-12-03,TRUE
+CUS-0013,Takeshi,Sato,takeshi.sato13@gmail.com,077-6546-4783,1960-01-28,Male,4-16-9 kita-cho,Shibuya,Tokyo,263-2035,Japan,Ultra HNW,2024-11-18,TRUE
+CUS-0014,Nana,Sato,nana.sato14@yahoo.co.jp,077-8658-5587,1992-11-16,Female,3-14-3 minami-cho,Okazaki,Aichi,466-8258,Japan,High Net Worth,2021-09-09,TRUE
+CUS-0015,Yusuke,Maeda,yusuke.maeda15@manulife.co.jp,085-2576-1754,1970-01-08,Male,3-19-13 chome,Chiba,Chiba,768-1079,Japan,Retail,2018-06-14,FALSE
+CUS-0016,Yui,Ikeda,yui.ikeda16@gmail.com,079-9665-6869,2005-04-17,Female,4-23-20 chome,Yokosuka,Kanagawa,347-1768,Japan,Mass Affluent,2019-08-03,TRUE
+CUS-0017,Sora,Yamaguchi,sora.yamaguchi17@manulife.co.jp,072-2107-2229,1991-01-30,Male,1-23-12 hon-machi,Minato,Tokyo,805-7261,Japan,Mass Affluent,2025-05-25,FALSE
+CUS-0018,Sakura,Nakajima,sakura.nakajima18@yahoo.co.jp,078-9763-6805,1956-04-24,Female,3-24-20 minami-cho,Toyonaka,Osaka,666-2579,Japan,Mass Affluent,2022-07-17,TRUE
+CUS-0019,Kazuki,Fujita,kazuki.fujita19@gmail.com,072-7651-6043,1984-06-24,Male,2-19-17 sakura-cho,Funabashi,Chiba,123-5813,Japan,Retail,2022-05-22,FALSE
+CUS-0020,Masashi,Inoue,masashi.inoue20@manulife.co.jp,089-9220-8378,1951-12-17,Male,3-29-2 kita-cho,Meguro,Tokyo,890-6355,Japan,Ultra HNW,2021-11-17,TRUE
+CUS-0021,Mio,Yamazaki,mio.yamazaki21@outlook.jp,081-3232-3919,1957-06-06,Female,2-30-1 midori-ku,Sendai,Miyagi,985-5718,Japan,Retail,2020-06-25,FALSE
+CUS-0022,Mio,Inoue,mio.inoue22@manulife.co.jp,085-6366-4874,1965-07-04,Female,1-18-18 midori-ku,Sendai,Miyagi,860-4468,Japan,Mass Affluent,2024-08-28,TRUE
+CUS-0023,Hanako,Yamamoto,hanako.yamamoto23@yahoo.co.jp,074-6072-5164,1954-08-31,Female,2-18-16 ku-dori,Chiyoda,Tokyo,518-5271,Japan,High Net Worth,2025-12-31,TRUE
+CUS-0024,Kenji,Ishikawa,kenji.ishikawa24@manulife.co.jp,071-9276-5609,1970-12-23,Male,1-27-9 ku-dori,Fukuyama,Hiroshima,412-9538,Japan,Retail,2025-09-03,TRUE
+CUS-0025,Kaito,Shimizu,kaito.shimizu25@manulife.co.jp,083-4926-4738,1984-08-04,Male,4-23-15 hon-machi,Himeji,Hyogo,992-9329,Japan,Group,2021-07-31,TRUE
+CUS-0026,Mayumi,Yoshida,mayumi.yoshida26@gmail.com,085-2907-6514,1974-08-11,Female,3-11-14 nishi-machi,Fukuoka,Fukuoka,150-8118,Japan,Retail,2023-12-15,TRUE
+CUS-0027,Sakura,Watanabe,sakura.watanabe27@outlook.jp,081-5340-7864,2003-01-14,Female,1-22-9 kita-cho,Nishinomiya,Hyogo,647-1318,Japan,Mass Affluent,2019-08-05,TRUE
+CUS-0028,Akiko,Hasegawa,akiko.hasegawa28@manulife.co.jp,080-7907-4193,1999-12-28,Female,4-24-13 chome,Hiroshima,Hiroshima,383-3221,Japan,Mass Affluent,2018-11-28,TRUE
+CUS-0029,Shota,Shimizu,shota.shimizu29@manulife.co.jp,080-1108-2030,1982-03-18,Male,1-28-12 kita-cho,Hakodate,Hokkaido,590-1926,Japan,High Net Worth,2024-05-18,TRUE
+CUS-0030,Aoi,Watanabe,aoi.watanabe30@gmail.com,077-3529-2873,1980-03-23,Female,5-4-12 hon-machi,Sendai,Miyagi,232-3183,Japan,Ultra HNW,2018-01-30,TRUE
+CUS-0031,Akiko,Kimura,akiko.kimura31@yahoo.co.jp,072-9036-7742,1987-05-15,Female,5-1-6 ku-dori,Chiba,Chiba,509-5008,Japan,Mass Affluent,2026-01-15,TRUE
+CUS-0032,Masashi,Yoshida,masashi.yoshida32@yahoo.co.jp,085-3948-9913,1980-06-21,Male,4-14-18 higashi-machi,Toyota,Aichi,612-3701,Japan,Mass Affluent,2019-10-31,TRUE
+CUS-0033,Takumi,Nakamura,takumi.nakamura33@manulife.co.jp,090-6333-4608,1966-05-06,Male,5-12-20 ku-dori,Kawagoe,Saitama,571-4872,Japan,Retail,2020-09-27,TRUE
+CUS-0034,Kana,Ito,kana.ito34@gmail.com,084-4419-1617,1974-05-31,Female,3-8-3 sakura-cho,Asahikawa,Hokkaido,316-3368,Japan,Ultra HNW,2021-11-18,FALSE
+CUS-0035,Mei,Hasegawa,mei.hasegawa35@yahoo.co.jp,077-1608-5276,1965-08-04,Female,3-20-3 chome,Kobe,Hyogo,268-7610,Japan,Mass Affluent,2024-02-23,TRUE
+CUS-0036,Sakura,Ogawa,sakura.ogawa36@gmail.com,076-2670-4840,1992-10-19,Female,1-12-1 nishi-machi,Kobe,Hyogo,925-9050,Japan,Retail,2018-12-02,TRUE
+CUS-0037,Sakura,Tanaka,sakura.tanaka37@gmail.com,075-7035-3405,1948-10-26,Female,1-9-8 chome,Okazaki,Aichi,736-8182,Japan,Mass Affluent,2024-03-08,TRUE
+CUS-0038,Haruki,Tanaka,haruki.tanaka38@gmail.com,082-8722-2420,1958-08-17,Male,5-12-3 nishi-machi,Osaka,Osaka,157-9235,Japan,Mass Affluent,2021-07-24,TRUE
+CUS-0039,Hanako,Yamazaki,hanako.yamazaki39@manulife.co.jp,090-9342-3175,1978-05-07,Female,1-9-19 nishi-machi,Chiba,Chiba,535-9503,Japan,Retail,2025-05-03,TRUE
+CUS-0040,Akira,Suzuki,akira.suzuki40@gmail.com,083-2058-1015,1998-06-29,Male,1-28-13 midori-ku,Kawaguchi,Saitama,793-9083,Japan,Retail,2022-09-13,TRUE
+CUS-0041,Kana,Hashimoto,kana.hashimoto41@manulife.co.jp,082-9315-9084,2005-02-05,Female,3-22-10 kita-cho,Higashiosaka,Osaka,326-3562,Japan,Retail,2021-03-04,TRUE
+CUS-0042,Rin,Ishikawa,rin.ishikawa42@manulife.co.jp,088-6143-8841,1992-04-01,Female,4-7-12 nishi-machi,Suita,Osaka,436-1924,Japan,High Net Worth,2020-12-11,FALSE
+CUS-0043,Hanako,Ito,hanako.ito43@gmail.com,075-5317-7999,1978-09-02,Female,5-21-15 hon-machi,Hakodate,Hokkaido,101-1746,Japan,Group,2024-06-28,TRUE
+CUS-0044,Nana,Maeda,nana.maeda44@outlook.jp,071-6297-9788,2001-11-14,Female,4-29-18 nishi-machi,Ichikawa,Chiba,486-5850,Japan,High Net Worth,2025-01-18,TRUE
+CUS-0045,Takeshi,Hashimoto,takeshi.hashimoto45@outlook.jp,076-3268-2050,1979-03-31,Male,3-13-13 nishi-machi,Hakodate,Hokkaido,399-8007,Japan,High Net Worth,2020-12-16,TRUE
+CUS-0046,Daiki,Hashimoto,daiki.hashimoto46@outlook.jp,085-4848-9633,1959-10-04,Male,5-13-16 midori-ku,Sapporo,Hokkaido,764-4118,Japan,High Net Worth,2018-12-07,FALSE
+CUS-0047,Rin,Yamamoto,rin.yamamoto47@gmail.com,078-8242-5692,2001-04-22,Female,3-21-17 nishi-machi,Suita,Osaka,303-2950,Japan,Mass Affluent,2024-06-30,TRUE
+CUS-0048,Kazuki,Tanaka,kazuki.tanaka48@manulife.co.jp,090-2642-6857,1957-08-20,Male,4-2-16 chome,Saitama,Saitama,919-8320,Japan,High Net Worth,2024-06-09,FALSE
+CUS-0049,Ryo,Ogawa,ryo.ogawa49@yahoo.co.jp,071-8253-3284,2001-08-08,Male,4-29-17 sakura-cho,Sumida,Tokyo,960-8200,Japan,Retail,2021-10-04,TRUE
+CUS-0050,Tatsuya,Hasegawa,tatsuya.hasegawa50@manulife.co.jp,082-7193-8215,1967-04-24,Male,3-19-16 minami-cho,Himeji,Hyogo,264-5388,Japan,Mass Affluent,2025-09-01,TRUE
+CUS-0051,Naoki,Sasaki,naoki.sasaki51@outlook.jp,082-9226-8439,1945-04-22,Male,2-13-1 hon-machi,Hakodate,Hokkaido,910-4101,Japan,Retail,2020-09-22,TRUE
+CUS-0052,Hiroshi,Ikeda,hiroshi.ikeda52@manulife.co.jp,072-1224-5380,1969-11-02,Male,3-29-11 kita-cho,Uji,Kyoto,531-4922,Japan,Group,2020-05-24,TRUE
+CUS-0053,Takumi,Okada,takumi.okada53@yahoo.co.jp,078-5881-4764,1983-05-07,Male,2-8-9 nishi-machi,Funabashi,Chiba,801-3386,Japan,Mass Affluent,2022-01-04,TRUE
+CUS-0054,Akiko,Yamamoto,akiko.yamamoto54@yahoo.co.jp,082-2676-8539,1963-11-04,Female,4-11-6 ku-dori,Nishinomiya,Hyogo,382-6167,Japan,Retail,2026-04-14,TRUE
+CUS-0055,Tatsuya,Hayashi,tatsuya.hayashi55@yahoo.co.jp,090-9432-7973,1993-11-18,Male,3-5-7 nishi-machi,Kawagoe,Saitama,678-4495,Japan,Mass Affluent,2018-10-21,TRUE
+CUS-0056,Kaito,Nakajima,kaito.nakajima56@gmail.com,070-9751-4592,1978-04-09,Male,2-20-6 sakura-cho,Osaka,Osaka,539-6361,Japan,Mass Affluent,2019-07-10,TRUE
+CUS-0057,Megumi,Nakajima,megumi.nakajima57@yahoo.co.jp,087-5905-8446,1995-03-12,Female,2-19-12 midori-ku,Fukuoka,Fukuoka,519-3681,Japan,Mass Affluent,2024-06-02,TRUE
+CUS-0058,Takeshi,Okada,takeshi.okada58@yahoo.co.jp,079-8037-9603,1956-10-20,Male,2-16-19 ku-dori,Okazaki,Aichi,317-4873,Japan,High Net Worth,2023-05-21,TRUE
+CUS-0059,Takeshi,Shimizu,takeshi.shimizu59@yahoo.co.jp,077-5512-5518,1969-09-03,Male,2-20-10 minami-cho,Shinjuku,Tokyo,767-4152,Japan,Retail,2020-07-05,FALSE
+CUS-0060,Kana,Fujita,kana.fujita60@yahoo.co.jp,081-4470-2954,1961-10-08,Female,1-17-2 higashi-machi,Kawasaki,Kanagawa,482-7013,Japan,Group,2018-11-30,TRUE
+CUS-0061,Kenji,Fujita,kenji.fujita61@gmail.com,083-9767-6416,1964-11-23,Male,4-7-8 minami-cho,Ishinomaki,Miyagi,640-1117,Japan,Retail,2019-09-06,TRUE
+CUS-0062,Yui,Yamazaki,yui.yamazaki62@yahoo.co.jp,076-7501-7421,1949-11-20,Female,5-5-17 hon-machi,Fukuyama,Hiroshima,559-2457,Japan,Retail,2023-09-28,TRUE
+CUS-0063,Ryota,Ishikawa,ryota.ishikawa63@yahoo.co.jp,074-8539-5135,1963-05-21,Male,1-21-19 minami-cho,Saitama,Saitama,110-7383,Japan,Retail,2020-12-29,TRUE
+CUS-0064,Kana,Matsumoto,kana.matsumoto64@gmail.com,075-6635-7905,1961-12-07,Female,1-12-4 minami-cho,Uji,Kyoto,297-9900,Japan,High Net Worth,2025-10-03,FALSE
+CUS-0065,Yuna,Ikeda,yuna.ikeda65@manulife.co.jp,087-4101-9592,1964-09-12,Female,5-12-18 midori-ku,Shinagawa,Tokyo,736-5111,Japan,Retail,2018-09-05,TRUE
+CUS-0066,Hanako,Kobayashi,hanako.kobayashi66@manulife.co.jp,086-6364-4566,1963-06-26,Female,1-21-11 midori-ku,Chiba,Chiba,384-5136,Japan,Retail,2018-03-10,TRUE
+CUS-0067,Takeshi,Ikeda,takeshi.ikeda67@outlook.jp,073-1342-5098,1976-10-23,Male,1-9-13 ku-dori,Amagasaki,Hyogo,796-9022,Japan,Retail,2021-10-03,TRUE
+CUS-0068,Yuki,Inoue,yuki.inoue68@outlook.jp,086-3519-4711,1978-08-19,Female,2-1-17 midori-ku,Kawasaki,Kanagawa,353-3709,Japan,High Net Worth,2025-12-19,TRUE
+CUS-0069,Masashi,Shimizu,masashi.shimizu69@gmail.com,075-1502-2004,1949-05-16,Male,1-7-3 midori-ku,Suita,Osaka,772-3526,Japan,Retail,2023-01-04,TRUE
+CUS-0070,Hanako,Okada,hanako.okada70@gmail.com,079-6724-4252,1973-10-22,Female,3-19-16 sakura-cho,Osaka,Osaka,217-8443,Japan,Group,2019-07-23,TRUE
+CUS-0071,Daiki,Shimizu,daiki.shimizu71@outlook.jp,086-5467-4640,1947-06-18,Male,4-24-13 ku-dori,Kawagoe,Saitama,601-6026,Japan,High Net Worth,2020-03-27,TRUE
+CUS-0072,Aoi,Ikeda,aoi.ikeda72@yahoo.co.jp,074-2256-7891,1958-12-21,Female,4-28-7 ku-dori,Himeji,Hyogo,867-3428,Japan,Retail,2019-05-03,FALSE
+CUS-0073,Yuto,Hasegawa,yuto.hasegawa73@manulife.co.jp,084-1709-1859,1985-04-27,Male,2-28-11 nishi-machi,Matsudo,Chiba,658-3138,Japan,Retail,2018-01-29,TRUE
+CUS-0074,Takumi,Yoshida,takumi.yoshida74@yahoo.co.jp,071-4324-6691,1982-03-31,Male,1-28-9 hon-machi,Minato,Tokyo,702-8136,Japan,Retail,2018-09-28,TRUE
+CUS-0075,Masashi,Tanaka,masashi.tanaka75@gmail.com,086-7452-2647,1984-09-21,Male,4-26-3 ku-dori,Kawaguchi,Saitama,715-2838,Japan,Group,2022-09-13,TRUE
+CUS-0076,Yuna,Yamamoto,yuna.yamamoto76@outlook.jp,080-9076-9021,1994-08-01,Female,2-4-8 chome,Chiyoda,Tokyo,936-7784,Japan,Mass Affluent,2024-01-12,TRUE
+CUS-0077,Ayaka,Yoshida,ayaka.yoshida77@yahoo.co.jp,089-1929-4462,1982-02-01,Female,2-27-14 higashi-machi,Amagasaki,Hyogo,950-7742,Japan,Retail,2020-09-02,TRUE
+CUS-0078,Aoi,Tanaka,aoi.tanaka78@gmail.com,079-9167-7436,1945-08-27,Female,1-13-11 hon-machi,Chiyoda,Tokyo,152-8061,Japan,Retail,2024-05-24,TRUE
+CUS-0079,Tatsuya,Yamada,tatsuya.yamada79@outlook.jp,082-5750-7617,1973-11-09,Male,2-22-2 sakura-cho,Okazaki,Aichi,719-9486,Japan,Mass Affluent,2018-09-28,TRUE
+CUS-0080,Ryo,Hashimoto,ryo.hashimoto80@manulife.co.jp,085-5748-7602,1950-11-22,Male,2-28-18 ku-dori,Yokosuka,Kanagawa,915-2642,Japan,Group,2026-04-05,TRUE
+CUS-0081,Tatsuya,Ikeda,tatsuya.ikeda81@outlook.jp,081-8391-6320,1968-10-05,Male,5-30-18 hon-machi,Sendai,Miyagi,352-6327,Japan,Retail,2024-10-04,TRUE
+CUS-0082,Tatsuya,Ishikawa,tatsuya.ishikawa82@yahoo.co.jp,089-4841-7520,1974-11-27,Male,3-16-12 ku-dori,Toyonaka,Osaka,794-4569,Japan,High Net Worth,2018-08-12,FALSE
+CUS-0083,Hina,Yoshida,hina.yoshida83@yahoo.co.jp,078-9496-9959,1954-08-04,Female,1-26-2 ku-dori,Fukuyama,Hiroshima,298-8822,Japan,Mass Affluent,2023-09-19,TRUE
+CUS-0084,Ryota,Yamada,ryota.yamada84@manulife.co.jp,077-4302-3972,2005-01-25,Male,1-25-7 nishi-machi,Amagasaki,Hyogo,867-1526,Japan,Retail,2025-02-28,TRUE
+CUS-0085,Akiko,Kato,akiko.kato85@yahoo.co.jp,074-8124-1109,2004-07-22,Female,3-5-20 nishi-machi,Amagasaki,Hyogo,866-1418,Japan,Retail,2021-04-27,TRUE
+CUS-0086,Masashi,Goto,masashi.goto86@outlook.jp,079-1466-7633,1961-07-26,Male,4-16-5 kita-cho,Hakodate,Hokkaido,289-2970,Japan,Retail,2025-04-06,TRUE
+CUS-0087,Ryo,Sato,ryo.sato87@gmail.com,088-5734-3689,1988-06-24,Male,5-23-15 chome,Yokosuka,Kanagawa,814-3795,Japan,High Net Worth,2018-02-24,TRUE
+CUS-0088,Yusuke,Ito,yusuke.ito88@outlook.jp,070-3071-9462,1952-09-30,Male,1-21-7 sakura-cho,Himeji,Hyogo,164-3798,Japan,Mass Affluent,2021-07-12,TRUE
+CUS-0089,Saki,Sato,saki.sato89@yahoo.co.jp,089-9105-1563,1960-05-29,Female,4-24-6 ku-dori,Hiroshima,Hiroshima,248-7637,Japan,Retail,2023-08-19,TRUE
+CUS-0090,Ryo,Suzuki,ryo.suzuki90@gmail.com,072-2361-2696,2004-06-15,Male,3-21-9 midori-ku,Meguro,Tokyo,444-5697,Japan,Mass Affluent,2025-03-06,TRUE
+CUS-0091,Yui,Ishikawa,yui.ishikawa91@gmail.com,079-1092-2140,1947-05-01,Female,2-17-8 minami-cho,Nagoya,Aichi,650-8469,Japan,Retail,2024-07-05,TRUE
+CUS-0092,Ryota,Kimura,ryota.kimura92@gmail.com,080-6523-4873,1981-01-24,Male,3-6-15 chome,Fukuyama,Hiroshima,658-4368,Japan,Ultra HNW,2025-06-21,TRUE
+CUS-0093,Yusuke,Watanabe,yusuke.watanabe93@gmail.com,077-6417-5369,2003-03-14,Male,3-28-10 sakura-cho,Kyoto,Kyoto,389-3223,Japan,Group,2020-04-02,TRUE
+CUS-0094,Masashi,Hasegawa,masashi.hasegawa94@yahoo.co.jp,090-9674-4865,1951-01-01,Male,3-21-15 minami-cho,Saitama,Saitama,570-1708,Japan,Mass Affluent,2023-04-22,TRUE
+CUS-0095,Kana,Kato,kana.kato95@outlook.jp,084-6748-9286,1986-10-11,Female,4-21-17 sakura-cho,Fukuyama,Hiroshima,374-4105,Japan,Group,2018-07-06,TRUE
+CUS-0096,Mio,Inoue,mio.inoue96@yahoo.co.jp,075-4992-8474,1980-11-07,Female,2-23-12 minami-cho,Matsudo,Chiba,628-4035,Japan,Ultra HNW,2025-12-18,TRUE
+CUS-0097,Daiki,Yamamoto,daiki.yamamoto97@yahoo.co.jp,090-8958-6300,1952-10-19,Male,3-4-1 ku-dori,Kurume,Fukuoka,627-3813,Japan,High Net Worth,2025-02-25,TRUE
+CUS-0098,Takumi,Tanaka,takumi.tanaka98@outlook.jp,077-5013-3947,1977-06-16,Male,4-25-5 chome,Asahikawa,Hokkaido,598-3969,Japan,Mass Affluent,2026-02-28,TRUE
+CUS-0099,Tatsuya,Kimura,tatsuya.kimura99@manulife.co.jp,083-3905-4223,1954-02-27,Male,2-29-3 chome,Sumida,Tokyo,251-1929,Japan,Mass Affluent,2023-09-16,TRUE
+CUS-0100,Masashi,Watanabe,masashi.watanabe100@yahoo.co.jp,078-4228-7058,1947-10-30,Male,3-5-3 kita-cho,Nagoya,Aichi,919-5849,Japan,Retail,2024-03-15,TRUE
+CUS-0101,Hina,Maeda,hina.maeda101@gmail.com,090-1330-5209,1995-04-14,Female,5-28-16 minami-cho,Ishinomaki,Miyagi,742-4757,Japan,High Net Worth,2020-07-02,TRUE
+CUS-0102,Ayaka,Matsumoto,ayaka.matsumoto102@yahoo.co.jp,075-4749-8443,2005-08-24,Female,5-13-20 midori-ku,Hiroshima,Hiroshima,482-5179,Japan,Retail,2022-01-15,TRUE
+CUS-0103,Hanako,Ikeda,hanako.ikeda103@manulife.co.jp,077-8152-5283,1994-03-22,Female,3-14-6 ku-dori,Toyonaka,Osaka,250-8799,Japan,Mass Affluent,2022-07-25,FALSE
+CUS-0104,Misaki,Tanaka,misaki.tanaka104@outlook.jp,085-8373-8861,1955-03-04,Female,2-30-16 ku-dori,Fukuoka,Fukuoka,634-8081,Japan,Retail,2026-04-27,FALSE
+CUS-0105,Rin,Sasaki,rin.sasaki105@outlook.jp,074-2114-2191,1991-07-04,Female,5-1-16 sakura-cho,Fukuyama,Hiroshima,543-8501,Japan,High Net Worth,2022-01-27,TRUE
+CUS-0106,Saki,Inoue,saki.inoue106@manulife.co.jp,073-5227-9215,1988-04-16,Female,2-13-12 chome,Chiba,Chiba,279-4603,Japan,Ultra HNW,2019-02-24,FALSE
+CUS-0107,Yuki,Nakajima,yuki.nakajima107@outlook.jp,073-8775-1467,1964-04-08,Female,2-6-15 kita-cho,Kawagoe,Saitama,111-6424,Japan,Retail,2021-09-23,TRUE
+CUS-0108,Mayumi,Yoshida,mayumi.yoshida108@manulife.co.jp,084-4661-7082,1948-07-22,Female,2-11-12 sakura-cho,Sendai,Miyagi,504-5266,Japan,Mass Affluent,2020-07-13,TRUE
+CUS-0109,Shota,Kato,shota.kato109@manulife.co.jp,084-9605-8217,1966-01-21,Male,2-12-3 sakura-cho,Funabashi,Chiba,908-6925,Japan,Retail,2018-06-17,TRUE
+CUS-0110,Misaki,Hayashi,misaki.hayashi110@yahoo.co.jp,077-8864-9776,1963-07-26,Female,4-15-10 chome,Funabashi,Chiba,220-3041,Japan,High Net Worth,2022-06-18,TRUE
+CUS-0111,Mayumi,Mori,mayumi.mori111@manulife.co.jp,073-2456-5547,1990-10-07,Female,4-12-15 chome,Ichinomiya,Aichi,778-7577,Japan,Retail,2022-06-11,TRUE
+CUS-0112,Takeshi,Yamaguchi,takeshi.yamaguchi112@gmail.com,078-6062-1396,1968-01-20,Male,4-17-1 midori-ku,Fukuyama,Hiroshima,996-4000,Japan,High Net Worth,2018-03-06,TRUE
+CUS-0113,Masashi,Watanabe,masashi.watanabe113@gmail.com,089-4283-5321,1976-09-04,Male,2-13-14 sakura-cho,Kurume,Fukuoka,523-9391,Japan,Retail,2026-03-05,TRUE
+CUS-0114,Sakura,Yamaguchi,sakura.yamaguchi114@manulife.co.jp,074-4602-6656,1969-03-09,Female,2-22-6 hon-machi,Kyoto,Kyoto,830-5405,Japan,Ultra HNW,2023-11-29,FALSE
+CUS-0115,Mei,Tanaka,mei.tanaka115@gmail.com,088-9757-1857,1979-11-11,Female,3-3-12 nishi-machi,Kyoto,Kyoto,881-9838,Japan,Mass Affluent,2020-05-12,TRUE
+CUS-0116,Hina,Matsumoto,hina.matsumoto116@outlook.jp,078-3469-6846,1947-07-29,Female,4-2-9 chome,Kawasaki,Kanagawa,905-3481,Japan,High Net Worth,2018-11-18,TRUE
+CUS-0117,Nana,Ogawa,nana.ogawa117@manulife.co.jp,083-1523-1162,1965-09-12,Female,3-23-4 kita-cho,Amagasaki,Hyogo,853-8211,Japan,High Net Worth,2022-12-27,TRUE
+CUS-0118,Kaori,Sasaki,kaori.sasaki118@gmail.com,072-7585-9536,1992-09-12,Female,4-28-12 chome,Kawaguchi,Saitama,768-9020,Japan,Retail,2019-05-01,TRUE
+CUS-0119,Yui,Kobayashi,yui.kobayashi119@outlook.jp,071-1799-1880,1964-07-14,Female,4-13-5 midori-ku,Kyoto,Kyoto,816-2025,Japan,Mass Affluent,2023-10-19,TRUE
+CUS-0120,Riko,Yamaguchi,riko.yamaguchi120@outlook.jp,072-8222-7021,1965-05-05,Female,1-6-18 sakura-cho,Uji,Kyoto,506-8104,Japan,Mass Affluent,2023-05-30,TRUE
+CUS-0121,Sora,Ogawa,sora.ogawa121@manulife.co.jp,075-6616-3269,1959-11-11,Male,5-6-7 minami-cho,Kitakyushu,Fukuoka,885-4584,Japan,Retail,2020-09-02,TRUE
+CUS-0122,Daiki,Okada,daiki.okada122@yahoo.co.jp,088-3440-2629,1981-02-17,Male,3-14-6 nishi-machi,Okazaki,Aichi,497-7329,Japan,Mass Affluent,2025-09-08,TRUE
+CUS-0123,Hina,Kato,hina.kato123@yahoo.co.jp,081-1675-2748,1953-11-06,Female,5-15-2 kita-cho,Shibuya,Tokyo,622-2898,Japan,Mass Affluent,2021-12-06,TRUE
+CUS-0124,Yuna,Maeda,yuna.maeda124@manulife.co.jp,071-5852-4346,1949-03-29,Female,3-1-10 minami-cho,Fukuyama,Hiroshima,172-3813,Japan,Retail,2025-06-18,FALSE
+CUS-0125,Rin,Maeda,rin.maeda125@manulife.co.jp,078-7662-9389,1961-02-12,Female,2-20-6 kita-cho,Kurume,Fukuoka,764-3977,Japan,Group,2020-02-18,TRUE
+CUS-0126,Hanako,Yamaguchi,hanako.yamaguchi126@gmail.com,079-9764-7611,1957-07-25,Female,2-5-5 midori-ku,Uji,Kyoto,810-2419,Japan,High Net Worth,2018-05-10,TRUE
+CUS-0127,Mio,Ishikawa,mio.ishikawa127@yahoo.co.jp,082-1916-2782,1985-05-21,Female,4-11-13 nishi-machi,Sagamihara,Kanagawa,826-6683,Japan,Retail,2025-08-02,TRUE
+CUS-0128,Saki,Ogawa,saki.ogawa128@outlook.jp,086-8364-4055,1999-01-18,Female,5-25-12 kita-cho,Okazaki,Aichi,761-9468,Japan,Retail,2022-10-26,TRUE
+CUS-0129,Nana,Maeda,nana.maeda129@manulife.co.jp,079-7290-7507,1955-08-03,Female,5-27-12 higashi-machi,Asahikawa,Hokkaido,375-3740,Japan,High Net Worth,2021-02-01,TRUE
+CUS-0130,Yuto,Kimura,yuto.kimura130@gmail.com,078-6375-6408,1965-06-05,Male,5-22-19 midori-ku,Kitakyushu,Fukuoka,346-5748,Japan,Retail,2022-02-26,TRUE
+CUS-0131,Kana,Goto,kana.goto131@manulife.co.jp,076-4922-4778,1962-07-18,Female,3-15-7 chome,Kyoto,Kyoto,479-1841,Japan,Ultra HNW,2021-04-09,TRUE
+CUS-0132,Mayumi,Sasaki,mayumi.sasaki132@outlook.jp,072-1046-2824,1977-11-29,Female,3-27-19 sakura-cho,Sendai,Miyagi,727-6703,Japan,Retail,2021-12-16,TRUE
+CUS-0133,Ryota,Hasegawa,ryota.hasegawa133@gmail.com,076-8530-9598,1982-08-09,Male,2-13-9 midori-ku,Hakodate,Hokkaido,227-5302,Japan,Ultra HNW,2021-01-26,FALSE
+CUS-0134,Yuto,Yamaguchi,yuto.yamaguchi134@outlook.jp,078-6894-7047,1984-03-18,Male,5-18-4 midori-ku,Kawagoe,Saitama,403-4544,Japan,Mass Affluent,2020-11-06,TRUE
+CUS-0135,Shota,Kimura,shota.kimura135@outlook.jp,089-6133-5539,1995-12-21,Male,2-21-3 midori-ku,Chiyoda,Tokyo,353-3508,Japan,High Net Worth,2020-01-04,TRUE
+CUS-0136,Yuto,Kimura,yuto.kimura136@manulife.co.jp,075-9590-5068,1972-11-28,Male,1-3-10 nishi-machi,Uji,Kyoto,614-3432,Japan,Retail,2024-10-09,TRUE
+CUS-0137,Shota,Kimura,shota.kimura137@manulife.co.jp,077-8822-2259,1979-10-01,Male,5-14-11 minami-cho,Chiyoda,Tokyo,333-7342,Japan,Retail,2019-05-26,TRUE
+CUS-0138,Kana,Yamazaki,kana.yamazaki138@manulife.co.jp,072-7613-1900,1946-01-06,Female,2-3-10 nishi-machi,Chiyoda,Tokyo,569-8222,Japan,High Net Worth,2024-02-18,TRUE
+CUS-0139,Aoi,Ishikawa,aoi.ishikawa139@gmail.com,090-7167-4870,2005-12-23,Female,5-22-8 kita-cho,Ishinomaki,Miyagi,710-5634,Japan,Retail,2019-03-16,TRUE
+CUS-0140,Akiko,Fujita,akiko.fujita140@manulife.co.jp,089-9695-8361,1952-03-19,Female,2-21-10 nishi-machi,Kawagoe,Saitama,991-5995,Japan,Group,2024-06-17,TRUE
+CUS-0141,Kaito,Ogawa,kaito.ogawa141@gmail.com,088-4241-1617,1989-11-09,Male,5-4-8 kita-cho,Kyoto,Kyoto,528-9708,Japan,Group,2020-04-22,TRUE
+CUS-0142,Takeshi,Yamaguchi,takeshi.yamaguchi142@manulife.co.jp,080-2342-8324,1971-05-02,Male,5-11-15 nishi-machi,Kitakyushu,Fukuoka,121-6459,Japan,Retail,2019-09-08,TRUE
+CUS-0143,Sora,Shimizu,sora.shimizu143@outlook.jp,082-2207-6608,1950-04-24,Male,1-19-14 hon-machi,Osaka,Osaka,896-7119,Japan,Retail,2019-01-08,TRUE
+CUS-0144,Shota,Kimura,shota.kimura144@manulife.co.jp,089-4463-5361,1945-01-30,Male,3-20-14 midori-ku,Yokohama,Kanagawa,730-4510,Japan,Retail,2025-08-28,TRUE
+CUS-0145,Kaori,Fujita,kaori.fujita145@manulife.co.jp,088-2545-2230,2000-07-25,Female,4-29-10 minami-cho,Nishinomiya,Hyogo,559-1448,Japan,Mass Affluent,2026-03-07,TRUE
+CUS-0146,Kaito,Hasegawa,kaito.hasegawa146@outlook.jp,071-5852-5690,1950-12-11,Male,5-4-12 sakura-cho,Himeji,Hyogo,655-8960,Japan,Retail,2023-10-14,TRUE
+CUS-0147,Masashi,Kato,masashi.kato147@yahoo.co.jp,084-5646-5225,2000-03-01,Male,1-9-2 hon-machi,Fukuyama,Hiroshima,417-7523,Japan,Group,2025-07-22,FALSE
+CUS-0148,Sora,Mori,sora.mori148@yahoo.co.jp,070-6364-5223,2003-10-07,Male,5-23-5 sakura-cho,Sapporo,Hokkaido,678-2189,Japan,Retail,2019-06-14,TRUE
+CUS-0149,Hina,Sasaki,hina.sasaki149@outlook.jp,089-7522-4253,1960-03-22,Female,1-18-12 ku-dori,Saitama,Saitama,445-8412,Japan,High Net Worth,2023-10-12,TRUE
+CUS-0150,Mio,Mori,mio.mori150@manulife.co.jp,076-3864-2554,1968-05-05,Female,4-28-10 kita-cho,Yokosuka,Kanagawa,138-4771,Japan,Mass Affluent,2024-10-08,TRUE
+CUS-0151,Daiki,Matsumoto,daiki.matsumoto151@manulife.co.jp,084-6227-6625,1998-08-01,Male,3-26-9 ku-dori,Amagasaki,Hyogo,506-7275,Japan,Mass Affluent,2018-06-07,FALSE
+CUS-0152,Kazuki,Nakajima,kazuki.nakajima152@gmail.com,085-1506-9116,1994-07-27,Male,5-7-5 sakura-cho,Meguro,Tokyo,809-2519,Japan,Mass Affluent,2021-05-29,TRUE
+CUS-0153,Kazuki,Mori,kazuki.mori153@yahoo.co.jp,077-6567-5415,1957-04-23,Male,3-19-7 hon-machi,Kawaguchi,Saitama,760-7887,Japan,Mass Affluent,2018-11-30,TRUE
+CUS-0154,Misaki,Tanaka,misaki.tanaka154@gmail.com,071-8761-8857,1990-07-18,Female,1-1-12 kita-cho,Uji,Kyoto,368-1075,Japan,Mass Affluent,2022-02-14,TRUE
+CUS-0155,Tatsuya,Yamamoto,tatsuya.yamamoto155@gmail.com,089-7242-4408,1974-10-04,Male,5-13-18 minami-cho,Kitakyushu,Fukuoka,137-3903,Japan,Retail,2025-08-20,TRUE
+CUS-0156,Ryo,Ito,ryo.ito156@yahoo.co.jp,084-5071-9594,1964-09-07,Male,1-3-6 chome,Yokohama,Kanagawa,441-8102,Japan,Retail,2022-04-02,TRUE
+CUS-0157,Aoi,Mori,aoi.mori157@outlook.jp,082-3946-9455,1966-03-18,Female,4-21-14 nishi-machi,Chiba,Chiba,247-1976,Japan,Retail,2025-11-11,TRUE
+CUS-0158,Hiroshi,Kimura,hiroshi.kimura158@yahoo.co.jp,084-9104-8046,1968-11-16,Male,5-29-9 nishi-machi,Kurume,Fukuoka,231-8151,Japan,Retail,2023-01-14,TRUE
+CUS-0159,Tsuyoshi,Yoshida,tsuyoshi.yoshida159@outlook.jp,078-7471-9949,1976-09-15,Male,5-5-10 minami-cho,Minato,Tokyo,510-5421,Japan,Retail,2023-07-15,FALSE
+CUS-0160,Akira,Maeda,akira.maeda160@manulife.co.jp,085-3691-1657,1945-05-20,Male,5-14-15 nishi-machi,Fukuyama,Hiroshima,378-9419,Japan,High Net Worth,2022-07-02,TRUE
+CUS-0161,Ayaka,Goto,ayaka.goto161@manulife.co.jp,081-4347-8645,1965-05-31,Female,2-12-6 hon-machi,Sendai,Miyagi,991-9307,Japan,Retail,2018-06-10,TRUE
+CUS-0162,Hanako,Yamaguchi,hanako.yamaguchi162@yahoo.co.jp,071-3620-9019,1994-08-23,Female,5-28-17 chome,Fukuyama,Hiroshima,338-3595,Japan,Retail,2025-08-05,TRUE
+CUS-0163,Nana,Hashimoto,nana.hashimoto163@outlook.jp,089-3659-6937,2000-04-18,Female,5-30-1 higashi-machi,Matsudo,Chiba,116-7456,Japan,Retail,2019-09-01,TRUE
+CUS-0164,Aoi,Yamada,aoi.yamada164@manulife.co.jp,083-6093-1835,1946-03-24,Female,3-3-3 nishi-machi,Uji,Kyoto,566-6246,Japan,High Net Worth,2026-02-25,TRUE
+CUS-0165,Ryo,Hashimoto,ryo.hashimoto165@yahoo.co.jp,076-8973-8735,1988-01-02,Male,4-20-4 higashi-machi,Chiba,Chiba,122-9321,Japan,Retail,2020-04-15,TRUE
+CUS-0166,Riko,Goto,riko.goto166@yahoo.co.jp,078-6006-5557,1998-11-01,Female,3-2-16 hon-machi,Kyoto,Kyoto,476-6400,Japan,Group,2019-09-24,TRUE
+CUS-0167,Kaori,Shimizu,kaori.shimizu167@manulife.co.jp,084-6440-7757,1961-05-02,Female,5-24-16 hon-machi,Kawaguchi,Saitama,411-3081,Japan,Retail,2024-12-30,TRUE
+CUS-0168,Akiko,Yamada,akiko.yamada168@manulife.co.jp,077-5163-3910,2000-12-04,Female,4-1-1 kita-cho,Hiroshima,Hiroshima,970-4799,Japan,High Net Worth,2025-01-30,TRUE
+CUS-0169,Naoki,Yamazaki,naoki.yamazaki169@yahoo.co.jp,073-9541-1956,2005-01-05,Male,1-27-1 sakura-cho,Sumida,Tokyo,138-7279,Japan,Mass Affluent,2025-02-17,TRUE
+CUS-0170,Saki,Mori,saki.mori170@gmail.com,075-9328-3628,1991-08-19,Female,4-26-2 higashi-machi,Funabashi,Chiba,538-8851,Japan,Ultra HNW,2020-06-02,TRUE
+CUS-0171,Saki,Kimura,saki.kimura171@manulife.co.jp,078-3293-1674,1982-04-19,Female,1-11-1 minami-cho,Nagoya,Aichi,196-4527,Japan,Retail,2026-03-13,TRUE
+CUS-0172,Misaki,Yamaguchi,misaki.yamaguchi172@outlook.jp,074-7832-4396,1961-01-09,Female,5-10-5 hon-machi,Hiroshima,Hiroshima,581-2736,Japan,Group,2020-04-27,TRUE
+CUS-0173,Rin,Kimura,rin.kimura173@yahoo.co.jp,084-5128-3793,2005-05-30,Female,1-29-1 kita-cho,Fukuyama,Hiroshima,195-7537,Japan,Group,2021-07-07,TRUE
+CUS-0174,Masashi,Fujita,masashi.fujita174@gmail.com,072-6481-6311,1971-06-07,Male,5-9-16 minami-cho,Kawagoe,Saitama,718-5483,Japan,Retail,2024-01-24,TRUE
+CUS-0175,Naoki,Yoshida,naoki.yoshida175@manulife.co.jp,088-2096-7462,1978-03-26,Male,5-22-2 kita-cho,Ichikawa,Chiba,560-5946,Japan,Retail,2025-05-15,TRUE
+CUS-0176,Kenji,Goto,kenji.goto176@manulife.co.jp,085-5803-6169,1969-10-30,Male,1-17-18 hon-machi,Nishinomiya,Hyogo,613-1967,Japan,High Net Worth,2023-09-02,TRUE
+CUS-0177,Akiko,Hayashi,akiko.hayashi177@yahoo.co.jp,090-6063-2613,1979-08-06,Female,4-6-17 kita-cho,Hakodate,Hokkaido,564-8063,Japan,Mass Affluent,2019-10-21,TRUE
+CUS-0178,Takeshi,Okada,takeshi.okada178@yahoo.co.jp,075-9960-1283,1962-09-11,Male,2-12-10 sakura-cho,Kyoto,Kyoto,249-2154,Japan,High Net Worth,2024-08-13,FALSE
+CUS-0179,Naoki,Watanabe,naoki.watanabe179@outlook.jp,077-1881-9013,1949-07-06,Male,5-20-3 higashi-machi,Kitakyushu,Fukuoka,164-8062,Japan,Retail,2022-12-08,TRUE
+CUS-0180,Hiroshi,Mori,hiroshi.mori180@manulife.co.jp,079-7528-4616,1959-01-22,Male,1-2-12 minami-cho,Nagoya,Aichi,657-5420,Japan,Retail,2019-09-10,TRUE
+CUS-0181,Masashi,Kobayashi,masashi.kobayashi181@gmail.com,075-5008-5394,1945-01-17,Male,4-2-12 minami-cho,Ishinomaki,Miyagi,464-8274,Japan,High Net Worth,2023-03-17,FALSE
+CUS-0182,Riko,Kobayashi,riko.kobayashi182@outlook.jp,081-5906-8363,1962-12-17,Female,5-19-5 kita-cho,Sagamihara,Kanagawa,941-3785,Japan,Group,2024-02-21,TRUE
+CUS-0183,Kenji,Kobayashi,kenji.kobayashi183@yahoo.co.jp,073-4084-5759,1948-02-11,Male,2-11-19 kita-cho,Saitama,Saitama,823-7132,Japan,Retail,2021-03-10,TRUE
+CUS-0184,Ryo,Maeda,ryo.maeda184@gmail.com,078-8065-2937,1971-06-23,Male,4-5-17 higashi-machi,Uji,Kyoto,264-4462,Japan,Retail,2021-10-08,TRUE
+CUS-0185,Takumi,Yamada,takumi.yamada185@yahoo.co.jp,081-1002-5798,1979-01-26,Male,5-15-16 higashi-machi,Ichikawa,Chiba,952-1197,Japan,Mass Affluent,2023-07-20,TRUE
+CUS-0186,Akiko,Inoue,akiko.inoue186@yahoo.co.jp,077-2076-7791,1952-08-08,Female,1-18-5 higashi-machi,Hakodate,Hokkaido,325-9265,Japan,Retail,2023-09-05,TRUE
+CUS-0187,Kana,Ikeda,kana.ikeda187@gmail.com,082-1021-5896,1969-01-22,Female,4-26-8 ku-dori,Chiba,Chiba,542-9139,Japan,Group,2022-06-03,TRUE
+CUS-0188,Riko,Kobayashi,riko.kobayashi188@outlook.jp,072-2503-3118,1997-12-31,Female,4-28-3 kita-cho,Yokosuka,Kanagawa,529-6045,Japan,Mass Affluent,2020-11-13,TRUE
+CUS-0189,Kenji,Kato,kenji.kato189@yahoo.co.jp,075-3314-5773,1988-12-23,Male,4-6-16 ku-dori,Fukuoka,Fukuoka,590-8466,Japan,Retail,2024-02-14,TRUE
+CUS-0190,Hanako,Ito,hanako.ito190@gmail.com,070-9846-1877,1950-03-27,Female,4-5-18 midori-ku,Amagasaki,Hyogo,740-2608,Japan,Retail,2023-09-05,TRUE
+CUS-0191,Riko,Tanaka,riko.tanaka191@gmail.com,081-7088-9625,1950-06-17,Female,3-3-7 chome,Toyonaka,Osaka,850-9385,Japan,Retail,2020-09-23,TRUE
+CUS-0192,Nana,Yamazaki,nana.yamazaki192@gmail.com,077-8254-6951,1969-11-28,Female,5-9-4 higashi-machi,Ishinomaki,Miyagi,994-9379,Japan,Ultra HNW,2026-04-30,TRUE
+CUS-0193,Jun,Okada,jun.okada193@manulife.co.jp,085-8282-4180,1973-06-24,Male,2-12-8 sakura-cho,Ishinomaki,Miyagi,921-9652,Japan,Retail,2018-02-20,TRUE
+CUS-0194,Rin,Yoshida,rin.yoshida194@yahoo.co.jp,088-6304-6580,1984-04-09,Female,3-21-7 hon-machi,Funabashi,Chiba,931-9817,Japan,Retail,2024-04-29,TRUE
+CUS-0195,Yuna,Yoshida,yuna.yoshida195@yahoo.co.jp,074-3989-8150,2004-02-28,Female,3-12-3 chome,Hakodate,Hokkaido,790-3695,Japan,Mass Affluent,2023-04-26,TRUE
+CUS-0196,Saki,Tanaka,saki.tanaka196@manulife.co.jp,075-2225-7385,1952-06-08,Female,4-27-1 higashi-machi,Fukuoka,Fukuoka,449-1466,Japan,Mass Affluent,2022-10-29,FALSE
+CUS-0197,Hanako,Sasaki,hanako.sasaki197@gmail.com,081-9623-9099,1978-08-19,Female,4-3-13 kita-cho,Matsudo,Chiba,920-7982,Japan,Ultra HNW,2024-05-29,FALSE
+CUS-0198,Saki,Hayashi,saki.hayashi198@yahoo.co.jp,078-6333-2116,1956-06-13,Female,3-2-7 ku-dori,Uji,Kyoto,661-4265,Japan,Retail,2026-02-09,TRUE
+CUS-0199,Kana,Matsumoto,kana.matsumoto199@gmail.com,072-7120-5436,1957-07-02,Female,4-14-8 midori-ku,Kitakyushu,Fukuoka,371-7655,Japan,Mass Affluent,2019-05-16,TRUE
+CUS-0200,Sakura,Maeda,sakura.maeda200@outlook.jp,087-5123-9295,1977-04-04,Female,3-13-17 chome,Fukuyama,Hiroshima,464-2926,Japan,Group,2024-10-05,TRUE
