@@ -22,7 +22,8 @@
                 },
                 "parameters": {
                     "downloadUrl": {
-                        "type": "String"
+                        "type": "String",
+                        "defaultValue": "https://graph.microsoft.com"
                     }
                 }
             }

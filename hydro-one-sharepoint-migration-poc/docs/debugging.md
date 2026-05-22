@@ -37,6 +37,7 @@ This guide is organized **by error code or symptom**. When you encounter an issu
 | Pipeline timeout | [Section 16](#16-pipeline-timeout) | ADF timeout settings |
 | File locked / checked out | [Section 17](#17-file-locked--checked-out) | SharePoint file locks |
 | Populate-ControlTable.ps1 errors (SQL firewall, ADFS auth, 404, DNS) | [Section 18](#18-populate-controltableps1-errors) | PowerShell script |
+| Debug session fails with BadRequest 400 / Managed VNet 404 (sandbox creation) | [Section 19](#19-debug-mode-fails-while-triggers-work) | ADF linked service / Managed VNet |
 
 ---
 
@@ -924,6 +925,59 @@ Populate-ControlTable_YYYYMMDD_HHmmss.log
 ```
 
 The log contains full environment diagnostics, SQL pre-flight results, per-site/library details, and exception stack traces. Always include this log file when reporting issues.
+
+---
+
+### 19. Debug mode fails while triggers work
+
+**Symptom**
+ADF Studio "Debug" button on any pipeline returns a `BadRequest` error with `message: null`, `details: null`, target like `pipeline//runid/<guid>`. Activity log of the underlying ADF service shows:
+- `POST Pipeline/CreateSandboxAsync` → 400
+- `PUT TriggerEvent/ProcessSandboxCreateTriggerEventAsync` → 400
+- `GET Manager/GetEntityAsync` for `ManagedVirtualNetwork/default` → 404
+
+Crucially, **triggers (manual, scheduled, tumbling) succeed** against the same pipelines. Only Debug mode fails.
+
+**Root Cause**
+ADF Studio's Debug initialises a sandbox session in the Managed VNet integration runtime. Sandbox creation validates every linked service in the factory (even ones the pipeline doesn't use). A linked service with a **required parameter that has no default value** invalidates the sandbox payload, causing the 400. Trigger runs only provision resources for the linked services they actually touch, so they skip the broken LS and succeed.
+
+In this project, the offender was `LS_HTTP_Graph_Download`, which has a required `downloadUrl` parameter. The LS is *unused* by any deployed pipeline (PL_Copy_File_Batch uses `DS_Graph_Content_Download` / `LS_HTTP_Graph_API` via the `/content` endpoint per Section 7), but it's still part of the factory, so sandbox validation fails on it.
+
+**Resolution**
+1. Add a `defaultValue` to every required parameter in every linked service. Example for `LS_HTTP_Graph_Download`:
+   ```json
+   "parameters": {
+       "downloadUrl": {
+           "type": "String",
+           "defaultValue": "https://graph.microsoft.com"
+       }
+   }
+   ```
+   The default doesn't need to be meaningful — it just needs to exist so the sandbox validator can construct a complete LS payload.
+2. Push the change to ADF (one-shot CLI):
+   ```bash
+   az datafactory linked-service create \
+     --resource-group rg-hydroone-migration-test \
+     --factory-name adf-hydroone-migration-test \
+     --linked-service-name LS_HTTP_Graph_Download \
+     --properties @adf-templates/linkedServices/LS_HTTP_Graph_Download.json
+   ```
+3. Hard-refresh ADF Studio (Ctrl+F5), then click Debug on any pipeline to confirm a sandbox now starts.
+
+**Alternative (preferred long-term)**
+Delete `LS_HTTP_Graph_Download` and `DS_Graph_Binary_Download` outright. They contradict the project's documented Graph API pattern (see Section 7) and no pipeline references them. Removing them eliminates the foot-gun:
+```bash
+az datafactory dataset delete --resource-group rg-hydroone-migration-test \
+  --factory-name adf-hydroone-migration-test --name DS_Graph_Binary_Download
+
+az datafactory linked-service delete --resource-group rg-hydroone-migration-test \
+  --factory-name adf-hydroone-migration-test --name LS_HTTP_Graph_Download
+```
+
+**Prevention**
+- When adding a parameterised linked service, always provide a `defaultValue` (use a sentinel like `"https://placeholder.invalid"` if the parameter is truly call-site-specific).
+- Run `az datafactory linked-service list ... --query "[].name"` and spot-check that every parameter has a default before publishing to a new factory.
+- Microsoft Support ticket #2605150040004570 (May 2026) confirmed this diagnosis for the Hydro One factory.
 
 ---
 
