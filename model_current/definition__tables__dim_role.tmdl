@@ -1,0 +1,96 @@
+table dim_role
+	lineageTag: e15fac39-c8d5-4c54-942f-e0891b70ae37
+	sourceLineageTag: [dbo].[dim_role]
+
+	column role_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 85c1c7ed-0d9c-416a-a1c1-5340937b1ad4
+		sourceLineageTag: role_id
+		summarizeBy: none
+		sourceColumn: role_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column role_title
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: c44d817d-1f82-4e7f-ac96-83d4a77f5e71
+		sourceLineageTag: role_title
+		summarizeBy: none
+		sourceColumn: role_title
+
+		annotation SummarizationSetBy = Automatic
+
+	column role_family
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: b43ffe5c-f5cc-48ed-83be-a163775b3e02
+		sourceLineageTag: role_family
+		summarizeBy: none
+		sourceColumn: role_family
+
+		annotation SummarizationSetBy = Automatic
+
+	column role_level
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: c1d22f8a-4d17-44af-8114-574a7d7e5da4
+		sourceLineageTag: role_level
+		summarizeBy: none
+		sourceColumn: role_level
+
+		annotation SummarizationSetBy = Automatic
+
+	column is_tech_role
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 3499ddfb-51f7-4849-a694-2e32577a8bae
+		sourceLineageTag: is_tech_role
+		summarizeBy: none
+		sourceColumn: is_tech_role
+
+		annotation SummarizationSetBy = Automatic
+
+	column base_salary_min
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: ae8134eb-1e14-490e-b7f8-eddaad2c3da6
+		sourceLineageTag: base_salary_min
+		summarizeBy: sum
+		sourceColumn: base_salary_min
+
+		annotation SummarizationSetBy = Automatic
+
+	column base_salary_max
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 3ee59417-dec5-412b-88e5-d934ef8c37f9
+		sourceLineageTag: base_salary_max
+		summarizeBy: sum
+		sourceColumn: base_salary_max
+
+		annotation SummarizationSetBy = Automatic
+
+	column market_median_salary
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 7c2bc282-d876-42db-800f-b59c133b53bf
+		sourceLineageTag: market_median_salary
+		summarizeBy: sum
+		sourceColumn: market_median_salary
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_role = entity
+		mode: directLake
+		source
+			entityName: dim_role
+			schemaName: dbo
+			expressionSource: DatabaseQuery
+
+	annotation PBI_ResultType = Table
+

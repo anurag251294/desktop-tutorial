@@ -1,0 +1,160 @@
+table fact_recruitment
+	lineageTag: e2f49dde-d524-498d-91e5-a9bf36922049
+	sourceLineageTag: [dbo].[fact_recruitment]
+
+	column req_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 213383a8-7175-4f3b-8204-7d5560316e8e
+		sourceLineageTag: req_id
+		summarizeBy: none
+		sourceColumn: req_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column posting_date
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: date
+		lineageTag: 46f7c1c7-6ac8-4277-9a3f-b32e084f1972
+		sourceLineageTag: posting_date
+		summarizeBy: none
+		sourceColumn: posting_date
+
+		annotation SummarizationSetBy = Automatic
+
+	column hire_date
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: date
+		lineageTag: 6f3ccf41-943e-4c81-bd32-416106c7459e
+		sourceLineageTag: hire_date
+		summarizeBy: none
+		sourceColumn: hire_date
+
+		annotation SummarizationSetBy = Automatic
+
+	column status
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 97caa21c-f885-4d68-b054-6265a30c931c
+		sourceLineageTag: status
+		summarizeBy: none
+		sourceColumn: status
+
+		annotation SummarizationSetBy = Automatic
+
+	column department_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 69615894-57eb-47a4-806a-5dc21b56a93c
+		sourceLineageTag: department_id
+		summarizeBy: none
+		sourceColumn: department_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column role_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: bf25bd4a-af9c-4cf3-a8db-1d834ec7541c
+		sourceLineageTag: role_id
+		summarizeBy: none
+		sourceColumn: role_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column location_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 42d71f4c-f386-4ddf-b7b3-405c92259a8b
+		sourceLineageTag: location_id
+		summarizeBy: none
+		sourceColumn: location_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column applicants
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 3fc52273-2283-415a-98a7-ada22737ccde
+		sourceLineageTag: applicants
+		summarizeBy: sum
+		sourceColumn: applicants
+
+		annotation SummarizationSetBy = Automatic
+
+	column interviewed
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: e5522cc7-52aa-4ffc-8cd0-34796061dc51
+		sourceLineageTag: interviewed
+		summarizeBy: sum
+		sourceColumn: interviewed
+
+		annotation SummarizationSetBy = Automatic
+
+	column offers_made
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 3c392dca-1a12-4a97-a4da-cfacb66d268c
+		sourceLineageTag: offers_made
+		summarizeBy: sum
+		sourceColumn: offers_made
+
+		annotation SummarizationSetBy = Automatic
+
+	column offers_accepted
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 4e438745-abe5-4961-8372-4470a3b7ba62
+		sourceLineageTag: offers_accepted
+		summarizeBy: sum
+		sourceColumn: offers_accepted
+
+		annotation SummarizationSetBy = Automatic
+
+	column time_to_fill_days
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 9fa393f3-566e-4e4a-a6ba-26cff12ba681
+		sourceLineageTag: time_to_fill_days
+		summarizeBy: sum
+		sourceColumn: time_to_fill_days
+
+		annotation SummarizationSetBy = Automatic
+
+	column source_channel
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 4bcb18f8-1352-4440-94ce-2c238229f677
+		sourceLineageTag: source_channel
+		summarizeBy: none
+		sourceColumn: source_channel
+
+		annotation SummarizationSetBy = Automatic
+
+	column hired_employee_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 143a8386-8554-45a3-bc27-c479de38ff64
+		sourceLineageTag: hired_employee_id
+		summarizeBy: none
+		sourceColumn: hired_employee_id
+
+		annotation SummarizationSetBy = Automatic
+
+	partition fact_recruitment = entity
+		mode: directLake
+		source
+			entityName: fact_recruitment
+			schemaName: dbo
+			expressionSource: DatabaseQuery
+
+	annotation PBI_ResultType = Table
+

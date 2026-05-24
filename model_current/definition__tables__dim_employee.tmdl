@@ -1,0 +1,200 @@
+table dim_employee
+	lineageTag: d9005d7e-b6d9-4d0a-a2d8-ecef09c627af
+	sourceLineageTag: [dbo].[dim_employee]
+
+	column employee_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: e95f0489-7a35-4f53-b914-464a0a5a4ae6
+		sourceLineageTag: employee_id
+		summarizeBy: none
+		sourceColumn: employee_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column full_name
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 2fc0c1f1-d617-401c-9e83-25947517b5d3
+		sourceLineageTag: full_name
+		summarizeBy: none
+		sourceColumn: full_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column gender
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 144d4985-8211-4722-83a4-600750ee22b4
+		sourceLineageTag: gender
+		summarizeBy: none
+		sourceColumn: gender
+
+		annotation SummarizationSetBy = Automatic
+
+	column ethnicity
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 9ab7e8b9-fc57-44a0-b0c5-1a1d176921a0
+		sourceLineageTag: ethnicity
+		summarizeBy: none
+		sourceColumn: ethnicity
+
+		annotation SummarizationSetBy = Automatic
+
+	column birth_year
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: cad470d3-69dc-4f47-a1ce-5a06fbcd084f
+		sourceLineageTag: birth_year
+		summarizeBy: sum
+		sourceColumn: birth_year
+
+		annotation SummarizationSetBy = Automatic
+
+	column hire_date
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: date
+		lineageTag: 656bc986-c570-40fa-a229-3f8e8366071e
+		sourceLineageTag: hire_date
+		summarizeBy: none
+		sourceColumn: hire_date
+
+		annotation SummarizationSetBy = Automatic
+
+	column department_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 73c767f7-147a-4590-9287-2b167d659512
+		sourceLineageTag: department_id
+		summarizeBy: none
+		sourceColumn: department_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column role_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: ef40a685-fe9f-4992-89a4-75586029399c
+		sourceLineageTag: role_id
+		summarizeBy: none
+		sourceColumn: role_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column location_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 61d0cfc0-bea0-4999-b15a-44ad151098dd
+		sourceLineageTag: location_id
+		summarizeBy: none
+		sourceColumn: location_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column manager_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 272ec284-c262-41f7-9656-ed6a8c396eba
+		sourceLineageTag: manager_id
+		summarizeBy: none
+		sourceColumn: manager_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column status
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 6d8c0fc3-309e-462c-905a-127b668f1941
+		sourceLineageTag: status
+		summarizeBy: none
+		sourceColumn: status
+
+		annotation SummarizationSetBy = Automatic
+
+	column termination_date
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: date
+		lineageTag: c4e57f39-ebf1-4eb2-8478-826e83310552
+		sourceLineageTag: termination_date
+		summarizeBy: none
+		sourceColumn: termination_date
+
+		annotation SummarizationSetBy = Automatic
+
+	column termination_type
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: d3e6b4ed-741b-4a47-a417-98b9c1339830
+		sourceLineageTag: termination_type
+		summarizeBy: none
+		sourceColumn: termination_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column termination_reason
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: e6df5cbf-9944-46ff-a496-83d606af751a
+		sourceLineageTag: termination_reason
+		summarizeBy: none
+		sourceColumn: termination_reason
+
+		annotation SummarizationSetBy = Automatic
+
+	column regrettable
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 2b72b03c-7ffa-4315-9ea1-3386156ca002
+		sourceLineageTag: regrettable
+		summarizeBy: none
+		sourceColumn: regrettable
+
+		annotation SummarizationSetBy = Automatic
+
+	column current_base_salary_cad
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 7d64c0d9-eab2-4732-a7f8-45a3f38379fd
+		sourceLineageTag: current_base_salary_cad
+		summarizeBy: sum
+		sourceColumn: current_base_salary_cad
+
+		annotation SummarizationSetBy = Automatic
+
+	column current_bonus_target_pct
+		dataType: double
+		sourceProviderType: float
+		lineageTag: c2aab2e9-6a6b-4b79-845e-611f1530d766
+		sourceLineageTag: current_bonus_target_pct
+		summarizeBy: sum
+		sourceColumn: current_bonus_target_pct
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column current_equity_grant_cad
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 7d245e48-27b1-496e-8905-64a1518a0de5
+		sourceLineageTag: current_equity_grant_cad
+		summarizeBy: sum
+		sourceColumn: current_equity_grant_cad
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_employee = entity
+		mode: directLake
+		source
+			entityName: dim_employee
+			schemaName: dbo
+			expressionSource: DatabaseQuery
+
+	annotation PBI_ResultType = Table
+

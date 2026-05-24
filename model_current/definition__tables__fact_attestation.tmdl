@@ -1,0 +1,116 @@
+table fact_attestation
+	lineageTag: 2ce541c0-fa6c-4973-a8ed-a137d815b1f0
+	sourceLineageTag: [dbo].[fact_attestation]
+
+	column attestation_record_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: ce379ecc-7afb-40c0-bdfc-7636cd18140b
+		sourceLineageTag: attestation_record_id
+		summarizeBy: none
+		sourceColumn: attestation_record_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column employee_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 4c4f37e1-2c5c-428f-b91d-eb2b0153049d
+		sourceLineageTag: employee_id
+		summarizeBy: none
+		sourceColumn: employee_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column attestation_type
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 83d67a8f-f90c-4d3f-a37d-eee3caf3c57f
+		sourceLineageTag: attestation_type
+		summarizeBy: none
+		sourceColumn: attestation_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column attestation_name
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 659557ce-1699-436a-98ca-a1c8a9d37562
+		sourceLineageTag: attestation_name
+		summarizeBy: none
+		sourceColumn: attestation_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column is_mandatory
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: cf20a7d7-c2ce-4bb3-94aa-6511f8ed99cd
+		sourceLineageTag: is_mandatory
+		summarizeBy: none
+		sourceColumn: is_mandatory
+
+		annotation SummarizationSetBy = Automatic
+
+	column due_date
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: date
+		lineageTag: cc1ceef4-f504-49b5-ad24-9e617ee43770
+		sourceLineageTag: due_date
+		summarizeBy: none
+		sourceColumn: due_date
+
+		annotation SummarizationSetBy = Automatic
+
+	column completed_date
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: date
+		lineageTag: 848d279a-3269-4ff5-be8a-6db69d6dfdf1
+		sourceLineageTag: completed_date
+		summarizeBy: none
+		sourceColumn: completed_date
+
+		annotation SummarizationSetBy = Automatic
+
+	column status
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 0626016e-64e7-420f-8faa-8f87b2b55d9f
+		sourceLineageTag: status
+		summarizeBy: none
+		sourceColumn: status
+
+		annotation SummarizationSetBy = Automatic
+
+	column days_overdue
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 952f89c5-9c0d-44cc-9727-90ae8aa1491b
+		sourceLineageTag: days_overdue
+		summarizeBy: sum
+		sourceColumn: days_overdue
+
+		annotation SummarizationSetBy = Automatic
+
+	column department_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 23a61ee5-b39c-45f4-99c6-9eaaa9b87d19
+		sourceLineageTag: department_id
+		summarizeBy: none
+		sourceColumn: department_id
+
+		annotation SummarizationSetBy = Automatic
+
+	partition fact_attestation = entity
+		mode: directLake
+		source
+			entityName: fact_attestation
+			schemaName: dbo
+			expressionSource: DatabaseQuery
+
+	annotation PBI_ResultType = Table
+

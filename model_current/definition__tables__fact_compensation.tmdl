@@ -1,0 +1,119 @@
+table fact_compensation
+	lineageTag: a695d9dd-60c9-406e-ad01-d9a08cdf4b0a
+	sourceLineageTag: [dbo].[fact_compensation]
+
+	column comp_action_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 676a2720-553b-4368-8aba-d736bfc0fadc
+		sourceLineageTag: comp_action_id
+		summarizeBy: none
+		sourceColumn: comp_action_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column employee_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: e50c7ac4-2c3a-4a38-9629-0eff9195bc54
+		sourceLineageTag: employee_id
+		summarizeBy: none
+		sourceColumn: employee_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column effective_date
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: date
+		lineageTag: e597e944-bffe-4657-a9e7-b55568cb5c7e
+		sourceLineageTag: effective_date
+		summarizeBy: none
+		sourceColumn: effective_date
+
+		annotation SummarizationSetBy = Automatic
+
+	column action_type
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: a4487755-1b5b-4c6d-9311-c7512a5ccc86
+		sourceLineageTag: action_type
+		summarizeBy: none
+		sourceColumn: action_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column previous_base_salary
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 68e69286-12fd-45d2-bb69-4e488c6f0f26
+		sourceLineageTag: previous_base_salary
+		summarizeBy: sum
+		sourceColumn: previous_base_salary
+
+		annotation SummarizationSetBy = Automatic
+
+	column new_base_salary
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 4d4df627-7345-4bd1-8dad-a6a13c240e2d
+		sourceLineageTag: new_base_salary
+		summarizeBy: sum
+		sourceColumn: new_base_salary
+
+		annotation SummarizationSetBy = Automatic
+
+	column bonus_target_pct
+		dataType: double
+		sourceProviderType: float
+		lineageTag: 9be711d0-b4ed-42c0-a64d-e8358cee8670
+		sourceLineageTag: bonus_target_pct
+		summarizeBy: sum
+		sourceColumn: bonus_target_pct
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column equity_grant_cad
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: dae50072-b958-410d-bbd5-a643f9361b11
+		sourceLineageTag: equity_grant_cad
+		summarizeBy: sum
+		sourceColumn: equity_grant_cad
+
+		annotation SummarizationSetBy = Automatic
+
+	column department_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: fac7a833-0ed3-4f57-8533-7426b3fec646
+		sourceLineageTag: department_id
+		summarizeBy: none
+		sourceColumn: department_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column role_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 05412a12-00c2-484e-9305-ecc6ee251d45
+		sourceLineageTag: role_id
+		summarizeBy: none
+		sourceColumn: role_id
+
+		annotation SummarizationSetBy = Automatic
+
+	partition fact_compensation = entity
+		mode: directLake
+		source
+			entityName: fact_compensation
+			schemaName: dbo
+			expressionSource: DatabaseQuery
+
+	annotation PBI_ResultType = Table
+

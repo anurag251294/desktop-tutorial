@@ -1,0 +1,25 @@
+model Model
+	culture: en-US
+	collation: Latin1_General_100_BIN2_UTF8
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	sourceQueryCulture: en-US
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+annotation __PBI_TimeIntelligenceEnabled = 0
+
+annotation PBI_QueryOrder = ["DatabaseQuery"]
+
+ref table fact_headcount_snapshot
+ref table dim_date
+ref table dim_role
+ref table fact_attrition
+ref table dim_location
+ref table dim_employee
+ref table dim_department
+ref table fact_compensation
+ref table fact_attestation
+ref table fact_recruitment
+ref table fact_training_completion
+

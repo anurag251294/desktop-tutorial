@@ -1,0 +1,97 @@
+table fact_headcount_snapshot
+	lineageTag: e1dfa6ce-d887-48f7-adc3-072ad48cfed0
+	sourceLineageTag: [dbo].[fact_headcount_snapshot]
+
+	column snapshot_date
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: date
+		lineageTag: 62577ba2-3847-411f-ba3c-1d5bb83feba2
+		sourceLineageTag: snapshot_date
+		summarizeBy: none
+		sourceColumn: snapshot_date
+
+		annotation SummarizationSetBy = Automatic
+
+	column employee_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 79cd5d51-f3b8-40fe-a623-59bd4883446b
+		sourceLineageTag: employee_id
+		summarizeBy: none
+		sourceColumn: employee_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column department_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: dce6696c-0550-4d92-baea-7ba9bcfab17c
+		sourceLineageTag: department_id
+		summarizeBy: none
+		sourceColumn: department_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column role_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 5cc4d119-f3be-4c34-aef8-a2f88072066a
+		sourceLineageTag: role_id
+		summarizeBy: none
+		sourceColumn: role_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column location_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 3b241b71-4117-401a-86ba-f08c32efacee
+		sourceLineageTag: location_id
+		summarizeBy: none
+		sourceColumn: location_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column manager_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 2d6747dd-0bbc-4090-a7bb-fdd867651b79
+		sourceLineageTag: manager_id
+		summarizeBy: none
+		sourceColumn: manager_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column fte
+		dataType: double
+		sourceProviderType: float
+		lineageTag: 7508b5f6-180e-44fe-ac87-872f037d93b2
+		sourceLineageTag: fte
+		summarizeBy: sum
+		sourceColumn: fte
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column base_salary_cad
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 6417115c-d353-4e53-b766-33890f49ff91
+		sourceLineageTag: base_salary_cad
+		summarizeBy: sum
+		sourceColumn: base_salary_cad
+
+		annotation SummarizationSetBy = Automatic
+
+	partition fact_headcount_snapshot = entity
+		mode: directLake
+		source
+			entityName: fact_headcount_snapshot
+			schemaName: dbo
+			expressionSource: DatabaseQuery
+
+	annotation PBI_ResultType = Table
+
