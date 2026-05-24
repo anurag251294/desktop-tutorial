@@ -1,0 +1,27 @@
+department_id,department_name,function,cost_center,target_active_hc
+DPT-001,Payments Platform,Engineering,CC-1001,85
+DPT-002,Money Movement,Engineering,CC-1002,62
+DPT-003,Core Network,Engineering,CC-1003,55
+DPT-004,Cyber Security,Engineering,CC-1004,48
+DPT-005,Data & ML Platform,Engineering,CC-1005,45
+DPT-006,Cloud Platform,Engineering,CC-1006,52
+DPT-007,Mobile & Web,Engineering,CC-1007,38
+DPT-008,Site Reliability,Engineering,CC-1008,25
+DPT-009,Product Management,Product,CC-2001,48
+DPT-010,Design,Product,CC-2002,22
+DPT-011,Credit Risk,Risk & Compliance,CC-3001,24
+DPT-012,Fraud & Financial Crime,Risk & Compliance,CC-3002,32
+DPT-013,AML / FINTRAC,Risk & Compliance,CC-3003,20
+DPT-014,OSFI Liaison & Policy,Risk & Compliance,CC-3004,10
+DPT-015,Privacy & Data Protection,Risk & Compliance,CC-3005,12
+DPT-016,Network Operations,Operations,CC-4001,38
+DPT-017,Settlement Operations,Operations,CC-4002,30
+DPT-018,Dispute Resolution,Operations,CC-4003,28
+DPT-019,Vendor Operations,Operations,CC-4004,16
+DPT-020,Customer Experience,Customer Experience,CC-5001,58
+DPT-021,Finance,Corporate,CC-6001,42
+DPT-022,Legal,Corporate,CC-6002,18
+DPT-023,Human Resources,Corporate,CC-6003,32
+DPT-024,Marketing & Comms,Corporate,CC-6004,28
+DPT-025,Corporate Strategy,Corporate,CC-6005,14
+DPT-026,IT & Workplace,Corporate,CC-6006,18

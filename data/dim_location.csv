@@ -1,0 +1,8 @@
+location_id,location_name,city,province,country,is_remote
+LOC-001,Toronto HQ,Toronto,ON,Canada,No
+LOC-002,Calgary,Calgary,AB,Canada,No
+LOC-003,Ottawa,Ottawa,ON,Canada,No
+LOC-004,Remote - ON,Various,ON,Canada,Yes
+LOC-005,Remote - AB,Various,AB,Canada,Yes
+LOC-006,Remote - QC,Various,QC,Canada,Yes
+LOC-007,Remote - BC,Various,BC,Canada,Yes

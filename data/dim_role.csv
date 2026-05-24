@@ -1,0 +1,41 @@
+role_id,role_title,role_family,role_level,is_tech_role,base_salary_min,base_salary_max,market_median_salary
+ROL-001,Associate Engineer,Engineering,IC1,Yes,78000,95000,88000
+ROL-002,Software Engineer,Engineering,IC2,Yes,95000,118000,108000
+ROL-003,Senior Software Engineer,Engineering,IC3,Yes,118000,148000,140000
+ROL-004,Staff Engineer,Engineering,IC4,Yes,148000,185000,178000
+ROL-005,Principal Engineer,Engineering,IC5,Yes,180000,230000,220000
+ROL-006,Distinguished Engineer,Engineering,IC6,Yes,225000,285000,280000
+ROL-007,Associate Product Manager,Product,IC2,No,88000,105000,100000
+ROL-008,Senior Product Manager,Product,IC3,No,115000,145000,138000
+ROL-009,Group Product Manager,Product,IC4,No,145000,178000,170000
+ROL-010,Risk Analyst,Risk,IC2,No,78000,95000,92000
+ROL-011,Senior Risk Analyst,Risk,IC3,No,95000,122000,120000
+ROL-012,Risk Manager,Risk,IC4,No,122000,155000,155000
+ROL-013,Compliance Officer,Compliance,IC3,No,95000,120000,118000
+ROL-014,Senior Compliance Officer,Compliance,IC4,No,120000,152000,150000
+ROL-015,Operations Analyst,Operations,IC1,No,62000,78000,72000
+ROL-016,Senior Operations Analyst,Operations,IC2,No,78000,98000,92000
+ROL-017,Operations Lead,Operations,IC3,No,98000,125000,118000
+ROL-018,Customer Support Specialist,CX,IC1,No,55000,68000,62000
+ROL-019,Senior Support Specialist,CX,IC2,No,68000,85000,80000
+ROL-020,Product Designer,Design,IC2,No,88000,112000,108000
+ROL-021,Senior Product Designer,Design,IC3,No,112000,140000,135000
+ROL-022,Analyst,Corporate,IC2,No,70000,88000,82000
+ROL-023,Senior Analyst,Corporate,IC3,No,88000,115000,108000
+ROL-024,Manager,Corporate,IC4,No,115000,145000,140000
+ROL-025,Engineering Manager,Management,M1,Yes,155000,195000,185000
+ROL-026,Senior Engineering Manager,Management,M2,Yes,185000,230000,220000
+ROL-027,"Director, Engineering",Management,M3,Yes,220000,280000,270000
+ROL-028,"Director, Product",Management,M2,No,195000,245000,235000
+ROL-029,"Director, Risk",Management,M2,No,180000,225000,215000
+ROL-030,"Director, Compliance",Management,M2,No,175000,220000,210000
+ROL-031,"Director, Operations",Management,M2,No,160000,200000,190000
+ROL-032,"VP, Engineering",Management,M3,Yes,280000,360000,340000
+ROL-033,"VP, Product",Management,M3,No,260000,330000,315000
+ROL-034,"VP, Risk & Compliance",Management,M3,No,250000,320000,305000
+ROL-035,Chief Technology Officer,Executive,E1,Yes,425000,525000,500000
+ROL-036,Chief Product Officer,Executive,E1,No,400000,500000,475000
+ROL-037,Chief Risk Officer,Executive,E1,No,400000,500000,475000
+ROL-038,Chief Financial Officer,Executive,E1,No,420000,525000,500000
+ROL-039,Chief People Officer,Executive,E1,No,360000,450000,425000
+ROL-040,Chief Executive Officer,Executive,E2,No,650000,825000,775000
