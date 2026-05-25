@@ -1,0 +1,11 @@
+{
+  "tenant": "microsoft.com",
+  "capacity_id": "fc2a4dac-2edb-4f33-9209-b0dac6a67c5d",
+  "capacity_name": "Trial-20260525T002804Z-7lpEOuxWXEKXst_jLv-FVA",
+  "workspace_id": "de6a7e47-474b-4354-87e7-26b8d741f015",
+  "lakehouse_id": "ace95976-24ae-4e1e-b799-2075c1495c11",
+  "sql_endpoint_cs": "x6eps4xrq2xudenlfv6naeo3i4-i57gvxsli5kehb7he24noqpqcu.msit-datawarehouse.fabric.microsoft.com",
+  "sql_endpoint_id": "922f1375-6b04-4325-a4f8-2d37e25367bf",
+  "model_id": "1fd6e015-e37a-4d30-95dd-e75f39ec8a2d",
+  "report_id": "7869f380-276a-49b2-af89-f9de7836eb80"
+}
