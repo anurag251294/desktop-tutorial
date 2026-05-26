@@ -37,3 +37,7 @@ Thumbs.db
 *.pbix.tmp
 .~lock.*
 ~$*
+
+# Transient artifacts (don't commit)
+backup_hr_report_*.json
+hr_agent_dump/
