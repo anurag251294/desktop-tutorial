@@ -1,0 +1,36 @@
+[
+  {
+    "name": "ctc_merch_agent",
+    "display": "CTC Merch Data Agent",
+    "ws": "9e29a8fd-9462-4c18-b691-f77a631e89ea",
+    "model_id": "729c30bc-100a-465a-8af6-4200bd6ff70c",
+    "model_name": "ctc_merch",
+    "description": "Conversational analytics over CTC Merch SKU performance, in-season demand, and connected inventory",
+    "prompts": [
+      "What are the top 10 SKUs by EGM dollars this year?",
+      "Compare Air Fryers vs Cookware Sets POS YoY and EGM %.",
+      "Which SKUs have lost sales above 5% and vendor fill rate below 85%?",
+      "Show SKUs with weeks of supply above 18 but lost sales below 2%.",
+      "Summarize Canvas Outdoor vendor performance."
+    ],
+    "created_id": "70dba6b9-5a14-4784-8ee1-1c463e58af59",
+    "created_type": "DataAgent"
+  },
+  {
+    "name": "interac_hr_agent",
+    "display": "Interac HR Data Agent",
+    "ws": "de6a7e47-474b-4354-87e7-26b8d741f015",
+    "model_id": "89782e0a-276b-4b86-a2d0-e8238d3c8791",
+    "model_name": "hr_demo",
+    "description": "Conversational analytics over Interac HR - attrition, FINTRAC training, COI attestations, headcount vs target",
+    "prompts": [
+      "What is the current attrition rate compared to the threshold?",
+      "Which departments have COI attestations overdue 90+ days?",
+      "Show FINTRAC training completion by function.",
+      "List managers with the most open requisitions.",
+      "Headcount vs target by department."
+    ],
+    "created_id": "5d87b475-310c-4b22-ba4c-592c73207dde",
+    "created_type": "DataAgent"
+  }
+]

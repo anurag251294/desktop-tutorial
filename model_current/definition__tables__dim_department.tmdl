@@ -1,0 +1,64 @@
+table dim_department
+	lineageTag: 5b18671e-ca2f-4b31-8b9d-5330b04e2fda
+	sourceLineageTag: [dbo].[dim_department]
+
+	column department_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: d795c244-35cb-4375-8808-4317291b3a25
+		sourceLineageTag: department_id
+		summarizeBy: none
+		sourceColumn: department_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column department_name
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 06944723-241e-4741-9931-94504cba7346
+		sourceLineageTag: department_name
+		summarizeBy: none
+		sourceColumn: department_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column function
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 1f15a9dd-feb4-407a-b98a-0c9e78f3c63e
+		sourceLineageTag: function
+		summarizeBy: none
+		sourceColumn: function
+
+		annotation SummarizationSetBy = Automatic
+
+	column cost_center
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: aa64b734-9d6f-475a-904e-56dd0b3d59a9
+		sourceLineageTag: cost_center
+		summarizeBy: none
+		sourceColumn: cost_center
+
+		annotation SummarizationSetBy = Automatic
+
+	column target_active_hc
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: fc310a0a-1e78-48e2-892b-cffed91ba141
+		sourceLineageTag: target_active_hc
+		summarizeBy: sum
+		sourceColumn: target_active_hc
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_department = entity
+		mode: directLake
+		source
+			entityName: dim_department
+			schemaName: dbo
+			expressionSource: DatabaseQuery
+
+	annotation PBI_ResultType = Table
+

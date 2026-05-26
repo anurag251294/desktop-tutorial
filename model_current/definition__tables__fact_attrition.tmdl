@@ -1,0 +1,149 @@
+table fact_attrition
+	lineageTag: 6e47e186-9e64-4671-b514-6b875a1c6867
+	sourceLineageTag: [dbo].[fact_attrition]
+
+	column attrition_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 0904108c-0207-44d7-91f4-493e3e3cb35c
+		sourceLineageTag: attrition_id
+		summarizeBy: none
+		sourceColumn: attrition_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column employee_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 9ba2ccd3-489a-479f-88fc-d32e19328343
+		sourceLineageTag: employee_id
+		summarizeBy: none
+		sourceColumn: employee_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column termination_date
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: date
+		lineageTag: af3c683e-dc20-4ff9-b154-db31171c3255
+		sourceLineageTag: termination_date
+		summarizeBy: none
+		sourceColumn: termination_date
+
+		annotation SummarizationSetBy = Automatic
+
+	column termination_type
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: f59bfe21-0235-4aad-8325-74b7e246aa3c
+		sourceLineageTag: termination_type
+		summarizeBy: none
+		sourceColumn: termination_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column termination_reason
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 239b9095-b206-4557-af40-542a12c0f27e
+		sourceLineageTag: termination_reason
+		summarizeBy: none
+		sourceColumn: termination_reason
+
+		annotation SummarizationSetBy = Automatic
+
+	column regrettable
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 6fe06b79-95be-4ff2-8d1b-40a9d63d2ee8
+		sourceLineageTag: regrettable
+		summarizeBy: none
+		sourceColumn: regrettable
+
+		annotation SummarizationSetBy = Automatic
+
+	column tenure_days
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 1c92354b-7384-44a4-a8fd-a6ed8d08b2bd
+		sourceLineageTag: tenure_days
+		summarizeBy: sum
+		sourceColumn: tenure_days
+
+		annotation SummarizationSetBy = Automatic
+
+	column tenure_months
+		dataType: double
+		sourceProviderType: float
+		lineageTag: dca193e6-e2e6-4ff3-8cc8-e9d09c93ada5
+		sourceLineageTag: tenure_months
+		summarizeBy: sum
+		sourceColumn: tenure_months
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column exit_interview_score
+		dataType: double
+		sourceProviderType: float
+		lineageTag: cc5599bc-100e-43a6-a84a-155f97d403d4
+		sourceLineageTag: exit_interview_score
+		summarizeBy: sum
+		sourceColumn: exit_interview_score
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column department_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 7daffde5-beda-40da-836f-11c76959e90a
+		sourceLineageTag: department_id
+		summarizeBy: none
+		sourceColumn: department_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column role_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 49597725-f7a8-4500-89dd-001a8664bb41
+		sourceLineageTag: role_id
+		summarizeBy: none
+		sourceColumn: role_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column location_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 1cbf6223-9f81-432c-9357-ce861f41e7c0
+		sourceLineageTag: location_id
+		summarizeBy: none
+		sourceColumn: location_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column manager_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: cb8f6f03-5419-4eb7-8847-7987214fb0b4
+		sourceLineageTag: manager_id
+		summarizeBy: none
+		sourceColumn: manager_id
+
+		annotation SummarizationSetBy = Automatic
+
+	partition fact_attrition = entity
+		mode: directLake
+		source
+			entityName: fact_attrition
+			schemaName: dbo
+			expressionSource: DatabaseQuery
+
+	annotation PBI_ResultType = Table
+

@@ -1,0 +1,69 @@
+SKU,SKU_Name,Category,Subcategory,Fineline,Fineline_Name,Vendor,Brand,New_SKU_Flag,Status,Retail_Price,Cost,Store_Count,Margin_Per_Unit
+AL-LED-001,LP LED 9005 HB3 2PK,Auto Lighting,Automotive,LED,LED Bulbs,LumiTech Canada,LumiPro,N,ACT,59.99,34.2,461,25.79
+AL-LED-002,LP LED H11 PRO 2PK,Auto Lighting,Automotive,LED,LED Bulbs,LumiTech Canada,LumiPro,N,ACT,64.99,37.1,444,27.89
+AL-LED-003,BP LED 9006 HB4 2PK,Auto Lighting,Automotive,LED,LED Bulbs,BrightPath Lighting,BrightPath,N,ACT,54.99,31.5,423,23.49
+AL-LED-004,LP LED H7 ULTRA 2PK,Auto Lighting,Automotive,LED,LED Bulbs,LumiTech Canada,LumiPro,Y,ACT,69.99,39.8,504,30.19
+AL-LED-005,BP LED H4 MAXX 2PK,Auto Lighting,Automotive,LED,LED Bulbs,BrightPath Lighting,BrightPath,Y,ACT,74.99,42.5,390,32.49
+AL-LED-006,LP LED 9012 HIR2 2PK,Auto Lighting,Automotive,LED,LED Bulbs,LumiTech Canada,LumiPro,Y,ACT,67.99,38.6,461,29.39
+AL-LED-007,OG LED FOG H16 2PK,Auto Lighting,Automotive,LED,LED Bulbs,OptiGlow Inc,OptiGlow,Y,ACT,49.99,28.5,409,21.49
+AL-LED-008,LP LED H1 SPORT 2PK,Auto Lighting,Automotive,LED,LED Bulbs,LumiTech Canada,LumiPro,Y,ACT,59.99,34.2,398,25.79
+AL-HAL-001,MM HALOGEN H11 2PK,Auto Lighting,Automotive,HAL,Halogen Bulbs,LumiTech Canada,MotoMaster,N,ACT,24.99,12.8,391,12.19
+AL-HAL-002,CT HALOGEN 9005 2PK,Auto Lighting,Automotive,HAL,Halogen Bulbs,LumiTech Canada,Certified,N,ACT,19.99,10.2,500,9.79
+AL-HAL-003,MM HALOGEN H7 2PK,Auto Lighting,Automotive,HAL,Halogen Bulbs,LumiTech Canada,MotoMaster,N,ACT,22.99,11.8,472,11.19
+AL-HAL-004,CT HALOGEN 9006 2PK,Auto Lighting,Automotive,HAL,Halogen Bulbs,LumiTech Canada,Certified,N,ACT,18.99,9.7,502,9.29
+AL-HAL-005,OG HALOGEN H4 STD,Auto Lighting,Automotive,HAL,Halogen Bulbs,OptiGlow Inc,OptiGlow,N,ACT,16.99,8.6,473,8.39
+AL-HAL-006,MM HALOGEN H1 2PK,Auto Lighting,Automotive,HAL,Halogen Bulbs,LumiTech Canada,MotoMaster,N,ACT,21.99,11.2,498,10.79
+AL-HAL-007,CT HALOGEN 9003 2PK,Auto Lighting,Automotive,HAL,Halogen Bulbs,LumiTech Canada,Certified,N,FD,17.99,9.2,455,8.79
+AL-MIN-001,CT MINI 3157 BP2,Auto Lighting,Automotive,MIN,Miniature Bulbs,LumiTech Canada,Certified,N,ACT,9.99,4.8,472,5.19
+AL-MIN-002,CT MINI 194 BP2,Auto Lighting,Automotive,MIN,Miniature Bulbs,LumiTech Canada,Certified,N,ACT,7.99,3.8,463,4.19
+AL-MIN-003,CT MINI 1157 BP2,Auto Lighting,Automotive,MIN,Miniature Bulbs,LumiTech Canada,Certified,N,ACT,8.99,4.3,389,4.69
+AL-MIN-004,CT MINI 168 LED 2PK,Auto Lighting,Automotive,MIN,Miniature Bulbs,LumiTech Canada,Certified,Y,ACT,14.99,7.6,441,7.39
+AL-MIN-005,OG MINI 912 BP2,Auto Lighting,Automotive,MIN,Miniature Bulbs,OptiGlow Inc,OptiGlow,N,ACT,8.49,4.1,480,4.39
+AL-MIN-006,CT MINI 921 BP2,Auto Lighting,Automotive,MIN,Miniature Bulbs,LumiTech Canada,Certified,N,ACT,8.99,4.3,497,4.69
+AL-MIN-007,BP MINI 2057 BP2,Auto Lighting,Automotive,MIN,Miniature Bulbs,BrightPath Lighting,BrightPath,N,ACT,7.49,3.6,456,3.89
+AL-SB-001,CT SEALED BEAM 6052,Auto Lighting,Automotive,SEA,Sealed Beams,LumiTech Canada,Certified,N,ACT,14.99,7.2,418,7.79
+AL-SB-002,CT SEALED BEAM H6054,Auto Lighting,Automotive,SEA,Sealed Beams,LumiTech Canada,Certified,N,ACT,18.99,9.6,492,9.39
+AL-SB-003,OG SEALED BEAM 6014,Auto Lighting,Automotive,SEA,Sealed Beams,OptiGlow Inc,OptiGlow,N,FD,12.99,6.5,418,6.49
+AL-SB-004,CT SEALED BEAM 4651,Auto Lighting,Automotive,SEA,Sealed Beams,LumiTech Canada,Certified,N,ACT,16.99,8.5,461,8.49
+AL-HA-001,BP HEADLIGHT CIVIC 16-20,Auto Lighting,Automotive,HEA,Headlight Assemblies,BrightPath Lighting,BrightPath,N,ACT,149.99,88.5,413,61.49
+AL-HA-002,BP HEADLIGHT RAV4 19-23,Auto Lighting,Automotive,HEA,Headlight Assemblies,BrightPath Lighting,BrightPath,N,ACT,169.99,99.8,398,70.19
+AL-HA-003,BP HEADLIGHT F150 18-22,Auto Lighting,Automotive,HEA,Headlight Assemblies,BrightPath Lighting,BrightPath,N,ACT,189.99,112.4,493,77.59
+AL-HA-004,BP HEADLIGHT CRV 17-21,Auto Lighting,Automotive,HEA,Headlight Assemblies,BrightPath Lighting,BrightPath,Y,ACT,159.99,94.0,480,65.99
+AL-HA-005,BP HEADLIGHT ROGUE 21-24,Auto Lighting,Automotive,HEA,Headlight Assemblies,BrightPath Lighting,BrightPath,Y,ACT,174.99,103.2,481,71.79
+AL-HA-006,LP HEADLIGHT COROLLA 20-24,Auto Lighting,Automotive,HEA,Headlight Assemblies,LumiTech Canada,LumiPro,N,ACT,139.99,82.4,448,57.59
+AL-HA-007,OG HEADLIGHT ACCORD 18-22,Auto Lighting,Automotive,HEA,Headlight Assemblies,OptiGlow Inc,OptiGlow,N,ACT,154.99,91.2,457,63.79
+KS-AFR-001,HM DIGITAL AIR FRYER 5.5L,Kitchen & Small Appliances,Home & Living,AFR,Air Fryers,HomeStyle Canada,HERITAGE,N,ACT,129.99,74.8,485,55.19
+KS-AFR-002,NK DUAL ZONE AIR FRYER 8L,Kitchen & Small Appliances,Home & Living,AFR,Air Fryers,Ninja Canada,Ninja,Y,ACT,199.99,118.5,420,81.49
+KS-AFR-003,HM COMPACT AIR FRYER 3.5L,Kitchen & Small Appliances,Home & Living,AFR,Air Fryers,HomeStyle Canada,HERITAGE,N,ACT,79.99,44.2,498,35.79
+KS-BLN-001,NK PRO BLENDER 1200W,Kitchen & Small Appliances,Home & Living,BLN,Blenders,Ninja Canada,Ninja,N,ACT,149.99,88.6,460,61.39
+KS-BLN-002,HM PERSONAL BLENDER 600W,Kitchen & Small Appliances,Home & Living,BLN,Blenders,HomeStyle Canada,HERITAGE,N,ACT,49.99,26.8,492,23.19
+KS-CKW-001,HM 10PC STAINLESS COOKWARE,Kitchen & Small Appliances,Home & Living,CKW,Cookware Sets,HomeStyle Canada,HERITAGE,N,ACT,199.99,112.4,470,87.59
+KS-CKW-002,HM 12PC NONSTICK COOKWARE,Kitchen & Small Appliances,Home & Living,CKW,Cookware Sets,HomeStyle Canada,HERITAGE,N,ACT,149.99,82.5,488,67.49
+OL-PFR-001,CV ALUMINUM DINING SET 7PC,Outdoor Living & Patio,Home & Living,PFR,Patio Furniture,Canvas Outdoor,CANVAS,N,ACT,899.99,548.0,380,351.99
+OL-PFR-002,CV WICKER SOFA SET 4PC,Outdoor Living & Patio,Home & Living,PFR,Patio Furniture,Canvas Outdoor,CANVAS,N,FD,749.99,442.5,420,307.49
+OL-PFR-003,CV ADIRONDACK CHAIR RESIN,Outdoor Living & Patio,Home & Living,PFR,Patio Furniture,Canvas Outdoor,CANVAS,N,ACT,129.99,71.5,495,58.49
+OL-BBQ-001,MC PROPANE GRILL 4-BURNER,Outdoor Living & Patio,Home & Living,BBQ,BBQs & Grills,MasterChef Canada,MasterChef,N,ACT,549.99,348.2,465,201.79
+OL-BBQ-002,MC PORTABLE CHARCOAL GRILL,Outdoor Living & Patio,Home & Living,BBQ,BBQs & Grills,MasterChef Canada,MasterChef,N,ACT,149.99,88.5,488,61.49
+OL-BBQ-003,NK WOODFIRE OUTDOOR GRILL,Outdoor Living & Patio,Home & Living,BBQ,BBQs & Grills,Ninja Canada,Ninja,Y,ACT,449.99,272.0,360,177.99
+OL-SLR-001,CV SOLAR PATH LIGHT 6PK,Outdoor Living & Patio,Home & Living,SLR,Outdoor Lighting,Canvas Outdoor,CANVAS,N,ACT,39.99,19.8,498,20.19
+OL-SLR-002,CV SOLAR STRING LIGHTS 25FT,Outdoor Living & Patio,Home & Living,SLR,Outdoor Lighting,Canvas Outdoor,CANVAS,Y,ACT,29.99,14.5,465,15.49
+CA-TNT-001,WF 4-PERSON DOME TENT,Camping & Adventure,Home & Living,TNT,Tents,Outbound Gear,Woods,N,ACT,249.99,142.5,440,107.49
+CA-TNT-002,WF 2-PERSON ULTRALIGHT TENT,Camping & Adventure,Home & Living,TNT,Tents,Outbound Gear,Woods,Y,ACT,349.99,206.5,360,143.49
+CA-SLP-001,WF HYBRID SLEEPING BAG -7C,Camping & Adventure,Home & Living,SLP,Sleeping Bags,Outbound Gear,Woods,N,ACT,119.99,64.8,470,55.19
+CA-SLP-002,OB MUMMY SLEEPING BAG -15C,Camping & Adventure,Home & Living,SLP,Sleeping Bags,Outbound Gear,Outbound,N,ACT,89.99,47.2,458,42.79
+CA-CLR-001,YT SOFT COOLER 30-CAN,Camping & Adventure,Home & Living,CLR,Coolers & Hydration,Yeti Canada,Yeti,N,ACT,249.99,152.5,410,97.49
+CA-CLR-002,OB HARD COOLER 52QT,Camping & Adventure,Home & Living,CLR,Coolers & Hydration,Outbound Gear,Outbound,N,FD,79.99,42.8,480,37.19
+CA-CLR-003,YT INSULATED BOTTLE 26OZ,Camping & Adventure,Home & Living,CLR,Coolers & Hydration,Yeti Canada,Yeti,Y,ACT,44.99,24.6,445,20.39
+HO-SHL-001,TA MODULAR SHELF 5-TIER,Home Organization & Storage,Home & Living,SHL,Shelving Systems,TypeA Canada,TYPE A,N,ACT,89.99,44.2,490,45.79
+HO-SHL-002,TA HEAVY DUTY SHELF 4-TIER,Home Organization & Storage,Home & Living,SHL,Shelving Systems,TypeA Canada,TYPE A,N,ACT,69.99,33.6,485,36.39
+HO-BIN-001,TA CLEAR STORAGE BIN 64L 4PK,Home Organization & Storage,Home & Living,BIN,Storage Bins,TypeA Canada,TYPE A,N,ACT,34.99,15.4,500,19.59
+HO-BIN-002,TA FABRIC BIN CUBE 6PK,Home Organization & Storage,Home & Living,BIN,Storage Bins,TypeA Canada,TYPE A,N,ACT,29.99,13.2,498,16.79
+HO-CLO-001,TA CLOSET ORGANIZER SYSTEM,Home Organization & Storage,Home & Living,CLO,Closet Solutions,TypeA Canada,TYPE A,Y,ACT,199.99,104.8,380,95.19
+HO-CLO-002,TA SHOE RACK 3-TIER,Home Organization & Storage,Home & Living,CLO,Closet Solutions,TypeA Canada,TYPE A,N,ACT,39.99,18.6,492,21.39
+FR-DWB-001,NF HEX DUMBBELL SET 5-25LB,Fitness & Recreation,Home & Living,DWB,Dumbbells & Weights,NordicFlex Canada,NordicFlex,N,ACT,199.99,118.4,458,81.59
+FR-DWB-002,NF ADJUSTABLE DUMBBELL 50LB,Fitness & Recreation,Home & Living,DWB,Dumbbells & Weights,NordicFlex Canada,NordicFlex,N,ACT,299.99,178.8,420,121.19
+FR-YGA-001,GC YOGA MAT PREMIUM 6MM,Fitness & Recreation,Home & Living,YGA,Yoga & Recovery,GreenCore Wellness,GreenCore,N,ACT,44.99,21.6,490,23.39
+FR-YGA-002,GC FOAM ROLLER 18IN,Fitness & Recreation,Home & Living,YGA,Yoga & Recovery,GreenCore Wellness,GreenCore,N,ACT,34.99,16.8,485,18.19
+FR-YGA-003,GC RESISTANCE BAND SET 5PK,Fitness & Recreation,Home & Living,YGA,Yoga & Recovery,GreenCore Wellness,GreenCore,Y,ACT,29.99,13.4,465,16.59
+FR-BKE-001,NF HYBRID BIKE 700C,Fitness & Recreation,Home & Living,BKE,Bikes & Cycling,NordicFlex Canada,NordicFlex,N,ACT,449.99,272.0,410,177.99
+FR-BKE-002,NF E-BIKE COMMUTER 500W,Fitness & Recreation,Home & Living,BKE,Bikes & Cycling,NordicFlex Canada,NordicFlex,Y,ACT,1499.99,920.0,280,579.99

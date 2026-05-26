@@ -1,0 +1,136 @@
+table fact_training_completion
+	lineageTag: 0a2ba9c6-19fc-48c6-ae72-e98087da98da
+	sourceLineageTag: [dbo].[fact_training_completion]
+
+	column training_record_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 2c4a9e2e-f283-4371-af22-5eb0d0774139
+		sourceLineageTag: training_record_id
+		summarizeBy: none
+		sourceColumn: training_record_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column employee_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: db0b93e9-e775-4afc-b407-6c51e8b3c110
+		sourceLineageTag: employee_id
+		summarizeBy: none
+		sourceColumn: employee_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column course_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 714c33d6-8d34-4c93-9b14-f3968d9f73a0
+		sourceLineageTag: course_id
+		summarizeBy: none
+		sourceColumn: course_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column course_name
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 24e9e41d-beed-4795-9595-2210688c5eed
+		sourceLineageTag: course_name
+		summarizeBy: none
+		sourceColumn: course_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column regulator
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 2f66a6c2-ca36-4929-adcc-922771c14349
+		sourceLineageTag: regulator
+		summarizeBy: none
+		sourceColumn: regulator
+
+		annotation SummarizationSetBy = Automatic
+
+	column is_mandatory
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: e2c4515a-4c58-4122-8d17-49a9b4de2f5d
+		sourceLineageTag: is_mandatory
+		summarizeBy: none
+		sourceColumn: is_mandatory
+
+		annotation SummarizationSetBy = Automatic
+
+	column due_date
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: date
+		lineageTag: efa47b6f-57a4-4f22-991c-6a339e2e789f
+		sourceLineageTag: due_date
+		summarizeBy: none
+		sourceColumn: due_date
+
+		annotation SummarizationSetBy = Automatic
+
+	column completion_date
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: date
+		lineageTag: e798b506-6c78-4fc8-8bba-aa318782d5d2
+		sourceLineageTag: completion_date
+		summarizeBy: none
+		sourceColumn: completion_date
+
+		annotation SummarizationSetBy = Automatic
+
+	column status
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: fc4d296e-4a71-4363-bf48-bc0d0550ff54
+		sourceLineageTag: status
+		summarizeBy: none
+		sourceColumn: status
+
+		annotation SummarizationSetBy = Automatic
+
+	column days_overdue
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 1aa57869-a1c1-4ba0-aa56-34f5ceb6b47e
+		sourceLineageTag: days_overdue
+		summarizeBy: sum
+		sourceColumn: days_overdue
+
+		annotation SummarizationSetBy = Automatic
+
+	column department_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 5ae09f7f-d94b-4329-a432-7d69db1591be
+		sourceLineageTag: department_id
+		summarizeBy: none
+		sourceColumn: department_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column location_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: f78312f7-0e40-4267-b98d-80bc6480af19
+		sourceLineageTag: location_id
+		summarizeBy: none
+		sourceColumn: location_id
+
+		annotation SummarizationSetBy = Automatic
+
+	partition fact_training_completion = entity
+		mode: directLake
+		source
+			entityName: fact_training_completion
+			schemaName: dbo
+			expressionSource: DatabaseQuery
+
+	annotation PBI_ResultType = Table
+

@@ -1,0 +1,214 @@
+{
+  "SKU": {
+    "full_name": "Stock Keeping Unit",
+    "description": "Unique alphanumeric identifier assigned to each product for inventory and sales tracking."
+  },
+  "SKU_Name": {
+    "full_name": "Stock Keeping Unit Name",
+    "description": "Descriptive product name including brand, type, and specification."
+  },
+  "Category": {
+    "full_name": "Category",
+    "description": "Top-level product classification (e.g., \"Auto Lighting\", \"Kitchen & Small Appliances\", \"Outdoor Living & Patio\")."
+  },
+  "Subcategory": {
+    "full_name": "Subcategory",
+    "description": "Secondary product classification within a category (e.g., \"Automotive\", \"Home & Living\")."
+  },
+  "Fineline": {
+    "full_name": "Fineline Code",
+    "description": "Short code representing the finest level of product classification (e.g., \"LED\", \"AFR\", \"BBQ\")."
+  },
+  "Fineline_Name": {
+    "full_name": "Fineline Name",
+    "description": "Full descriptive name of the fineline grouping (e.g., \"Air Fryers\", \"Coolers & Hydration\", \"Yoga & Recovery\")."
+  },
+  "Vendor": {
+    "full_name": "Vendor",
+    "description": "Name of the supplier or manufacturer providing the product."
+  },
+  "Brand": {
+    "full_name": "Brand",
+    "description": "Consumer-facing brand name under which the product is sold (e.g., \"LumiPro\", \"Ninja\", \"CANVAS\", \"Woods\")."
+  },
+  "New_SKU_Flag": {
+    "full_name": "New SKU Flag",
+    "description": "Indicates whether the SKU is new to the assortment. \"Y\" = new; \"N\" = existing."
+  },
+  "Status": {
+    "full_name": "Status",
+    "description": "Current lifecycle status. \"ACT\" = Active; \"FD\" = Fade/Discontinue (being phased out)."
+  },
+  "Retail_Price": {
+    "full_name": "Retail Price",
+    "description": "Current selling price to the consumer, in dollars."
+  },
+  "Cost": {
+    "full_name": "Cost",
+    "description": "Unit cost to the retailer from the vendor, in dollars."
+  },
+  "TY_POS_Units": {
+    "full_name": "This Year Point of Sale Units",
+    "description": "Total units sold at the register (point of sale) in the current year."
+  },
+  "LY_POS_Units": {
+    "full_name": "Last Year Point of Sale Units",
+    "description": "Total units sold at the register in the prior year, used for year-over-year comparison."
+  },
+  "TY_POS_Dollars": {
+    "full_name": "This Year Point of Sale Dollars",
+    "description": "Total retail sales revenue in dollars for the current year."
+  },
+  "LY_POS_Dollars": {
+    "full_name": "Last Year Point of Sale Dollars",
+    "description": "Total retail sales revenue in dollars for the prior year."
+  },
+  "TY_RVS": {
+    "full_name": "This Year Retail Value of Shipments",
+    "description": "Dollar value of inventory shipped to retail locations in the current year, measured at retail price."
+  },
+  "LY_RVS": {
+    "full_name": "Last Year Retail Value of Shipments",
+    "description": "Dollar value of inventory shipped to retail locations in the prior year."
+  },
+  "TY_EGM_Dollars": {
+    "full_name": "This Year Earned Gross Margin Dollars",
+    "description": "Gross margin earned in dollars for the current year, calculated as revenue minus cost of goods sold plus vendor allowances."
+  },
+  "LY_EGM_Dollars": {
+    "full_name": "Last Year Earned Gross Margin Dollars",
+    "description": "Gross margin earned in dollars for the prior year."
+  },
+  "TY_EGM_Pct": {
+    "full_name": "This Year Earned Gross Margin Percentage",
+    "description": "EGM as a percentage of sales for the current year, indicating the margin rate."
+  },
+  "LY_EGM_Pct": {
+    "full_name": "Last Year Earned Gross Margin Percentage",
+    "description": "EGM as a percentage of sales for the prior year."
+  },
+  "QTD_POS_Dollars": {
+    "full_name": "Quarter to Date Point of Sale Dollars",
+    "description": "Cumulative retail sales revenue from the start of the current quarter to the present date."
+  },
+  "YTD_POS_Dollars": {
+    "full_name": "Year to Date Point of Sale Dollars",
+    "description": "Cumulative retail sales revenue from January 1 of the current year to the present date."
+  },
+  "R12_POS_Dollars": {
+    "full_name": "Rolling 12 Months Point of Sale Dollars",
+    "description": "Total retail sales revenue over the most recent trailing 12-month window, updated monthly."
+  },
+  "Store_Count": {
+    "full_name": "Store Count",
+    "description": "Number of retail store locations currently carrying this SKU."
+  },
+  "Season": {
+    "full_name": "Season",
+    "description": "Retail season code indicating the selling period (e.g., \"S3 Spring\" = Season 3, Spring)."
+  },
+  "YTD_TY_POS": {
+    "full_name": "Year to Date This Year Point of Sale",
+    "description": "Cumulative units sold at point of sale from the start of the year to date, current year."
+  },
+  "YTD_LY_POS": {
+    "full_name": "Year to Date Last Year Point of Sale",
+    "description": "Cumulative units sold at point of sale from the start of the year to date, prior year."
+  },
+  "YTD_TY_Ship": {
+    "full_name": "Year to Date This Year Shipments",
+    "description": "Cumulative units shipped to stores from the start of the year to date, current year."
+  },
+  "YTD_LY_Ship": {
+    "full_name": "Year to Date Last Year Shipments",
+    "description": "Cumulative units shipped to stores from the start of the year to date, prior year."
+  },
+  "Retail_Inv_TY": {
+    "full_name": "Retail Inventory This Year",
+    "description": "Current on-hand inventory units at retail store locations."
+  },
+  "Corp_Inv_TY": {
+    "full_name": "Corporate Inventory This Year",
+    "description": "Current on-hand inventory units at the corporate distribution center or warehouse."
+  },
+  "Current_POS_Forecast": {
+    "full_name": "Current Point of Sale Forecast",
+    "description": "Projected total units expected to be sold for the remainder of the season based on current demand signals."
+  },
+  "Current_Ship_Forecast": {
+    "full_name": "Current Shipment Forecast",
+    "description": "Projected total units expected to be shipped to stores for the remainder of the season."
+  },
+  "Open_PO_Qty": {
+    "full_name": "Open Purchase Order Quantity",
+    "description": "Units on outstanding purchase orders placed with the vendor but not yet received."
+  },
+  "Planned_Purchase_Qty": {
+    "full_name": "Planned Purchase Quantity",
+    "description": "Units planned to be ordered from the vendor in future purchase orders to meet demand."
+  },
+  "Weeks_of_Supply": {
+    "full_name": "Weeks of Supply",
+    "description": "Estimated number of weeks current inventory (retail + corporate) will last at the current rate of sale."
+  },
+  "Corp_Inv_Units_TY": {
+    "full_name": "Corporate Inventory Units This Year",
+    "description": "On-hand inventory units at the corporate distribution center, current year."
+  },
+  "Corp_Inv_Units_LY": {
+    "full_name": "Corporate Inventory Units Last Year",
+    "description": "On-hand inventory units at the corporate distribution center, prior year."
+  },
+  "Retail_Inv_Units_TY": {
+    "full_name": "Retail Inventory Units This Year",
+    "description": "On-hand inventory units at retail store locations, current year."
+  },
+  "Retail_Inv_Units_LY": {
+    "full_name": "Retail Inventory Units Last Year",
+    "description": "On-hand inventory units at retail store locations, prior year."
+  },
+  "YTD_POS_TY": {
+    "full_name": "Year to Date Point of Sale This Year",
+    "description": "Cumulative units sold year to date, current year."
+  },
+  "YTD_POS_LY": {
+    "full_name": "Year to Date Point of Sale Last Year",
+    "description": "Cumulative units sold year to date, prior year."
+  },
+  "YTD_POS_Change_Pct": {
+    "full_name": "Year to Date POS Change Percentage",
+    "description": "Percentage change in YTD units sold compared to the prior year."
+  },
+  "R8_POS_TY": {
+    "full_name": "Rolling 8 Weeks Point of Sale This Year",
+    "description": "Total units sold over the most recent trailing 8-week window, current year."
+  },
+  "R8_POS_LY": {
+    "full_name": "Rolling 8 Weeks Point of Sale Last Year",
+    "description": "Total units sold over the comparable trailing 8-week window, prior year."
+  },
+  "R8_POS_Change_Pct": {
+    "full_name": "Rolling 8 Weeks POS Change Percentage",
+    "description": "Percentage change in R8 units sold compared to the prior year's equivalent 8-week window."
+  },
+  "YTD_Lost_Sales_Pct": {
+    "full_name": "Year to Date Lost Sales Percentage",
+    "description": "Estimated percentage of potential sales lost due to out-of-stock situations year to date."
+  },
+  "Vendor_Fill_Rate_Pct": {
+    "full_name": "Vendor Fill Rate Percentage",
+    "description": "Percentage of units ordered from the vendor that were fulfilled and delivered on time."
+  },
+  "Ship_Units_TY": {
+    "full_name": "Shipped Units This Year",
+    "description": "Total units shipped from the distribution center to retail stores, current year."
+  },
+  "Ship_Units_LY": {
+    "full_name": "Shipped Units Last Year",
+    "description": "Total units shipped from the distribution center to retail stores, prior year."
+  },
+  "DDF_Units": {
+    "full_name": "Dealer Direct Fulfillment Units",
+    "description": "Units fulfilled directly from the dealer or vendor to the customer or store, bypassing the central distribution center."
+  }
+}

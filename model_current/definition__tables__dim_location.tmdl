@@ -1,0 +1,73 @@
+table dim_location
+	lineageTag: ba14fe49-6590-451c-85f9-584b74671b8e
+	sourceLineageTag: [dbo].[dim_location]
+
+	column location_id
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 340f09db-33ca-4a40-9e2c-1029c115f457
+		sourceLineageTag: location_id
+		summarizeBy: none
+		sourceColumn: location_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column location_name
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 294f7473-4c59-4ec1-b484-da92eab3d622
+		sourceLineageTag: location_name
+		summarizeBy: none
+		sourceColumn: location_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column city
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 0005d828-9e32-4bba-b5d8-289a9d08c1eb
+		sourceLineageTag: city
+		summarizeBy: none
+		sourceColumn: city
+
+		annotation SummarizationSetBy = Automatic
+
+	column province
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 8365d203-105b-4178-a0ae-726db7ac7baa
+		sourceLineageTag: province
+		summarizeBy: none
+		sourceColumn: province
+
+		annotation SummarizationSetBy = Automatic
+
+	column country
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 6d3b1d15-4768-4a0e-a166-cd16be2175ab
+		sourceLineageTag: country
+		summarizeBy: none
+		sourceColumn: country
+
+		annotation SummarizationSetBy = Automatic
+
+	column is_remote
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 40c9c136-0e52-46c6-9a0f-76b99d24969a
+		sourceLineageTag: is_remote
+		summarizeBy: none
+		sourceColumn: is_remote
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_location = entity
+		mode: directLake
+		source
+			entityName: dim_location
+			schemaName: dbo
+			expressionSource: DatabaseQuery
+
+	annotation PBI_ResultType = Table
+

@@ -1,9 +1,11 @@
 # Python
 __pycache__/
 *.py[cod]
+*.pyc
 *.egg-info/
 dist/
 build/
+.venv/
 .env
 
 # IDE
@@ -19,7 +21,6 @@ Thumbs.db
 *.log
 .claude/settings.local.json
 .claude/*
-.claude/settings.local.json
 
 # Fabric VS Code extension metadata
 .vfsmeta/
@@ -31,3 +32,8 @@ Thumbs.db
 .resource-info
 **/conf/lighter-config.json
 **/builtin/
+
+# Power BI temp / Office lock files
+*.pbix.tmp
+.~lock.*
+~$*
