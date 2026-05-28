@@ -175,8 +175,8 @@ def lane(y, color, title, items):
              items, size=12, color=WHITE, anchor=MSO_ANCHOR.MIDDLE)
 
 
-lane(Inches(1.5), NAVY,    "Consumption",        "Copilot in Power BI  |  Smart Narrative  |  Q&A  |  Data Agent")
-lane(Inches(2.65), GRAY,   "Semantic model",     "ctc_merch (Direct Lake on OneLake) - measure descriptions, synonyms, example prompts")
+lane(Inches(1.5), NAVY,    "Consumption",        "Copilot in Power BI  |  Smart Narrative  |  Q&A  |  Fabric Data Agent (Teams + Portal)")
+lane(Inches(2.65), GRAY,   "Semantic model",     "ctc_merch (Direct Lake on OneLake) - measure descriptions, synonyms, table semantics for the Data Agent")
 lane(Inches(3.80), CTC_RED, "OneLake (Delta)",    "dim_sku, dim_vendor, dim_season, dim_date, fact_sku_performance, fact_in_season, fact_connected_inventory")
 lane(Inches(4.95), RGBColor(0x4F,0x55,0x60), "Source data", "Customer-prepared synthetic Merch datasets + blended dimensions (Faker)")
 add_text(s, Inches(0.5), Inches(6.4), Inches(12), Inches(0.5),
@@ -239,7 +239,53 @@ for i, (head, sub) in enumerate(flow, 1):
              sub, size=11, color=GRAY)
     y += Inches(0.92)
 
-# ----- SLIDE 7: Headline findings -------------------------------------------
+# ----- SLIDE 7: CTC Merch Data Agent ----------------------------------------
+s = prs.slides.add_slide(BLANK)
+header(s, "CTC Merch Data Agent", "Conversational analytics outside the report - in Teams, in the portal")
+
+# Left side: what it is + where it lives
+add_rect(s, Inches(0.5), Inches(1.4), Inches(5.5), Inches(5.6), fill=LIGHTBG)
+add_text(s, Inches(0.7), Inches(1.55), Inches(5.1), Inches(0.4),
+         "Same model, different surface", size=15, bold=True, color=CTC_RED)
+add_bullets(s, Inches(0.7), Inches(2.05), Inches(5.1), Inches(2.6),
+            [
+              ("Grounded on ctc_merch",      "Same Direct Lake model that powers the report"),
+              ("Merch vocabulary built in",  "POS, EGM, RVS, WoS, fill rate, lost sales, fineline"),
+              ("Use cases pre-seeded",       "Top SKUs by EGM, at-risk SKUs, markdown candidates, vendor summary"),
+              ("Lives where buyers work",    "Fabric portal today; Teams + Copilot Studio next"),
+            ], size=12)
+add_text(s, Inches(0.7), Inches(5.4), Inches(5.1), Inches(0.4),
+         "Status: published, draft + published stages bound, 5 relationships indexed",
+         size=10, color=GRAY)
+add_text(s, Inches(0.7), Inches(5.85), Inches(5.1), Inches(0.4),
+         "7 tables - 75 columns - 64 measures - all annotated",
+         size=10, color=GRAY)
+
+# Right side: 10 starter prompts
+add_rect(s, Inches(6.15), Inches(1.4), Inches(6.7), Inches(5.6), fill=LIGHTBG)
+add_text(s, Inches(6.35), Inches(1.55), Inches(6.3), Inches(0.4),
+         "10 Starter Questions buyers can run today", size=15, bold=True, color=CTC_RED)
+prompts = [
+    "One-paragraph merch briefing - POS YoY, EGM %, growth and drag",
+    "Top 10 SKUs by EGM dollars with POS YoY and EGM %",
+    "Air Fryers vs Cookware Sets - POS YoY and EGM %",
+    "SKUs with lost sales > 5% AND fill rate < 85%",
+    "WoS > 18 AND lost sales < 2% - markdown candidates",
+    "Canvas Outdoor vendor - POS, fill rate, EGM contribution",
+    "New SKUs (New_SKU_Flag = Yes) driving the most POS growth",
+    "Worst POS YoY % decline by fineline and its fill rate",
+    "Vendors with worst fill rate but highest planned purchase",
+    "Demand vs supply gap by category - where to expedite",
+]
+y = Inches(2.05)
+for i, q in enumerate(prompts, 1):
+    add_text(s, Inches(6.35), y, Inches(0.4), Inches(0.3),
+             f"{i:02d}", size=10, bold=True, color=CTC_RED)
+    add_text(s, Inches(6.75), y, Inches(5.9), Inches(0.3),
+             q, size=10, color=NAVY)
+    y += Inches(0.46)
+
+# ----- SLIDE 8: Headline findings -------------------------------------------
 s = prs.slides.add_slide(BLANK)
 header(s, "Headline findings from the demo data", "What Copilot surfaces in seconds")
 
