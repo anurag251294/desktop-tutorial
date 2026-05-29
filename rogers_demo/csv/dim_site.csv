@@ -1,0 +1,81 @@
+site_id,site_name,region,region_name,city,latitude,longitude,primary_technology,primary_vendor,commissioned_date,site_type
+S-VAN-001,Vancouver VAN001,BC,British Columbia,Vancouver,49.22018,-123.04239,4G,Nokia,2022-07-29,Macro
+S-SUR-002,Surrey SUR002,BC,British Columbia,Surrey,49.19253,-122.83104,5G,Samsung,2022-12-24,Macro
+S-HAM-001,Hamilton HAM001,ON,Ontario,Hamilton,43.25037,-79.87409,5G,Nokia,2020-10-28,Macro
+S-HAM-002,Hamilton HAM002,ON,Ontario,Hamilton,43.27542,-79.90774,5G,Nokia,2025-05-05,SmallCell
+S-MTL-001,Montreal MTL001,QC,Quebec,Montreal,45.47742,-73.568,5G,Samsung,2023-06-26,Macro
+S-OTT-003,Ottawa OTT003,ON,Ontario,Ottawa,45.45732,-75.72891,5G,Nokia,2024-06-01,SmallCell
+S-OTT-004,Ottawa OTT004,ON,Ontario,Ottawa,45.40219,-75.66736,5G,Samsung,2023-02-23,SmallCell
+S-CAL-001,Calgary CAL001,AB,Alberta,Calgary,51.06742,-114.0441,5G,Ericsson,2020-03-15,Macro
+S-OTT-005,Ottawa OTT005,ON,Ontario,Ottawa,45.43242,-75.73187,5G,Nokia,2022-07-03,SmallCell
+S-MNC-001,Moncton MNC001,NB,New Brunswick,Moncton,46.04433,-64.71887,4G,Nokia,2023-04-05,SmallCell
+S-QBC-002,Quebec City QBC002,QC,Quebec,Quebec City,46.87696,-71.21156,5G,Samsung,2024-01-18,Macro
+S-LDN-006,London LDN006,ON,Ontario,London,43.07008,-81.2873,5G,Nokia,2022-03-13,Macro
+S-LDN-007,London LDN007,ON,Ontario,London,42.95149,-81.21715,4G,Ericsson,2025-02-08,Macro
+S-STJ-001,St. John's STJ001,NL,Newfoundland,St. John's,47.54242,-52.66204,4G,Ericsson,2022-09-25,SmallCell
+S-VAN-003,Vancouver VAN003,BC,British Columbia,Vancouver,49.29519,-123.12174,5G,Samsung,2023-04-16,Macro
+S-CHA-001,Charlottetown CHA001,PE,Prince Edward Island,Charlottetown,46.24353,-63.10514,5G,Ericsson,2025-04-28,Rooftop
+S-MNC-002,Moncton MNC002,NB,New Brunswick,Moncton,46.11298,-64.71258,4G,Samsung,2021-07-09,Macro
+S-MTL-003,Montreal MTL003,QC,Quebec,Montreal,45.53201,-73.56747,4G,Ericsson,2022-11-19,Rooftop
+S-VAN-004,Vancouver VAN004,BC,British Columbia,Vancouver,49.33337,-123.11714,4G,Ericsson,2021-12-08,SmallCell
+S-CHA-002,Charlottetown CHA002,PE,Prince Edward Island,Charlottetown,46.23284,-63.15507,5G,Ericsson,2023-12-01,Macro
+S-LDN-008,London LDN008,ON,Ontario,London,43.01492,-81.27631,5G,Samsung,2021-06-16,Macro
+S-MTL-004,Montreal MTL004,QC,Quebec,Montreal,45.45896,-73.53732,5G,Samsung,2020-12-04,Macro
+S-MTL-005,Montreal MTL005,QC,Quebec,Montreal,45.42806,-73.55183,4G,Samsung,2022-02-02,SmallCell
+S-TOR-009,Toronto TOR009,ON,Ontario,Toronto,43.72611,-79.37837,5G,Nokia,2024-02-15,Macro
+S-LAV-006,Laval LAV006,QC,Quebec,Laval,45.64205,-73.74476,4G,Nokia,2023-02-03,Macro
+S-LAV-007,Laval LAV007,QC,Quebec,Laval,45.59414,-73.63168,4G,Nokia,2025-02-22,Rooftop
+S-CHA-003,Charlottetown CHA003,PE,Prince Edward Island,Charlottetown,46.29995,-63.14619,4G,Ericsson,2021-01-20,Macro
+S-SUR-005,Surrey SUR005,BC,British Columbia,Surrey,49.20145,-122.82705,4G,Nokia,2024-06-26,Rooftop
+S-LDN-010,London LDN010,ON,Ontario,London,43.01949,-81.24128,5G,Ericsson,2020-01-10,SmallCell
+S-VIC-006,Victoria VIC006,BC,British Columbia,Victoria,48.41681,-123.41522,4G,Ericsson,2024-07-02,SmallCell
+S-WPG-001,Winnipeg WPG001,MB,Manitoba,Winnipeg,49.87141,-97.09896,4G,Ericsson,2022-12-27,Rooftop
+S-EDM-002,Edmonton EDM002,AB,Alberta,Edmonton,53.519,-113.49856,5G,Samsung,2023-02-17,Macro
+S-OTT-011,Ottawa OTT011,ON,Ontario,Ottawa,45.45344,-75.73233,5G,Ericsson,2023-05-31,Rooftop
+S-WPG-002,Winnipeg WPG002,MB,Manitoba,Winnipeg,49.84017,-97.16738,5G,Samsung,2022-09-07,Rooftop
+S-MNC-003,Moncton MNC003,NB,New Brunswick,Moncton,46.0217,-64.75585,4G,Nokia,2021-10-12,Rooftop
+S-HAM-012,Hamilton HAM012,ON,Ontario,Hamilton,43.26795,-79.88531,4G,Nokia,2021-05-10,Macro
+S-OTT-013,Ottawa OTT013,ON,Ontario,Ottawa,45.33282,-75.68045,4G,Ericsson,2022-08-05,Rooftop
+S-OTT-014,Ottawa OTT014,ON,Ontario,Ottawa,45.44287,-75.72691,5G,Nokia,2023-08-29,Macro
+S-SAS-001,Saskatoon SAS001,SK,Saskatchewan,Saskatoon,52.14975,-106.66306,4G,Nokia,2021-08-30,Macro
+S-LAV-008,Laval LAV008,QC,Quebec,Laval,45.61143,-73.70375,4G,Ericsson,2024-01-30,Macro
+S-QBC-009,Quebec City QBC009,QC,Quebec,Quebec City,46.78063,-71.19297,4G,Nokia,2021-02-04,SmallCell
+S-MNC-004,Moncton MNC004,NB,New Brunswick,Moncton,46.08154,-64.85887,4G,Nokia,2021-08-28,Macro
+S-LDN-015,London LDN015,ON,Ontario,London,43.02691,-81.22474,4G,Ericsson,2021-09-15,Macro
+S-QBC-010,Quebec City QBC010,QC,Quebec,Quebec City,46.76597,-71.17454,4G,Ericsson,2023-07-22,Macro
+S-HAM-016,Hamilton HAM016,ON,Ontario,Hamilton,43.25404,-79.896,4G,Ericsson,2023-02-03,SmallCell
+S-WPG-003,Winnipeg WPG003,MB,Manitoba,Winnipeg,49.81831,-97.07887,5G,Nokia,2021-01-31,Macro
+S-QBC-011,Quebec City QBC011,QC,Quebec,Quebec City,46.80859,-71.13532,5G,Ericsson,2025-02-08,Rooftop
+S-VAN-007,Vancouver VAN007,BC,British Columbia,Vancouver,49.30254,-123.17206,4G,Ericsson,2020-05-13,SmallCell
+S-QBC-012,Quebec City QBC012,QC,Quebec,Quebec City,46.81029,-71.18462,5G,Nokia,2022-10-05,Rooftop
+S-TOR-017,Toronto TOR017,ON,Ontario,Toronto,43.64136,-79.35353,5G,Nokia,2022-12-11,Macro
+S-QBC-013,Quebec City QBC013,QC,Quebec,Quebec City,46.84266,-71.23446,5G,Ericsson,2022-08-01,SmallCell
+S-TOR-018,Toronto TOR018,ON,Ontario,Toronto,43.73359,-79.35835,5G,Samsung,2021-10-14,SmallCell
+S-SUR-008,Surrey SUR008,BC,British Columbia,Surrey,49.18932,-122.81497,5G,Samsung,2022-10-15,Rooftop
+S-TOR-019,Toronto TOR019,ON,Ontario,Toronto,43.62372,-79.36357,4G,Ericsson,2020-07-09,Macro
+S-LAV-014,Laval LAV014,QC,Quebec,Laval,45.5883,-73.64242,5G,Ericsson,2024-09-16,SmallCell
+S-SUR-009,Surrey SUR009,BC,British Columbia,Surrey,49.18692,-122.80148,5G,Nokia,2020-07-08,Macro
+S-MTL-015,Montreal MTL015,QC,Quebec,Montreal,45.58476,-73.601,5G,Ericsson,2020-05-02,Macro
+S-EDM-003,Edmonton EDM003,AB,Alberta,Edmonton,53.51726,-113.46557,4G,Samsung,2022-05-30,Macro
+S-QBC-016,Quebec City QBC016,QC,Quebec,Quebec City,46.82917,-71.20293,4G,Nokia,2025-06-14,Macro
+S-LAV-017,Laval LAV017,QC,Quebec,Laval,45.57354,-73.65584,4G,Ericsson,2022-10-07,Macro
+S-SUR-010,Surrey SUR010,BC,British Columbia,Surrey,49.22338,-122.83922,5G,Ericsson,2021-10-31,Macro
+S-SUR-011,Surrey SUR011,BC,British Columbia,Surrey,49.25282,-122.87262,4G,Nokia,2021-11-04,Rooftop
+S-SUR-012,Surrey SUR012,BC,British Columbia,Surrey,49.23272,-122.89763,4G,Ericsson,2020-02-02,Macro
+S-MTL-018,Montreal MTL018,QC,Quebec,Montreal,45.55787,-73.57011,5G,Nokia,2023-08-01,Rooftop
+S-VAN-013,Vancouver VAN013,BC,British Columbia,Vancouver,49.2361,-123.17753,5G,Samsung,2024-01-31,SmallCell
+S-MTL-019,Montreal MTL019,QC,Quebec,Montreal,45.48678,-73.5906,4G,Samsung,2022-07-29,Macro
+S-HAM-020,Hamilton HAM020,ON,Ontario,Hamilton,43.2535,-79.87376,5G,Ericsson,2020-02-18,Macro
+S-VAN-014,Vancouver VAN014,BC,British Columbia,Vancouver,49.26415,-123.08712,5G,Ericsson,2021-07-05,Rooftop
+S-TOR-021,Toronto TOR021,ON,Ontario,Toronto,43.74103,-79.34806,4G,Samsung,2025-05-16,SmallCell
+S-LAV-020,Laval LAV020,QC,Quebec,Laval,45.63368,-73.72587,4G,Ericsson,2020-12-04,Macro
+S-OTT-022,Ottawa OTT022,ON,Ontario,Ottawa,45.39553,-75.65453,5G,Ericsson,2020-12-04,Macro
+S-TOR-023,Toronto TOR023,ON,Ontario,Toronto,43.69398,-79.43563,5G,Nokia,2020-04-14,Rooftop
+S-REG-002,Regina REG002,SK,Saskatchewan,Regina,50.44531,-104.60242,4G,Ericsson,2023-09-15,Rooftop
+S-MIS-024,Mississauga MIS024,ON,Ontario,Mississauga,43.61974,-79.63611,5G,Samsung,2021-09-26,SmallCell
+S-HAM-025,Hamilton HAM025,ON,Ontario,Hamilton,43.26146,-79.88249,4G,Samsung,2022-09-26,Rooftop
+S-MTL-021,Montreal MTL021,QC,Quebec,Montreal,45.437,-73.53195,5G,Nokia,2024-11-20,Macro
+S-MNC-005,Moncton MNC005,NB,New Brunswick,Moncton,46.10542,-64.8376,5G,Ericsson,2021-07-21,Macro
+S-QBC-022,Quebec City QBC022,QC,Quebec,Quebec City,46.91718,-71.23337,5G,Nokia,2025-01-20,SmallCell
+S-CAL-004,Calgary CAL004,AB,Alberta,Calgary,51.02876,-114.06034,5G,Samsung,2020-10-27,Rooftop
+S-QBC-023,Quebec City QBC023,QC,Quebec,Quebec City,46.72824,-71.20952,4G,Ericsson,2023-01-27,Macro

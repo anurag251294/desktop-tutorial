@@ -1,0 +1,16 @@
+alarm_type_id,alarm_name,severity,category
+AT01,Cell Down,Critical,RAN
+AT02,Sector Outage,Critical,RAN
+AT03,High PRB Utilization,Major,RAN
+AT04,Throughput Degradation,Major,RAN
+AT05,Latency Threshold Exceeded,Major,RAN
+AT06,Backhaul Link Down,Critical,Transport
+AT07,Backhaul Congestion,Major,Transport
+AT08,Fiber Cut,Critical,Transport
+AT09,Core Element CPU High,Major,Core
+AT10,PCRF Session Drop,Major,Core
+AT11,Power Module Fault,Critical,Power
+AT12,Generator Switchover,Minor,Power
+AT13,VSWR Antenna Mismatch,Minor,RAN
+AT14,Software Watchdog Reset,Minor,RAN
+AT15,Temperature Threshold,Minor,Power

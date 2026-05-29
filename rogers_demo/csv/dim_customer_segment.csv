@@ -1,0 +1,5 @@
+segment_id,segment_name,segment_class,subscriber_count
+CS01,Consumer-Prepaid,Consumer,3500000
+CS02,Consumer-Postpaid,Consumer,6200000
+CS03,SMB,Business,650000
+CS04,Enterprise,Business,180000

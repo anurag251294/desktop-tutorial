@@ -41,9 +41,11 @@ Thumbs.db
 # Transient artifacts (don't commit)
 backup_hr_report_*.json
 backup_ctc_*.json
+backup_rogers_*.json
 hr_agent_dump/
 ctc_*_dump.json
 ctc_report_current.json
 ctc_agent_after.json
 hr_agent_template.json
 hr_report_current.json
+rogers_*_dump.json

@@ -1,0 +1,15 @@
+{
+  "tenant": "microsoft.com",
+  "capacity_id": "fc2a4dac-2edb-4f33-9209-b0dac6a67c5d",
+  "workspace_id": "75f5f034-1bd1-49cf-aa25-2002233200e3",
+  "workspace_name": "Rogers_Network_Demo",
+  "lakehouse_id": "65fd0721-759d-4787-9504-ffbc5bba8f94",
+  "lakehouse_name": "rogers_lh",
+  "sql_endpoint_cs": "x6eps4xrq2xudenlfv6naeo3i4-gtypk5ordphutkrfeabcgmqa4m.msit-datawarehouse.fabric.microsoft.com",
+  "sql_endpoint_id": "c647309a-36ae-4a3c-bacf-f738f9153860",
+  "model_id": "1a315d2c-767d-42ab-b732-fcf3937affee",
+  "model_name": "rogers_net",
+  "data_agent_id": "2a499ed1-aa2f-4fc2-908b-0f84d9527de4",
+  "report_id": "00d79f52-40a0-4b62-8684-102d2cc34444",
+  "report_name": "Rogers_Network_Anomaly_Copilot_Demo"
+}

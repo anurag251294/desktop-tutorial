@@ -1,0 +1,25 @@
+hour,hour_label,daypart,is_peak
+0,00:00,Late Night,False
+1,01:00,Late Night,False
+2,02:00,Late Night,False
+3,03:00,Late Night,False
+4,04:00,Late Night,False
+5,05:00,Late Night,False
+6,06:00,Morning,False
+7,07:00,Morning,False
+8,08:00,Morning,False
+9,09:00,Business,True
+10,10:00,Business,True
+11,11:00,Business,True
+12,12:00,Business,True
+13,13:00,Business,True
+14,14:00,Business,True
+15,15:00,Business,True
+16,16:00,Business,True
+17,17:00,Peak,True
+18,18:00,Peak,True
+19,19:00,Peak,True
+20,20:00,Peak,True
+21,21:00,Peak,True
+22,22:00,Evening,False
+23,23:00,Evening,False
