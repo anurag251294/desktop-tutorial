@@ -2,7 +2,7 @@
 
 ## Overview
 
-This solution migrates approximately **25 TB** of documents and files from **SharePoint Online** to **Azure Data Lake Storage Gen2 (ADLS Gen2)** using **Azure Data Factory (ADF)** as the orchestration engine. The migration is metadata-driven, fully audited, and supports both initial bulk migration and ongoing incremental synchronization.
+This solution migrates approximately **25 TB** of documents and files from **SharePoint Online** to **Azure Data Lake Storage Gen2 (ADLS Gen2)** using **Azure Data Factory (ADF)** or **Microsoft Fabric Data Factory (FDF)** as the orchestration engine. The migration is metadata-driven, fully audited, and supports both initial bulk migration and ongoing incremental synchronization.
 
 All file access is handled through the **Microsoft Graph API** with cross-tenant OAuth2 authentication, enabling ADF (running in the MCAPS tenant) to securely read from Hydro One's SharePoint tenant and write to Azure storage.
 
@@ -98,6 +98,9 @@ hydro-one-sharepoint-migration-poc/
 │   │   └── PL_Validation.json
 │   └── triggers/
 │       └── TR_Triggers.json
+├── fdf-templates/                  # Generated Fabric Data Factory item definitions
+│   ├── conversion-report.json      # Conversion warnings and summary
+│   └── pipelines/                  # One Fabric DataPipeline folder per pipeline
 ├── sql/                            # SQL DDL and operational queries
 │   ├── create_control_table.sql    # MigrationControl, IncrementalWatermark, BatchLog, SyncLog tables
 │   ├── create_audit_log_table.sql  # MigrationAuditLog, ValidationLog tables + stored procedures
@@ -109,6 +112,8 @@ hydro-one-sharepoint-migration-poc/
 │   ├── Grant-DelegatedPermissions.ps1 # Step 3: Adds delegated permissions + admin consent
 │   ├── Populate-ControlTable.ps1   # Step 8: Enumerates SharePoint sites/libraries into SQL control table
 │   ├── Deploy-ADF-Templates.sh     # Step 7: ARM template deployment via Azure CLI (bash)
+│   ├── Convert-ADF-To-FDF.ps1      # Converts ADF ARM pipelines to Fabric DataPipeline definitions
+│   ├── Deploy-FDF-Templates.ps1    # Creates/updates Fabric DataPipeline items in a workspace
 │   ├── Monitor-Migration.ps1       # Operations: Real-time migration progress dashboard
 │   └── Validate-Migration.ps1      # Step 10: Post-migration file count/size validation
 ├── terraform/                      # Infrastructure-as-Code for private networking
@@ -122,7 +127,8 @@ hydro-one-sharepoint-migration-poc/
 │   └── terraform.tfvars            # Environment-specific variable values
 ├── config/                         # Environment-specific ARM template parameters
 │   ├── parameters.dev.json
-│   └── parameters.prod.json
+│   ├── parameters.prod.json
+│   └── fdf-connections.sample.json # Template for mapping ADF linked services to Fabric connections
 ├── docs/                           # Detailed technical documentation
 │   ├── architecture.md             # Solution architecture deep-dive with Mermaid diagrams
 │   ├── deployment-guide.md         # 10-phase step-by-step deployment guide
@@ -131,6 +137,7 @@ hydro-one-sharepoint-migration-poc/
 │   ├── pipeline-documentation.md   # Technical reference for all pipelines, datasets, and scripts
 │   ├── debugging.md                # Troubleshooting guide organized by error code
 │   ├── scripts-reference.md        # Central reference for all automation scripts
+│   ├── fabric-data-factory.md      # FDF conversion and deployment guide
 │   ├── terraform-private-endpoints.md  # Private endpoints deployment guide
 │   ├── architecture-decisions.md   # Architecture Decision Records (ADRs)
 │   ├── sql-schema.md               # SQL database schema with ER diagram
@@ -139,6 +146,19 @@ hydro-one-sharepoint-migration-poc/
 ├── _archived/                      # Deprecated earlier iterations (for reference only)
 └── README.md                       # This file
 ```
+
+---
+
+## Fabric Data Factory deployment
+
+The ADF templates can be converted into Fabric Data Factory item definitions and deployed to a Fabric workspace:
+
+```powershell
+.\scripts\Convert-ADF-To-FDF.ps1 -Clean
+.\scripts\Deploy-FDF-Templates.ps1 -WorkspaceId "<fabric-workspace-guid>"
+```
+
+Fabric uses workspace connections instead of ADF linked services. For production deployment, copy `config\fdf-connections.sample.json` to `config\fdf-connections.json`, fill in the Fabric connection GUIDs, and rerun the converter with `-ConnectionMapPath`. See `docs\fabric-data-factory.md` for the full process.
 
 ---
 

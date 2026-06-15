@@ -292,7 +292,7 @@
                                     "policy": { "timeout": "0.00:05:00", "retry": 2, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
                                     "userProperties": [],
                                     "typeProperties": {
-                                        "storedProcedureName": "[[dbo].[usp_UpdateWatermark]",
+                                        "storedProcedureName": "[dbo].[usp_UpdateWatermark]",
                                         "storedProcedureParameters": {
                                             "SiteUrl": { "value": { "value": "@item().SiteUrl", "type": "Expression" }, "type": "String" },
                                             "LibraryName": { "value": { "value": "@item().LibraryName", "type": "Expression" }, "type": "String" },
@@ -314,7 +314,7 @@
                         "policy": { "timeout": "0.00:05:00", "retry": 2, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
                         "userProperties": [],
                         "typeProperties": {
-                            "storedProcedureName": "[[dbo].[usp_LogSyncRun]",
+                            "storedProcedureName": "[dbo].[usp_LogSyncRun]",
                             "storedProcedureParameters": {
                                 "PipelineRunId": { "value": { "value": "@pipeline().RunId", "type": "Expression" }, "type": "String" },
                                 "SyncType": { "value": "Incremental", "type": "String" },

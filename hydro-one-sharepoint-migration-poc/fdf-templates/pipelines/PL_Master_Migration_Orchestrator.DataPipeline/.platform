@@ -1,0 +1,12 @@
+{
+  "config": {
+    "logicalId": "06a3f4ff-02e9-e334-b4b1-35c00b26df2f"
+  },
+  "version": "2.0",
+  "metadata": {
+    "description": "Master orchestration pipeline for Hydro One SharePoint to ADLS migration. Reads from control table and iterates through SharePoint sites/libraries, invoking the child migration pipeline for each. Implements batch processing with configurable parallelism to manage SharePoint throttling. Passes production parameters (PageSize, CopyBatchCount, ThrottleDelaySeconds) to child pipelines.",
+    "type": "DataPipeline",
+    "displayName": "PL_Master_Migration_Orchestrator"
+  },
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/platform/platformProperties.json"
+}
