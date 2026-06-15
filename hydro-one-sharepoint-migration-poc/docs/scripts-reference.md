@@ -1,6 +1,6 @@
 # Hydro One SharePoint Migration - Scripts Reference
 
-Central reference for all 6 automation scripts used in the SharePoint Online to ADLS Gen2 migration.
+Central reference for automation scripts used in the SharePoint Online to ADLS Gen2 migration.
 
 ---
 
@@ -12,6 +12,7 @@ Run the scripts in this order. Steps marked **[Manual]** require human action ou
 2. **`Register-SharePointApp.ps1`** -- Creates the Service Principal and stores its secret in Key Vault
 3. **[Manual]** Grant admin consent to the app registration in Azure Portal > Enterprise Applications
 4. **`Deploy-ADF-Templates.sh`** -- Deploys ADF ARM templates (linked services, datasets, pipelines)
+4a. **`Convert-ADF-To-FDF.ps1`** and **`Deploy-FDF-Templates.ps1`** -- Optional Fabric Data Factory deployment path
 5. **`Populate-ControlTable.ps1`** -- Enumerates SharePoint sites/libraries into the SQL control table
 6. **[Manual]** Trigger migration pipelines in ADF (PL_Master_Migration_Orchestrator)
 7. **`Monitor-Migration.ps1`** -- Real-time progress dashboard (run during migration)
@@ -25,7 +26,7 @@ Run the scripts in this order. Steps marked **[Manual]** require human action ou
 
 | Category        | Scripts                                              | When to Run                        |
 |-----------------|------------------------------------------------------|------------------------------------|
-| One-time setup  | Setup-AzureResources, Register-SharePointApp, Deploy-ADF-Templates | Once per environment / tenant      |
+| One-time setup  | Setup-AzureResources, Register-SharePointApp, Deploy-ADF-Templates, Convert-ADF-To-FDF, Deploy-FDF-Templates | Once per environment / tenant      |
 | Repeatable      | Populate-ControlTable, Validate-Migration            | Before and after each migration batch |
 | Ongoing         | Monitor-Migration                                    | During every active migration run  |
 
@@ -126,6 +127,34 @@ export FACTORY_NAME="adf-hydroone-migration-prod"
 ```
 
 **Deployment order:** Linked Services > Datasets > Pipelines (PL_Copy_File_Batch > PL_Process_Subfolder > PL_Migrate_Single_Library > PL_Incremental_Sync > PL_Post_Migration_Validation > PL_Master_Migration_Orchestrator).
+
+---
+
+### 3a. Convert-ADF-To-FDF.ps1 and Deploy-FDF-Templates.ps1
+
+**Purpose:** Converts ADF ARM pipeline templates into Fabric Data Factory `DataPipeline` item definitions and creates/updates those items in a Fabric workspace.
+
+**When:** Use this path instead of `Deploy-ADF-Templates.sh` when the orchestration runtime is Microsoft Fabric Data Factory.
+
+**Auth:** Azure CLI login (`az login`) with Contributor access to the Fabric workspace.
+
+**Examples:**
+
+```powershell
+.\scripts\Convert-ADF-To-FDF.ps1 -Clean
+.\scripts\Deploy-FDF-Templates.ps1 -WorkspaceId "<fabric-workspace-guid>"
+```
+
+With Fabric connection mappings:
+
+```powershell
+Copy-Item .\config\fdf-connections.sample.json .\config\fdf-connections.json
+# edit fdf-connections.json with Fabric connection GUIDs
+.\scripts\Convert-ADF-To-FDF.ps1 -ConnectionMapPath .\config\fdf-connections.json -Clean
+.\scripts\Deploy-FDF-Templates.ps1 -WorkspaceId "<fabric-workspace-guid>"
+```
+
+**Notes:** Fabric uses workspace connections instead of ADF linked services. Review `fdf-templates\conversion-report.json` before deploying.
 
 ---
 

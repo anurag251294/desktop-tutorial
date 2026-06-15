@@ -1,0 +1,11 @@
+{
+  "sourceTemplateDir": "C:\\Users\\yusraadil\\OneDrive - Microsoft\\Documents\\Clawpilot\\desktop-tutorial\\hydro-one-sharepoint-migration-poc\\adf-templates",
+  "outputDir": "C:\\Users\\yusraadil\\OneDrive - Microsoft\\Documents\\Clawpilot\\desktop-tutorial\\hydro-one-sharepoint-migration-poc\\fdf-templates",
+  "generatedAtUtc": "2026-06-15T14:18:45.7174610Z",
+  "pipelineCount": 6,
+  "warnings": [
+    "No Fabric connection mapping supplied for linked service 'LS_ADLS_Gen2'. The generated definition keeps the ADF linkedServiceName reference.",
+    "No Fabric connection mapping supplied for linked service 'LS_AzureSqlDatabase'. The generated definition keeps the ADF linkedServiceName reference.",
+    "No Fabric connection mapping supplied for linked service 'LS_HTTP_Graph_Download'. The generated definition keeps the ADF linkedServiceName reference."
+  ]
+}

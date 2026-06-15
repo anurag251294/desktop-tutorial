@@ -1,0 +1,12 @@
+{
+  "config": {
+    "logicalId": "1617d6bb-cc86-6d39-8bca-f84a031cf84f"
+  },
+  "version": "2.0",
+  "metadata": {
+    "description": "Lightweight child pipeline that copies a batch of files from Graph API to ADLS Gen2. Called by parent pipelines via ExecutePipeline to work around ADF's restriction on ForEach inside Until loops.",
+    "type": "DataPipeline",
+    "displayName": "PL_Copy_File_Batch"
+  },
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/platform/platformProperties.json"
+}

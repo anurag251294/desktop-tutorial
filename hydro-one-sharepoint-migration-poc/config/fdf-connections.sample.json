@@ -1,0 +1,7 @@
+{
+  "LS_AzureSqlDatabase": "<fabric-sql-connection-guid>",
+  "LS_ADLS_Gen2": "<fabric-adls-gen2-connection-guid>",
+  "LS_AzureBlobStorage": "<fabric-blob-or-adls-connection-guid>",
+  "LS_HTTP_Graph_Download": "<fabric-http-connection-guid>",
+  "LS_KeyVault": "<fabric-key-vault-connection-guid>"
+}
