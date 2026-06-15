@@ -56,21 +56,34 @@ function Read-JsonFile {
     if (-not (Test-Path $Path)) {
         throw "File not found: $Path"
     }
-    return Get-Content -Raw -Path $Path | ConvertFrom-Json -Depth 100
+    # Note: ConvertFrom-Json has no -Depth parameter on Windows PowerShell 5.1
+    # (only PowerShell 7+). 5.1 parses arbitrarily deep JSON by default, so we
+    # omit it here to stay compatible with the stock client environment.
+    return Get-Content -Raw -Path $Path | ConvertFrom-Json
 }
 
 function Write-JsonFile {
     param(
         [Parameter(Mandatory = $true)]$InputObject,
-        [Parameter(Mandatory = $true)][string]$Path
+        [Parameter(Mandatory = $true)][string]$Path,
+        [switch]$UnescapeArm
     )
     $json = $InputObject | ConvertTo-Json -Depth 100
+    if ($UnescapeArm) {
+        # ARM templates escape a literal leading '[' as '[[' (e.g. a stored
+        # procedure name "[[dbo].[usp_X]" deploys to the literal "[dbo].[usp_X]").
+        # Fabric pipeline definitions are NOT ARM, so the escaping must be undone.
+        # A JSON string value that opens with "[[ is always such an escape: an
+        # embedded double-quote would be backslash-escaped, so the sequence "[[
+        # can only mark start-of-value followed by an ARM-escaped bracket.
+        $json = $json -replace '"\[\[', '"['
+    }
     Set-Content -Path $Path -Value $json -Encoding UTF8
 }
 
 function Copy-JsonObject {
     param([Parameter(Mandatory = $true)]$InputObject)
-    return ($InputObject | ConvertTo-Json -Depth 100 | ConvertFrom-Json -Depth 100)
+    return ($InputObject | ConvertTo-Json -Depth 100 | ConvertFrom-Json)
 }
 
 function Get-ObjectPropertyValue {
@@ -290,7 +303,7 @@ function Convert-PipelineTemplate {
         $content = @{
             properties = $pipelineProperties
         }
-        Write-JsonFile -InputObject $content -Path (Join-Path $itemDir "pipeline-content.json")
+        Write-JsonFile -InputObject $content -Path (Join-Path $itemDir "pipeline-content.json") -UnescapeArm
 
         $platform = @{
             version = "2.0"

@@ -70,10 +70,28 @@ function Invoke-FabricRequest {
     $bodyJson = if ($null -ne $Body) { $Body | ConvertTo-Json -Depth 100 } else { $null }
 
     try {
-        if ($bodyJson) {
-            return Invoke-RestMethod -Method $Method -Uri $uri -Headers $headers -Body $bodyJson
+        # Invoke-WebRequest (not Invoke-RestMethod) so we can inspect the status
+        # code and headers — Fabric item create/updateDefinition are asynchronous
+        # and return HTTP 202 + an Operation-Location header we must poll.
+        $params = @{
+            Method          = $Method
+            Uri             = $uri
+            Headers         = $headers
+            UseBasicParsing = $true
+            ErrorAction     = "Stop"
         }
-        return Invoke-RestMethod -Method $Method -Uri $uri -Headers $headers
+        if ($bodyJson) { $params["Body"] = $bodyJson }
+        $response = Invoke-WebRequest @params
+
+        $data = $null
+        if ($response.Content) {
+            try { $data = $response.Content | ConvertFrom-Json } catch { $data = $null }
+        }
+        return [pscustomobject]@{
+            StatusCode = [int]$response.StatusCode
+            Headers    = $response.Headers
+            Data       = $data
+        }
     }
     catch {
         $response = $_.Exception.Response
@@ -83,6 +101,37 @@ function Invoke-FabricRequest {
             throw "Fabric API $Method $Path failed with HTTP $([int]$response.StatusCode): $details"
         }
         throw
+    }
+}
+
+function Wait-FabricOperation {
+    # Polls a Fabric long-running operation (HTTP 202) to completion. No-op for
+    # synchronous 200/201 responses so callers can wrap every mutating request.
+    param([Parameter(Mandatory = $true)]$Response)
+
+    if ($Response.StatusCode -ne 202) { return }
+
+    $operationUrl = @($Response.Headers["Operation-Location"])[0]
+    if (-not $operationUrl) { $operationUrl = @($Response.Headers["Location"])[0] }
+    if (-not $operationUrl) { return }
+
+    $headers = @{ Authorization = "Bearer $script:AccessToken" }
+    $retryAfter = @($Response.Headers["Retry-After"])[0]
+    while ($true) {
+        $delay = if ($retryAfter) { [int]$retryAfter } else { 5 }
+        Start-Sleep -Seconds $delay
+
+        $op = Invoke-WebRequest -Method GET -Uri $operationUrl -Headers $headers -UseBasicParsing -ErrorAction Stop
+        $status = $null
+        if ($op.Content) { try { $status = ($op.Content | ConvertFrom-Json).status } catch { $status = $null } }
+        $retryAfter = @($op.Headers["Retry-After"])[0]
+
+        switch ("$status") {
+            "Succeeded" { return }
+            "Completed" { return }
+            "Failed"    { throw "Fabric operation failed: $($op.Content)" }
+            "Cancelled" { throw "Fabric operation cancelled: $($op.Content)" }
+        }
     }
 }
 
@@ -121,7 +170,7 @@ function Get-FabricWorkspaceItems {
     $items = @()
     $path = "/workspaces/$WorkspaceId/items"
     do {
-        $response = Invoke-FabricRequest -Method GET -Path $path
+        $response = (Invoke-FabricRequest -Method GET -Path $path).Data
         $items += @($response.value)
         $continuationToken = $response.continuationToken
         if ($continuationToken) {
@@ -132,14 +181,18 @@ function Get-FabricWorkspaceItems {
     return $items
 }
 
-if (-not $AccessToken) {
-    Write-Step "Getting Fabric access token from Azure CLI..."
-    $AccessToken = az account get-access-token --resource "https://api.fabric.microsoft.com" --query accessToken -o tsv
-    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($AccessToken)) {
-        throw "Unable to get Fabric access token. Run 'az login' and ensure the account has Fabric workspace Contributor access."
+# -WhatIf is a fully offline dry-run: no token, no Fabric calls. This lets the
+# client validate the generated templates locally before touching the workspace.
+if (-not $WhatIf) {
+    if (-not $AccessToken) {
+        Write-Step "Getting Fabric access token from Azure CLI..."
+        $AccessToken = az account get-access-token --resource "https://api.fabric.microsoft.com" --query accessToken -o tsv
+        if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($AccessToken)) {
+            throw "Unable to get Fabric access token. Run 'az login' and ensure the account has Fabric workspace Contributor access."
+        }
     }
+    $script:AccessToken = $AccessToken
 }
-$script:AccessToken = $AccessToken
 
 $TemplateDir = (Resolve-Path $TemplateDir).Path
 $pipelineRoot = Join-Path $TemplateDir "pipelines"
@@ -147,17 +200,33 @@ if (-not (Test-Path $pipelineRoot)) {
     throw "Pipeline template folder not found: $pipelineRoot. Run Convert-ADF-To-FDF.ps1 first."
 }
 
+$pipelineDirs = Get-ChildItem -Path $pipelineRoot -Directory -Filter "*.DataPipeline" | Sort-Object Name
+
+# Guard: templates generated without a connection map still carry ADF-style
+# "linkedServiceName" references. They will import into Fabric but every Copy /
+# Lookup / stored-procedure activity will be unbound and fail at run time.
+$unmapped = @($pipelineDirs | Where-Object {
+    (Get-Content -Raw -Path (Join-Path $_.FullName "pipeline-content.json")) -match '"linkedServiceName"'
+})
+if ($unmapped.Count -gt 0) {
+    Write-Step "WARNING: $($unmapped.Count) pipeline(s) still contain unmapped ADF 'linkedServiceName' references:" "WARNING"
+    foreach ($u in $unmapped) { Write-Step "  - $($u.Name)" "WARNING" }
+    Write-Step "These activities will not bind to Fabric connections. Re-run Convert-ADF-To-FDF.ps1" "WARNING"
+    Write-Step "with -ConnectionMapPath <connections.json> (real Fabric connection GUIDs) before a production deploy." "WARNING"
+}
+
 Write-Step "Reading existing Fabric workspace items..."
 $existingByName = @{}
-foreach ($item in @(Get-FabricWorkspaceItems -WorkspaceId $WorkspaceId)) {
-    if ($item.type -eq "DataPipeline") {
-        $existingByName[$item.displayName] = $item
+if (-not $WhatIf) {
+    foreach ($item in @(Get-FabricWorkspaceItems -WorkspaceId $WorkspaceId)) {
+        if ($item.type -eq "DataPipeline") {
+            $existingByName[$item.displayName] = $item
+        }
     }
 }
 
-$pipelineDirs = Get-ChildItem -Path $pipelineRoot -Directory -Filter "*.DataPipeline" | Sort-Object Name
 foreach ($dir in $pipelineDirs) {
-    $platform = Get-Content -Raw -Path (Join-Path $dir.FullName ".platform") | ConvertFrom-Json -Depth 100
+    $platform = Get-Content -Raw -Path (Join-Path $dir.FullName ".platform") | ConvertFrom-Json
     $displayName = [string]$platform.metadata.displayName
     $definition = Get-ItemDefinitionPayload -ItemDirectory $dir.FullName
 
@@ -165,20 +234,28 @@ foreach ($dir in $pipelineDirs) {
         $itemId = $existingByName[$displayName].id
         Write-Step "Updating DataPipeline '$displayName' ($itemId)..."
         if (-not $WhatIf) {
-            Invoke-FabricRequest -Method POST -Path "/workspaces/$WorkspaceId/items/$itemId/updateDefinition?updateMetadata=true" -Body @{
+            $response = Invoke-FabricRequest -Method POST -Path "/workspaces/$WorkspaceId/items/$itemId/updateDefinition?updateMetadata=true" -Body @{
                 definition = $definition
-            } | Out-Null
+            }
+            Wait-FabricOperation -Response $response
+        }
+        else {
+            Write-Step "  [WhatIf] would update '$displayName'."
         }
     }
     else {
         Write-Step "Creating DataPipeline '$displayName'..."
         if (-not $WhatIf) {
-            Invoke-FabricRequest -Method POST -Path "/workspaces/$WorkspaceId/items" -Body @{
+            $response = Invoke-FabricRequest -Method POST -Path "/workspaces/$WorkspaceId/items" -Body @{
                 displayName = $displayName
                 type = "DataPipeline"
                 description = [string]$platform.metadata.description
                 definition = $definition
-            } | Out-Null
+            }
+            Wait-FabricOperation -Response $response
+        }
+        else {
+            Write-Step "  [WhatIf] would create '$displayName'."
         }
     }
 }

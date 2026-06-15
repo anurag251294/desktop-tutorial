@@ -79,7 +79,7 @@
                                     "policy": { "timeout": "0.00:05:00", "retry": 2, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
                                     "userProperties": [],
                                     "typeProperties": {
-                                        "storedProcedureName": "[dbo].[usp_LogFileAudit]",
+                                        "storedProcedureName": "[[dbo].[usp_LogFileAudit]",
                                         "storedProcedureParameters": {
                                             "FileName": { "value": { "value": "@item().name", "type": "Expression" }, "type": "String" },
                                             "SourcePath": { "value": { "value": "@concat(pipeline().parameters.SourcePathPrefix, if(contains(item(), 'parentReference'), replace(replace(item().parentReference.path, concat('/drives/', pipeline().parameters.DriveId, '/root:'), ''), concat('/drives/', pipeline().parameters.DriveId, '/root'), ''), ''), '/', item().name)", "type": "Expression" }, "type": "String" },
@@ -99,7 +99,7 @@
                                     "policy": { "timeout": "0.00:05:00", "retry": 2, "retryIntervalInSeconds": 30, "secureOutput": false, "secureInput": false },
                                     "userProperties": [],
                                     "typeProperties": {
-                                        "storedProcedureName": "[dbo].[usp_LogFileAudit]",
+                                        "storedProcedureName": "[[dbo].[usp_LogFileAudit]",
                                         "storedProcedureParameters": {
                                             "FileName": { "value": { "value": "@item().name", "type": "Expression" }, "type": "String" },
                                             "SourcePath": { "value": { "value": "@concat(pipeline().parameters.SourcePathPrefix, if(contains(item(), 'parentReference'), replace(replace(item().parentReference.path, concat('/drives/', pipeline().parameters.DriveId, '/root:'), ''), concat('/drives/', pipeline().parameters.DriveId, '/root'), ''), ''), '/', item().name)", "type": "Expression" }, "type": "String" },

@@ -12,6 +12,10 @@ fdf-templates/
       .platform
 ```
 
+## Requirements
+
+Both scripts run on **Windows PowerShell 5.1** (the stock Windows shell) as well as PowerShell 7+. No `pwsh` install is required. `Convert-ADF-To-FDF.ps1` needs no Azure sign-in; `Deploy-FDF-Templates.ps1` uses Azure CLI (`az`) for its access token unless you pass `-AccessToken`.
+
 ## Convert ADF templates to FDF item definitions
 
 From the project root:
@@ -30,6 +34,8 @@ Copy-Item .\config\fdf-connections.sample.json .\config\fdf-connections.json
 
 The converter writes `fdf-templates\conversion-report.json`. Review warnings before deployment, especially missing connection mappings.
 
+> **Important:** Templates generated **without** a connection map import into Fabric but every Copy / Lookup / stored-procedure activity stays unbound and fails at run time. For a functional deployment you must create the Fabric connections first and re-run the converter with `-ConnectionMapPath`. `Deploy-FDF-Templates.ps1` warns when it detects unmapped `linkedServiceName` references.
+
 ## Deploy to a Fabric workspace
 
 Sign in with Azure CLI using an account that has Contributor access to the Fabric workspace:
@@ -39,11 +45,13 @@ az login
 .\scripts\Deploy-FDF-Templates.ps1 -WorkspaceId "<fabric-workspace-guid>"
 ```
 
-To preview create/update actions without calling Fabric:
+`-WhatIf` is a fully offline dry-run: it acquires no token and makes no Fabric calls, so the client can validate the generated templates locally before touching the workspace:
 
 ```powershell
 .\scripts\Deploy-FDF-Templates.ps1 -WorkspaceId "<fabric-workspace-guid>" -WhatIf
 ```
+
+Real create / `updateDefinition` calls are asynchronous (HTTP 202); the script polls each operation to completion and fails loudly if Fabric reports the operation failed.
 
 ## What the converter changes
 
