@@ -58,7 +58,7 @@ Copy-Item .\fabric-native\config\fabric-native.sample.json .\fabric-native\confi
 # edit fabric-native.json: graph tenant/client, Key Vault, sites, and (optionally)
 # the SharePoint connection GUID
 
-.\scripts\Deploy-FabricNative.ps1 -WorkspaceId "<workspace-guid>" -ConfigPath .\fabric-native\config\fabric-native.json
+.\fabric-native\scripts\Deploy-FabricNative.ps1 -WorkspaceId "<workspace-guid>" -ConfigPath .\fabric-native\config\fabric-native.json
 ```
 
 The deploy is **idempotent** and resolves every cross-item reference for you:

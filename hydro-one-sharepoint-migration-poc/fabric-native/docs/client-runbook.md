@@ -142,7 +142,7 @@ Edit `fabric-native.json`:
 
 ```powershell
 az login
-.\scripts\Deploy-FabricNative.ps1 -WorkspaceId "<workspace-guid>" -ConfigPath .\fabric-native\config\fabric-native.json
+.\fabric-native\scripts\Deploy-FabricNative.ps1 -WorkspaceId "<workspace-guid>" -ConfigPath .\fabric-native\config\fabric-native.json
 ```
 
 This single command, **idempotently**:
@@ -160,7 +160,7 @@ Re-running is safe: existing items are updated in place.
 **Dry run (offline, no Fabric calls):**
 
 ```powershell
-.\scripts\Deploy-FabricNative.ps1 -WorkspaceId "<workspace-guid>" -ConfigPath .\fabric-native\config\fabric-native.json -WhatIf
+.\fabric-native\scripts\Deploy-FabricNative.ps1 -WorkspaceId "<workspace-guid>" -ConfigPath .\fabric-native\config\fabric-native.json -WhatIf
 ```
 
 > If `sharePointConnectionId` is left blank, the inventory pipeline is created as

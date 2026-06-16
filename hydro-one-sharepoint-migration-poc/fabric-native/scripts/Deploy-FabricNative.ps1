@@ -40,7 +40,9 @@
 param(
     [Parameter(Mandatory = $true)][guid]$WorkspaceId,
     [string]$ConfigPath,
-    [string]$SourceDir = "fabric-native",
+    # Defaults to the fabric-native folder this script lives in, so it works
+    # regardless of the current directory.
+    [string]$SourceDir = (Join-Path $PSScriptRoot ".."),
     [string]$AccessToken,
     [switch]$WhatIf
 )

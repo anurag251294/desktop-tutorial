@@ -14,12 +14,14 @@ All file access is handled through the **Microsoft Graph API** with cross-tenant
 > orchestrated by one master pipeline. One idempotent command deploys the whole stack:
 >
 > ```powershell
-> .\scripts\Deploy-FabricNative.ps1 -WorkspaceId "<workspace-guid>" -ConfigPath .\fabric-native\config\fabric-native.json
+> .\fabric-native\scripts\Deploy-FabricNative.ps1 -WorkspaceId "<workspace-guid>" -ConfigPath .\fabric-native\config\fabric-native.json
 > ```
 >
-> See **[docs/fabric-native-migration.md](docs/fabric-native-migration.md)**. Artifacts
-> live under `fabric-native/`. This path was deployed and the OneLake write verified
-> end to end on a live Fabric workspace.
+> Everything lives under **`fabric-native/`** — see the
+> **[client runbook](fabric-native/docs/client-runbook.md)** (az-CLI deploy guide)
+> and the **[architecture deep-dive](fabric-native/docs/fabric-native-migration.md)**.
+> This path was deployed and a real SharePoint→OneLake migration verified end to end
+> on a live Fabric workspace.
 
 ### Why This Migration?
 
