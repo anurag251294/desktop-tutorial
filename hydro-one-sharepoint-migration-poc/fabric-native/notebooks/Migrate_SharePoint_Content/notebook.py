@@ -129,11 +129,12 @@ def write_audit(records):
 def site_key():
     return f"{site_url}::{library_name}"
 
-def enumerate_items(token, site_id, drive_id):
-    """Yield driveItems. Uses Graph delta for incremental, children for full."""
-    key = site_key()
+def enumerate_items(token, site_id, drive_id, state):
+    """Yield driveItems. Uses Graph delta for incremental, children for full.
+    The final delta link is captured in state['delta_link'] so the caller can
+    advance the watermark only after a clean run (failed files get retried)."""
     if mode == "incremental":
-        url = read_watermark(key) or f"{GRAPH}/sites/{site_id}/drives/{drive_id}/root/delta"
+        url = read_watermark(site_key()) or f"{GRAPH}/sites/{site_id}/drives/{drive_id}/root/delta"
     else:
         url = f"{GRAPH}/sites/{site_id}/drives/{drive_id}/root/children"
     while url:
@@ -143,8 +144,7 @@ def enumerate_items(token, site_id, drive_id):
         if "@odata.nextLink" in page:
             url = page["@odata.nextLink"]
         else:
-            if mode == "incremental" and "@odata.deltaLink" in page:
-                write_watermark(key, page["@odata.deltaLink"])
+            state["delta_link"] = page.get("@odata.deltaLink")
             url = None
 
 def dest_rel(item):
@@ -157,16 +157,22 @@ def dest_rel(item):
 def migrate():
     token = graph_token()
     site_id, drive_id = resolve_drive(token)
-    audit, copied, skipped = [], 0, 0
-    for it in enumerate_items(token, site_id, drive_id):
+    state = {}
+    audit, copied, skipped, errors = [], 0, 0, 0
+    for it in enumerate_items(token, site_id, drive_id, state):
         if it.get("deleted") or "file" not in it:   # skip folders & tombstones
             skipped += 1
             continue
         dest = files_uri(*dest_rel(it))
         try:
-            # Stream download to a local temp file, then copy into OneLake.
+            # The Graph /delta response does NOT carry @microsoft.graph.downloadUrl,
+            # so download via the item's /content endpoint. Graph 302-redirects to a
+            # pre-authenticated storage URL; requests drops the Authorization header
+            # on the cross-host redirect (correct -- that URL is already authorized).
+            item_drive = it.get("parentReference", {}).get("driveId", drive_id)
+            content_url = f"{GRAPH}/drives/{item_drive}/items/{it['id']}/content"
             with tempfile.NamedTemporaryFile(delete=False) as tmp:
-                resp = graph_get(it["@microsoft.graph.downloadUrl"], token, stream=True)
+                resp = graph_get(content_url, token, stream=True)
                 for chunk in resp.iter_content(chunk_size=4 * 1024 * 1024):
                     tmp.write(chunk)
                 tmp_path = tmp.name
@@ -175,6 +181,7 @@ def migrate():
             copied += 1
             status = "copied"
         except Exception as e:   # noqa: BLE001 - record and continue
+            errors += 1
             status = f"error: {e}"
         audit.append(dict(site=site_url, library=library_name, name=it["name"],
                           item_id=it["id"], size=it.get("size", 0),
@@ -182,14 +189,18 @@ def migrate():
         if len(audit) >= 200:
             write_audit(audit); audit = []
     write_audit(audit)
-    return copied, skipped
+    # Advance the incremental watermark only on a clean run, so any failed files
+    # are re-enumerated and retried on the next run instead of being skipped.
+    if mode == "incremental" and errors == 0 and state.get("delta_link"):
+        write_watermark(site_key(), state["delta_link"])
+    return copied, skipped, errors
 
 # CELL ========================================================================
 # Entry point
 if site_url:
-    copied, skipped = migrate()
+    copied, skipped, errors = migrate()
     result = {"site": site_url, "library": library_name, "mode": mode,
-              "copied": copied, "skipped": skipped}
+              "copied": copied, "skipped": skipped, "errors": errors}
     print(json.dumps(result))
     notebookutils.notebook.exit(json.dumps(result))
 else:

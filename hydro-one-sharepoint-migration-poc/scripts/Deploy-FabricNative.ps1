@@ -137,6 +137,7 @@ function Build-NotebookIpynb {
     # Split into cells on the marker; drop the file header before the first marker.
     $parts = [regex]::Split($raw, '(?m)^# CELL .*$')
     $cellTexts = @($parts | Select-Object -Skip 1)
+    $cellIndex = 0
     $cells = foreach ($text in $cellTexts) {
         $body = $text.Trim("`r", "`n")
         $lines = $body -split "`n"
@@ -144,7 +145,13 @@ function Build-NotebookIpynb {
         $src = for ($i = 0; $i -lt $lines.Count; $i++) {
             if ($i -lt $lines.Count - 1) { ($lines[$i] -replace "`r$", "") + "`n" } else { ($lines[$i] -replace "`r$", "") }
         }
-        [ordered]@{ cell_type = "code"; source = @($src); metadata = @{}; outputs = @(); execution_count = $null }
+        # The FIRST cell is the parameters cell -- it MUST be tagged "parameters"
+        # so Fabric injects pipeline/job parameter overrides AFTER it. Without the
+        # tag, Fabric injects the overrides before this cell and the defaults here
+        # clobber them (e.g. site_url back to "" -> the notebook runs smoke mode).
+        $meta = if ($cellIndex -eq 0) { @{ tags = @("parameters") } } else { @{} }
+        $cellIndex++
+        [ordered]@{ cell_type = "code"; source = @($src); metadata = $meta; outputs = @(); execution_count = $null }
     }
 
     $dependencies = @{}
