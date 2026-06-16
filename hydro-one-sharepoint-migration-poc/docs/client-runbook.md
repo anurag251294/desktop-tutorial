@@ -51,32 +51,61 @@ no external storage account to provision or pay for.
 | 3 | **Windows PowerShell 5.1** or **PowerShell 7+** | The deploy script runs on the stock Windows shell — no `pwsh` install required. |
 | 4 | **Entra app registration** (service principal) | Used by the Spark notebook to read SharePoint via Graph. |
 | 5 | **Azure Key Vault** | Stores the app's client secret. The notebook reads it at run time; the secret is never written to config or code. |
-| 6 | **Fabric SharePoint Online connection** | Used by the inventory pipeline. Created once in the Fabric portal. |
+| 6 | **Fabric SharePoint Online connection** | *Optional* — only for the inventory pipeline (metadata table). The content migration does **not** need it. |
 
-### 2a. App registration + Graph permissions
+> The whole flow is **Azure CLI–driven**: `az login` → run the deploy script (it
+> gets its Fabric token from `az`) → start the migration with `az rest`. The only
+> non-CLI step is the optional Fabric SharePoint connection (2c).
 
-1. Entra ID → **App registrations** → **New registration** (single tenant is fine
-   for same-tenant SharePoint).
-2. **API permissions** → Microsoft Graph → **Application permissions** → add
-   **`Sites.Read.All`** and **`Files.Read.All`** → **Grant admin consent**.
-3. **Certificates & secrets** → **New client secret** → copy the value.
-4. Note the **Application (client) ID** and **Directory (tenant) ID**.
+### 2a. App registration + Graph permissions (az CLI)
 
-### 2b. Store the secret in Key Vault
+Run these once. They create the app, grant the Graph **application** permissions
+the notebook needs, admin-consent them, and mint a secret.
 
-```powershell
-az keyvault secret set --vault-name <your-keyvault> --name graph-client-secret --value "<the-secret-value>"
+```bash
+# 1) Create the app registration + service principal
+appId=$(az ad app create --display-name "HydroOne-SPO-Migration" --query appId -o tsv)
+az ad sp create --id "$appId"
+
+# 2) Grant Microsoft Graph application permissions:
+#    Sites.Read.All = 332a536c-c7ef-4017-ab91-336970924f0d
+#    Files.Read.All = 01d4889c-1287-42c6-ac1f-5d1e02578ef6
+az ad app permission add --id "$appId" --api 00000003-0000-0000-c000-000000000000 \
+  --api-permissions 332a536c-c7ef-4017-ab91-336970924f0d=Role 01d4889c-1287-42c6-ac1f-5d1e02578ef6=Role
+
+# 3) Admin-consent (requires Global Admin / Privileged Role Admin)
+az ad app permission admin-consent --id "$appId"
+
+# 4) Create a client secret
+secret=$(az ad app credential reset --id "$appId" --display-name "fabric-migration" --years 1 --query password -o tsv)
+
+# 5) Record these for the config:
+tenantId=$(az account show --query tenantId -o tsv)
+echo "tenantId=$tenantId"; echo "clientId=$appId"
 ```
 
-Grant the identity that runs the notebook **Key Vault Secrets User** on the vault
-(the workspace identity, or the same service principal).
+> PowerShell users: same `az` commands; capture with `$appId = az ad app create ... -o tsv`.
 
-### 2c. Create the Fabric SharePoint connection
+### 2b. Store the secret in Key Vault (az CLI)
 
-In the Fabric portal: **Settings → Manage connections and gateways → New** →
-**SharePoint Online list** → enter a site URL and authenticate → **Create**.
-Copy the connection's **GUID** (Settings → the connection → ID). You'll paste it
-into the config below.
+```bash
+az keyvault secret set --vault-name <your-keyvault> --name graph-client-secret --value "$secret"
+```
+
+Grant the identity that runs the notebook **Key Vault Secrets User** on the vault:
+
+```bash
+az role assignment create --assignee "$appId" --role "Key Vault Secrets User" \
+  --scope $(az keyvault show --name <your-keyvault> --query id -o tsv)
+```
+
+### 2c. (Optional) Create the Fabric SharePoint connection
+
+Only needed if you want the inventory pipeline to populate `sharepoint_inventory`.
+**Skip it to start** — the content migration works without it. When you want it:
+Fabric portal → **Settings → Manage connections and gateways → New** →
+**SharePoint Online list** → authenticate → **Create**, then copy the connection
+**GUID** into `sharePointConnectionId` and re-run the deploy.
 
 ---
 
@@ -119,8 +148,9 @@ az login
 This single command, **idempotently**:
 
 1. Creates the **Lakehouse** if missing.
-2. Assembles the notebook `.ipynb` from `notebook.py` (injecting the workspace and
-   Lakehouse IDs) and deploys it.
+2. Assembles the notebook `.ipynb` from `notebook.py` (baking in the workspace and
+   Lakehouse IDs **and the Graph identity** from your config — tenant/client/vault,
+   never the secret) and deploys it.
 3. Creates the pipelines, then rewrites every cross-item reference
    (pipeline→pipeline, pipeline→notebook, and the Lakehouse IDs) to real GUIDs —
    Fabric rejects name-based references, so this is done for you.
@@ -142,21 +172,59 @@ Re-running is safe: existing items are updated in place.
 
 ## 5. Run the migration
 
-Run **`PL_Migrate_Master`** from the Fabric portal (**Run**) or via REST, supplying
-parameters:
+The deploy **bakes the Graph identity** (`tenant_id`, `client_id`, `keyVaultUri`,
+`clientSecretName`) into the notebook from your config, so a run only needs the
+site/library/mode. The client secret is fetched from Key Vault at run time.
+
+The deploy prints each item's GUID, e.g.
+`Migrate_SharePoint_Content -> <notebook-id>`. Use it below.
+
+### Option A — run the content notebook directly (az CLI)
+
+```bash
+ws="<workspace-guid>"; nb="<notebook-id>"
+az rest --method post \
+  --url "https://api.fabric.microsoft.com/v1/workspaces/$ws/items/$nb/jobs/instances?jobType=RunNotebook" \
+  --resource "https://api.fabric.microsoft.com" \
+  --headers "Content-Type=application/json" \
+  --body '{"executionData":{"parameters":{
+            "site_url":{"value":"https://<tenant>.sharepoint.com/sites/<site>","type":"string"},
+            "library_name":{"value":"Documents","type":"string"},
+            "mode":{"value":"full","type":"string"}}}}'
+```
+
+`az rest` starts the job (HTTP 202). Poll its status until `Completed`:
+
+```bash
+az rest --method get \
+  --url "https://api.fabric.microsoft.com/v1/workspaces/$ws/items/$nb/jobs/instances" \
+  --resource "https://api.fabric.microsoft.com" --query "value[-1].status" -o tsv
+```
+
+### Option B — run the master pipeline (inventory + content)
+
+```bash
+ws="<workspace-guid>"; pl="<PL_Migrate_Master-id>"
+az rest --method post \
+  --url "https://api.fabric.microsoft.com/v1/workspaces/$ws/items/$pl/jobs/instances?jobType=Pipeline" \
+  --resource "https://api.fabric.microsoft.com" \
+  --headers "Content-Type=application/json" \
+  --body '{"executionData":{"parameters":{
+            "SiteUrl":{"value":"https://<tenant>.sharepoint.com/sites/<site>","type":"string"},
+            "LibraryName":{"value":"Documents","type":"string"},
+            "Mode":{"value":"full","type":"string"}}}}'
+```
 
 | Parameter | Example | Meaning |
 |-----------|---------|---------|
-| `SiteUrl` | `https://contoso.sharepoint.com/sites/Eng` | The SharePoint site. |
-| `LibraryName` | `Documents` | The document library. |
-| `Mode` | `full` or `incremental` | `full` copies everything; `incremental` resumes from the saved Graph delta link. |
+| `site_url` / `SiteUrl` | `https://contoso.sharepoint.com/sites/Eng` | The SharePoint site. |
+| `library_name` / `LibraryName` | `Documents` | The document library. |
+| `mode` / `Mode` | `full` or `incremental` | `full` copies everything; `incremental` resumes from the saved Graph delta link. |
 
-The pipeline refreshes the inventory, then runs the notebook to copy content into
-`Files/<site>/<library>/…` in the Lakehouse.
-
-**Initial load then ongoing sync:** run once with `Mode = full`, then schedule
-`PL_Migrate_Master` with `Mode = incremental` (Fabric **Schedule** on the pipeline).
-Each incremental run only transfers what changed since the last run.
+**Initial load then ongoing sync:** run once with `mode=full` (or `incremental`,
+which on a first run enumerates everything via Graph delta and recurses subfolders),
+then schedule it with `mode=incremental` — each run only transfers what changed.
+(Portal alternative: open the item and click **Run** / **Schedule**.)
 
 ---
 
@@ -201,13 +269,17 @@ WHERE status LIKE 'error:%' ORDER BY ts_utc DESC;
 
 ## 8. What is and isn't included
 
-- **Included & validated end to end on a live Fabric workspace:** Lakehouse
-  provisioning, notebook assembly + deploy, pipeline deploy with all references
-  resolved, the master pipeline run, and the OneLake write path (files + Delta
-  tables).
-- **You provide (credential-bearing, can't be scripted blind):** the app
-  registration + Graph consent, the Key Vault secret, and the Fabric SharePoint
-  connection.
+- **Validated end to end on a live Fabric workspace with real SharePoint data:**
+  a real document library (`SalesAndMarketing` / `Documents`) was migrated via the
+  deployed notebook using app-only Graph auth — **30 files / 7.96 MB** copied into
+  OneLake (including nested subfolders), `migration_audit` all `copied`, and an
+  **incremental re-run copied 0** (delta-link resume). This matches the prior ADF
+  POC byte-for-byte. Deploy, reference resolution, the master-pipeline run, and the
+  OneLake write path are all verified.
+- **You provide (credential-bearing):** the app registration + Graph admin consent,
+  the Key Vault secret, and — only if you want the inventory table — the Fabric
+  SharePoint connection.
 - **Scope note:** the inventory pipeline uses the SharePoint Online **list**
   connector for metadata; binary document **content** is moved by the Spark
-  notebook (the connector alone does not move large binaries reliably).
+  notebook (the connector alone does not move large binaries reliably). The content
+  migration is fully functional without the connection.

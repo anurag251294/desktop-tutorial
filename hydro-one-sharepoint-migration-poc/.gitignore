@@ -10,6 +10,9 @@ credentials/
 .env
 .env.*
 
+# Fabric-native runtime config (copy of the sample with real tenant/client IDs)
+fabric-native/config/fabric-native.json
+
 # PowerShell
 *.log
 *.transcript

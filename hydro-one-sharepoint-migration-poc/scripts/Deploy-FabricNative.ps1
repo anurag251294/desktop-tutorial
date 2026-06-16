@@ -128,11 +128,23 @@ function Build-NotebookIpynb {
     param(
         [Parameter(Mandatory = $true)][string]$NotebookPyPath,
         [string]$LakehouseId,
-        [string]$LakehouseName
+        [string]$LakehouseName,
+        $Graph
     )
     $raw = Get-Content -Raw -Path $NotebookPyPath
     $raw = $raw -replace 'workspace_id     = ""', "workspace_id     = ""$WorkspaceId"""
     if ($LakehouseId) { $raw = $raw -replace 'lakehouse_id     = ""', "lakehouse_id     = ""$LakehouseId""" }
+
+    # Bake the Graph identity from config into the notebook defaults so the
+    # deployed notebook can authenticate on its own (run from the pipeline, a
+    # schedule, or az rest) without re-supplying tenant/client/vault every time.
+    # The client secret is NEVER baked in -- it is read from Key Vault at run time.
+    if ($Graph) {
+        if ($Graph.tenantId)         { $raw = $raw -replace 'tenant_id        = ""', "tenant_id        = ""$($Graph.tenantId)""" }
+        if ($Graph.clientId)         { $raw = $raw -replace 'client_id        = ""', "client_id        = ""$($Graph.clientId)""" }
+        if ($Graph.keyVaultUri)      { $raw = $raw -replace 'key_vault_uri    = ""', "key_vault_uri    = ""$($Graph.keyVaultUri)""" }
+        if ($Graph.clientSecretName) { $raw = $raw -replace 'client_secret_name = "graph-client-secret"', "client_secret_name = ""$($Graph.clientSecretName)""" }
+    }
 
     # Split into cells on the marker; drop the file header before the first marker.
     $parts = [regex]::Split($raw, '(?m)^# CELL .*$')
@@ -270,7 +282,7 @@ foreach ($nbFolder in $notebookFolders) {
     $nbName = $nbFolder.Name
     $nbPy = Join-Path $nbFolder.FullName "notebook.py"
     if (-not (Test-Path $nbPy)) { continue }
-    $ipynb = Build-NotebookIpynb -NotebookPyPath $nbPy -LakehouseId $lakehouseId -LakehouseName $lakehouseName
+    $ipynb = Build-NotebookIpynb -NotebookPyPath $nbPy -LakehouseId $lakehouseId -LakehouseName $lakehouseName -Graph $(if ($config) { $config.graph } else { $null })
     if ($WhatIf) { Write-Step "[WhatIf] would deploy Notebook '$nbName' ($([math]::Round($ipynb.Length/1KB)) KB ipynb)."; continue }
     $definition = @{ format = "ipynb"; parts = @(@{ path = "notebook-content.ipynb"; payload = (ConvertTo-Base64Utf8 -Text $ipynb); payloadType = "InlineBase64" }) }
     $key = "Notebook/$nbName"

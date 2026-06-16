@@ -130,13 +130,17 @@ def site_key():
     return f"{site_url}::{library_name}"
 
 def enumerate_items(token, site_id, drive_id, state):
-    """Yield driveItems. Uses Graph delta for incremental, children for full.
-    The final delta link is captured in state['delta_link'] so the caller can
-    advance the watermark only after a clean run (failed files get retried)."""
+    """Yield driveItems. Both modes use the Graph /delta endpoint, which is
+    RECURSIVE (it returns every item in the drive, including nested folders) --
+    unlike /root/children, which is shallow. 'full' starts fresh; 'incremental'
+    resumes from the saved delta link. The final delta link is captured in
+    state['delta_link'] so the caller advances the watermark only after a clean
+    run (failed files get retried)."""
+    delta = f"{GRAPH}/sites/{site_id}/drives/{drive_id}/root/delta"
     if mode == "incremental":
-        url = read_watermark(site_key()) or f"{GRAPH}/sites/{site_id}/drives/{drive_id}/root/delta"
+        url = read_watermark(site_key()) or delta
     else:
-        url = f"{GRAPH}/sites/{site_id}/drives/{drive_id}/root/children"
+        url = delta   # full = fresh, complete, recursive enumeration
     while url:
         page = graph_get(url, token).json()
         for it in page.get("value", []):
@@ -189,9 +193,10 @@ def migrate():
         if len(audit) >= 200:
             write_audit(audit); audit = []
     write_audit(audit)
-    # Advance the incremental watermark only on a clean run, so any failed files
-    # are re-enumerated and retried on the next run instead of being skipped.
-    if mode == "incremental" and errors == 0 and state.get("delta_link"):
+    # Advance the watermark only on a clean run (no errors), so failed files are
+    # re-enumerated and retried next time. A clean 'full' run also sets the
+    # baseline so subsequent 'incremental' runs resume correctly.
+    if errors == 0 and state.get("delta_link"):
         write_watermark(site_key(), state["delta_link"])
     return copied, skipped, errors
 
