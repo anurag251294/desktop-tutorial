@@ -1,0 +1,54 @@
+{
+  "properties": {
+    "description": "Master orchestrator: refresh SharePoint inventory (connector), then migrate document content to OneLake (Spark). Deploy-time placeholders __WORKSPACE_ID__/__LAKEHOUSE_ID__/__ITEM:..__ are resolved by Deploy-FabricNative.ps1.",
+    "activities": [
+      {
+        "name": "Refresh_Inventory",
+        "type": "ExecutePipeline",
+        "dependsOn": [],
+        "userProperties": [],
+        "typeProperties": {
+          "pipeline": {
+            "referenceName": "PL_SharePoint_Inventory",
+            "type": "PipelineReference"
+          },
+          "waitOnCompletion": true
+        }
+      },
+      {
+        "name": "Migrate_Content_To_OneLake",
+        "type": "TridentNotebook",
+        "dependsOn": [
+          {
+            "activity": "Refresh_Inventory",
+            "dependencyConditions": [ "Succeeded" ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureInput": false,
+          "secureOutput": false
+        },
+        "userProperties": [],
+        "typeProperties": {
+          "notebookId": "__ITEM:Migrate_SharePoint_Content__",
+          "workspaceId": "__WORKSPACE_ID__",
+          "parameters": {
+            "workspace_id": { "value": "__WORKSPACE_ID__", "type": "string" },
+            "lakehouse_id": { "value": "__LAKEHOUSE_ID__", "type": "string" },
+            "site_url": { "value": "@pipeline().parameters.SiteUrl", "type": "string" },
+            "library_name": { "value": "@pipeline().parameters.LibraryName", "type": "string" },
+            "mode": { "value": "@pipeline().parameters.Mode", "type": "string" }
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "SiteUrl": { "type": "string", "defaultValue": "" },
+      "LibraryName": { "type": "string", "defaultValue": "Documents" },
+      "Mode": { "type": "string", "defaultValue": "incremental" }
+    }
+  }
+}

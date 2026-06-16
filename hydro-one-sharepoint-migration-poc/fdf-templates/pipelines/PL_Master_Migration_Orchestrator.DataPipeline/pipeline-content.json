@@ -1,415 +1,427 @@
 {
-  "properties": {
-    "description": "Master orchestration pipeline for Hydro One SharePoint to ADLS migration. Reads from control table and iterates through SharePoint sites/libraries, invoking the child migration pipeline for each. Implements batch processing with configurable parallelism to manage SharePoint throttling. Passes production parameters (PageSize, CopyBatchCount, ThrottleDelaySeconds) to child pipelines.",
-    "activities": [
-      {
-        "name": "Lookup_PendingLibraries",
-        "type": "Lookup",
-        "dependsOn": [
-          {
-            "activity": "Set_BatchId",
-            "dependencyConditions": [
-              "Succeeded"
-            ]
-          }
-        ],
-        "policy": {
-          "timeout": "0.00:10:00",
-          "retry": 3,
-          "retryIntervalInSeconds": 30,
-          "secureOutput": false,
-          "secureInput": false
-        },
-        "userProperties": [],
-        "typeProperties": {
-          "source": {
-            "type": "AzureSqlSource",
-            "sqlReaderQuery": {
-              "value": "SELECT TOP (@{pipeline().parameters.BatchSize}) Id, SiteUrl, LibraryName, FileCount, TotalSizeBytes, RetryCount \nFROM dbo.MigrationControl \nWHERE Status IN ('Pending', 'Failed') \nAND (RetryCount < @{pipeline().parameters.MaxRetries} OR RetryCount IS NULL)\nORDER BY TotalSizeBytes ASC",
-              "type": "Expression"
-            },
-            "queryTimeout": "00:05:00",
-            "partitionOption": "None"
-          },
-          "firstRowOnly": false,
-          "datasetSettings": {
-            "description": "Dataset for the migration control table containing SharePoint sites and libraries to migrate with status tracking.",
-            "linkedServiceName": {
-              "referenceName": "LS_AzureSqlDatabase",
-              "type": "LinkedServiceReference"
-            },
-            "annotations": [
-              "sql",
-              "control-table",
-              "migration-status",
-              "hydro-one-migration"
-            ],
-            "type": "AzureSqlTable",
-            "typeProperties": {
-              "schema": {
-                "value": "@dataset().SchemaName",
-                "type": "Expression"
-              },
-              "table": {
-                "value": "@dataset().TableName",
-                "type": "Expression"
-              }
-            },
-            "schema": [
-              {
-                "name": "Id",
-                "type": "int"
-              },
-              {
-                "name": "SiteUrl",
-                "type": "nvarchar"
-              },
-              {
-                "name": "LibraryName",
-                "type": "nvarchar"
-              },
-              {
-                "name": "Status",
-                "type": "nvarchar"
-              },
-              {
-                "name": "FileCount",
-                "type": "int"
-              },
-              {
-                "name": "TotalSizeBytes",
-                "type": "bigint"
-              },
-              {
-                "name": "StartTime",
-                "type": "datetime2"
-              },
-              {
-                "name": "EndTime",
-                "type": "datetime2"
-              },
-              {
-                "name": "ErrorMessage",
-                "type": "nvarchar"
-              },
-              {
-                "name": "RetryCount",
-                "type": "int"
-              },
-              {
-                "name": "BatchId",
-                "type": "nvarchar"
-              }
-            ],
-            "parameters": {
-              "SchemaName": "dbo",
-              "TableName": "MigrationControl"
-            }
-          }
-        }
-      },
-      {
-        "name": "ForEach_Library",
-        "type": "ForEach",
-        "dependsOn": [
-          {
-            "activity": "Lookup_PendingLibraries",
-            "dependencyConditions": [
-              "Succeeded"
-            ]
-          }
-        ],
-        "userProperties": [],
-        "typeProperties": {
-          "items": {
-            "value": "@activity('Lookup_PendingLibraries').output.value",
-            "type": "Expression"
-          },
-          "isSequential": false,
-          "batchCount": 4,
-          "activities": [
-            {
-              "name": "Execute_MigrateSingleLibrary",
-              "type": "ExecutePipeline",
-              "dependsOn": [],
-              "policy": {
-                "secureInput": false
-              },
-              "userProperties": [],
-              "typeProperties": {
-                "pipeline": {
-                  "referenceName": "PL_Migrate_Single_Library",
-                  "type": "PipelineReference"
-                },
-                "waitOnCompletion": true,
-                "parameters": {
-                  "SiteUrl": {
-                    "value": "@item().SiteUrl",
-                    "type": "Expression"
-                  },
-                  "LibraryName": {
-                    "value": "@item().LibraryName",
-                    "type": "Expression"
-                  },
-                  "ControlTableId": {
-                    "value": "@item().Id",
-                    "type": "Expression"
-                  },
-                  "BatchId": {
-                    "value": "@variables('BatchId')",
-                    "type": "Expression"
-                  },
-                  "ContainerName": {
-                    "value": "@pipeline().parameters.TargetContainerName",
-                    "type": "Expression"
-                  },
-                  "SharePointTenantUrl": {
-                    "value": "@pipeline().parameters.SharePointTenantUrl",
-                    "type": "Expression"
-                  },
-                  "PageSize": {
-                    "value": "@pipeline().parameters.PageSize",
-                    "type": "Expression"
-                  },
-                  "CopyBatchCount": {
-                    "value": "@pipeline().parameters.CopyBatchCount",
-                    "type": "Expression"
-                  },
-                  "ThrottleDelaySeconds": {
-                    "value": "@pipeline().parameters.ThrottleDelaySeconds",
-                    "type": "Expression"
-                  },
-                  "ServicePrincipalId": {
-                    "value": "@pipeline().parameters.ServicePrincipalId",
-                    "type": "Expression"
-                  },
-                  "ServicePrincipalTenantId": {
-                    "value": "@pipeline().parameters.ServicePrincipalTenantId",
-                    "type": "Expression"
-                  },
-                  "KeyVaultUrl": {
-                    "value": "@pipeline().parameters.KeyVaultUrl",
-                    "type": "Expression"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
-      {
-        "name": "Set_BatchId",
-        "type": "SetVariable",
-        "dependsOn": [],
-        "policy": {
-          "secureOutput": false,
-          "secureInput": false
-        },
-        "userProperties": [],
-        "typeProperties": {
-          "variableName": "BatchId",
-          "value": {
-            "value": "@concat('BATCH-', formatDateTime(utcNow(), 'yyyyMMdd-HHmmss'))",
-            "type": "Expression"
-          }
-        }
-      },
-      {
-        "name": "Log_BatchStart",
-        "type": "SqlServerStoredProcedure",
-        "dependsOn": [
-          {
-            "activity": "Set_BatchId",
-            "dependencyConditions": [
-              "Succeeded"
-            ]
-          }
-        ],
-        "policy": {
-          "timeout": "0.00:05:00",
-          "retry": 2,
-          "retryIntervalInSeconds": 30,
-          "secureOutput": false,
-          "secureInput": false
-        },
-        "userProperties": [],
-        "typeProperties": {
-          "storedProcedureName": "[dbo].[usp_LogBatchStart]",
-          "storedProcedureParameters": {
-            "BatchId": {
-              "value": {
-                "value": "@variables('BatchId')",
-                "type": "Expression"
-              },
-              "type": "String"
-            },
-            "PipelineRunId": {
-              "value": {
-                "value": "@pipeline().RunId",
-                "type": "Expression"
-              },
-              "type": "String"
-            },
-            "StartTime": {
-              "value": {
-                "value": "@utcNow()",
-                "type": "Expression"
-              },
-              "type": "DateTime"
-            }
-          }
-        },
-        "linkedServiceName": {
-          "referenceName": "LS_AzureSqlDatabase",
-          "type": "LinkedServiceReference"
-        }
-      },
-      {
-        "name": "Log_BatchComplete",
-        "type": "SqlServerStoredProcedure",
-        "dependsOn": [
-          {
-            "activity": "ForEach_Library",
-            "dependencyConditions": [
-              "Succeeded"
-            ]
-          }
-        ],
-        "policy": {
-          "timeout": "0.00:05:00",
-          "retry": 2,
-          "retryIntervalInSeconds": 30,
-          "secureOutput": false,
-          "secureInput": false
-        },
-        "userProperties": [],
-        "typeProperties": {
-          "storedProcedureName": "[dbo].[usp_LogBatchComplete]",
-          "storedProcedureParameters": {
-            "BatchId": {
-              "value": {
-                "value": "@variables('BatchId')",
-                "type": "Expression"
-              },
-              "type": "String"
-            },
-            "Status": {
-              "value": "Completed",
-              "type": "String"
-            },
-            "EndTime": {
-              "value": {
-                "value": "@utcNow()",
-                "type": "Expression"
-              },
-              "type": "DateTime"
-            }
-          }
-        },
-        "linkedServiceName": {
-          "referenceName": "LS_AzureSqlDatabase",
-          "type": "LinkedServiceReference"
-        }
-      },
-      {
-        "name": "If_NoLibrariesToProcess",
-        "type": "IfCondition",
-        "dependsOn": [
-          {
-            "activity": "Lookup_PendingLibraries",
-            "dependencyConditions": [
-              "Succeeded"
-            ]
-          }
-        ],
-        "userProperties": [],
-        "typeProperties": {
-          "expression": {
-            "value": "@equals(activity('Lookup_PendingLibraries').output.count, 0)",
-            "type": "Expression"
-          },
-          "ifTrueActivities": [
-            {
-              "name": "Log_NoWork",
-              "type": "SetVariable",
-              "dependsOn": [],
-              "policy": {
-                "secureOutput": false,
-                "secureInput": false
-              },
-              "userProperties": [],
-              "typeProperties": {
-                "variableName": "NoWorkMessage",
-                "value": "No pending libraries found in control table. All migrations complete or maximum retries exceeded."
-              }
-            }
-          ]
-        }
-      }
-    ],
-    "parameters": {
-      "BatchSize": {
-        "type": "int",
-        "defaultValue": 10
-      },
-      "ParallelLibraries": {
-        "type": "int",
-        "defaultValue": 4
-      },
-      "MaxRetries": {
-        "type": "int",
-        "defaultValue": 3
-      },
-      "TargetContainerName": {
-        "type": "string",
-        "defaultValue": "sharepoint-migration"
-      },
-      "SharePointTenantUrl": {
-        "type": "string",
-        "defaultValue": "https://hydroone.sharepoint.com"
-      },
-      "ServicePrincipalId": {
-        "type": "string",
-        "defaultValue": ""
-      },
-      "ServicePrincipalTenantId": {
-        "type": "string",
-        "defaultValue": ""
-      },
-      "KeyVaultUrl": {
-        "type": "string",
-        "defaultValue": ""
-      },
-      "PageSize": {
-        "type": "int",
-        "defaultValue": 200
-      },
-      "CopyBatchCount": {
-        "type": "int",
-        "defaultValue": 10
-      },
-      "ThrottleDelaySeconds": {
-        "type": "int",
-        "defaultValue": 2
-      }
-    },
-    "variables": {
-      "BatchId": {
-        "type": "String"
-      },
-      "NoWorkMessage": {
-        "type": "String"
-      }
-    },
-    "annotations": [
-      "master-pipeline",
-      "orchestrator",
-      "hydro-one-migration",
-      "sharepoint-to-adls",
-      "production"
-    ],
-    "folder": {
-      "name": "SharePoint Migration"
-    }
-  }
+    "properties":  {
+                       "description":  "Master orchestration pipeline for Hydro One SharePoint to ADLS migration. Reads from control table and iterates through SharePoint sites/libraries, invoking the child migration pipeline for each. Implements batch processing with configurable parallelism to manage SharePoint throttling. Passes production parameters (PageSize, CopyBatchCount, ThrottleDelaySeconds) to child pipelines.",
+                       "activities":  [
+                                          {
+                                              "name":  "Lookup_PendingLibraries",
+                                              "type":  "Lookup",
+                                              "dependsOn":  [
+                                                                {
+                                                                    "activity":  "Set_BatchId",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                }
+                                                            ],
+                                              "policy":  {
+                                                             "timeout":  "0.00:10:00",
+                                                             "retry":  3,
+                                                             "retryIntervalInSeconds":  30,
+                                                             "secureOutput":  false,
+                                                             "secureInput":  false
+                                                         },
+                                              "userProperties":  [
+
+                                                                 ],
+                                              "typeProperties":  {
+                                                                     "source":  {
+                                                                                    "type":  "AzureSqlSource",
+                                                                                    "sqlReaderQuery":  {
+                                                                                                           "value":  "SELECT TOP (@{pipeline().parameters.BatchSize}) Id, SiteUrl, LibraryName, FileCount, TotalSizeBytes, RetryCount \nFROM dbo.MigrationControl \nWHERE Status IN (\u0027Pending\u0027, \u0027Failed\u0027) \nAND (RetryCount \u003c @{pipeline().parameters.MaxRetries} OR RetryCount IS NULL)\nORDER BY TotalSizeBytes ASC",
+                                                                                                           "type":  "Expression"
+                                                                                                       },
+                                                                                    "queryTimeout":  "00:05:00",
+                                                                                    "partitionOption":  "None"
+                                                                                },
+                                                                     "firstRowOnly":  false,
+                                                                     "datasetSettings":  {
+                                                                                             "description":  "Dataset for the migration control table containing SharePoint sites and libraries to migrate with status tracking.",
+                                                                                             "linkedServiceName":  {
+                                                                                                                       "referenceName":  "LS_AzureSqlDatabase",
+                                                                                                                       "type":  "LinkedServiceReference"
+                                                                                                                   },
+                                                                                             "annotations":  [
+                                                                                                                 "sql",
+                                                                                                                 "control-table",
+                                                                                                                 "migration-status",
+                                                                                                                 "hydro-one-migration"
+                                                                                                             ],
+                                                                                             "type":  "AzureSqlTable",
+                                                                                             "schema":  [
+                                                                                                            {
+                                                                                                                "name":  "Id",
+                                                                                                                "type":  "int"
+                                                                                                            },
+                                                                                                            {
+                                                                                                                "name":  "SiteUrl",
+                                                                                                                "type":  "nvarchar"
+                                                                                                            },
+                                                                                                            {
+                                                                                                                "name":  "LibraryName",
+                                                                                                                "type":  "nvarchar"
+                                                                                                            },
+                                                                                                            {
+                                                                                                                "name":  "Status",
+                                                                                                                "type":  "nvarchar"
+                                                                                                            },
+                                                                                                            {
+                                                                                                                "name":  "FileCount",
+                                                                                                                "type":  "int"
+                                                                                                            },
+                                                                                                            {
+                                                                                                                "name":  "TotalSizeBytes",
+                                                                                                                "type":  "bigint"
+                                                                                                            },
+                                                                                                            {
+                                                                                                                "name":  "StartTime",
+                                                                                                                "type":  "datetime2"
+                                                                                                            },
+                                                                                                            {
+                                                                                                                "name":  "EndTime",
+                                                                                                                "type":  "datetime2"
+                                                                                                            },
+                                                                                                            {
+                                                                                                                "name":  "ErrorMessage",
+                                                                                                                "type":  "nvarchar"
+                                                                                                            },
+                                                                                                            {
+                                                                                                                "name":  "RetryCount",
+                                                                                                                "type":  "int"
+                                                                                                            },
+                                                                                                            {
+                                                                                                                "name":  "BatchId",
+                                                                                                                "type":  "nvarchar"
+                                                                                                            }
+                                                                                                        ],
+                                                                                             "typeProperties":  {
+                                                                                                                    "schema":  "dbo",
+                                                                                                                    "table":  "MigrationControl"
+                                                                                                                }
+                                                                                         }
+                                                                 }
+                                          },
+                                          {
+                                              "name":  "ForEach_Library",
+                                              "type":  "ForEach",
+                                              "dependsOn":  [
+                                                                {
+                                                                    "activity":  "Lookup_PendingLibraries",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                }
+                                                            ],
+                                              "userProperties":  [
+
+                                                                 ],
+                                              "typeProperties":  {
+                                                                     "items":  {
+                                                                                   "value":  "@activity(\u0027Lookup_PendingLibraries\u0027).output.value",
+                                                                                   "type":  "Expression"
+                                                                               },
+                                                                     "isSequential":  false,
+                                                                     "batchCount":  4,
+                                                                     "activities":  [
+                                                                                        {
+                                                                                            "name":  "Execute_MigrateSingleLibrary",
+                                                                                            "type":  "ExecutePipeline",
+                                                                                            "dependsOn":  [
+
+                                                                                                          ],
+                                                                                            "policy":  {
+                                                                                                           "secureInput":  false
+                                                                                                       },
+                                                                                            "userProperties":  [
+
+                                                                                                               ],
+                                                                                            "typeProperties":  {
+                                                                                                                   "pipeline":  {
+                                                                                                                                    "referenceName":  "PL_Migrate_Single_Library",
+                                                                                                                                    "type":  "PipelineReference"
+                                                                                                                                },
+                                                                                                                   "waitOnCompletion":  true,
+                                                                                                                   "parameters":  {
+                                                                                                                                      "SiteUrl":  {
+                                                                                                                                                      "value":  "@item().SiteUrl",
+                                                                                                                                                      "type":  "Expression"
+                                                                                                                                                  },
+                                                                                                                                      "LibraryName":  {
+                                                                                                                                                          "value":  "@item().LibraryName",
+                                                                                                                                                          "type":  "Expression"
+                                                                                                                                                      },
+                                                                                                                                      "ControlTableId":  {
+                                                                                                                                                             "value":  "@item().Id",
+                                                                                                                                                             "type":  "Expression"
+                                                                                                                                                         },
+                                                                                                                                      "BatchId":  {
+                                                                                                                                                      "value":  "@variables(\u0027BatchId\u0027)",
+                                                                                                                                                      "type":  "Expression"
+                                                                                                                                                  },
+                                                                                                                                      "ContainerName":  {
+                                                                                                                                                            "value":  "@pipeline().parameters.TargetContainerName",
+                                                                                                                                                            "type":  "Expression"
+                                                                                                                                                        },
+                                                                                                                                      "SharePointTenantUrl":  {
+                                                                                                                                                                  "value":  "@pipeline().parameters.SharePointTenantUrl",
+                                                                                                                                                                  "type":  "Expression"
+                                                                                                                                                              },
+                                                                                                                                      "PageSize":  {
+                                                                                                                                                       "value":  "@pipeline().parameters.PageSize",
+                                                                                                                                                       "type":  "Expression"
+                                                                                                                                                   },
+                                                                                                                                      "CopyBatchCount":  {
+                                                                                                                                                             "value":  "@pipeline().parameters.CopyBatchCount",
+                                                                                                                                                             "type":  "Expression"
+                                                                                                                                                         },
+                                                                                                                                      "ThrottleDelaySeconds":  {
+                                                                                                                                                                   "value":  "@pipeline().parameters.ThrottleDelaySeconds",
+                                                                                                                                                                   "type":  "Expression"
+                                                                                                                                                               },
+                                                                                                                                      "ServicePrincipalId":  {
+                                                                                                                                                                 "value":  "@pipeline().parameters.ServicePrincipalId",
+                                                                                                                                                                 "type":  "Expression"
+                                                                                                                                                             },
+                                                                                                                                      "ServicePrincipalTenantId":  {
+                                                                                                                                                                       "value":  "@pipeline().parameters.ServicePrincipalTenantId",
+                                                                                                                                                                       "type":  "Expression"
+                                                                                                                                                                   },
+                                                                                                                                      "KeyVaultUrl":  {
+                                                                                                                                                          "value":  "@pipeline().parameters.KeyVaultUrl",
+                                                                                                                                                          "type":  "Expression"
+                                                                                                                                                      }
+                                                                                                                                  }
+                                                                                                               }
+                                                                                        }
+                                                                                    ]
+                                                                 }
+                                          },
+                                          {
+                                              "name":  "Set_BatchId",
+                                              "type":  "SetVariable",
+                                              "dependsOn":  [
+
+                                                            ],
+                                              "policy":  {
+                                                             "secureOutput":  false,
+                                                             "secureInput":  false
+                                                         },
+                                              "userProperties":  [
+
+                                                                 ],
+                                              "typeProperties":  {
+                                                                     "variableName":  "BatchId",
+                                                                     "value":  {
+                                                                                   "value":  "@concat(\u0027BATCH-\u0027, formatDateTime(utcNow(), \u0027yyyyMMdd-HHmmss\u0027))",
+                                                                                   "type":  "Expression"
+                                                                               }
+                                                                 }
+                                          },
+                                          {
+                                              "name":  "Log_BatchStart",
+                                              "type":  "SqlServerStoredProcedure",
+                                              "dependsOn":  [
+                                                                {
+                                                                    "activity":  "Set_BatchId",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                }
+                                                            ],
+                                              "policy":  {
+                                                             "timeout":  "0.00:05:00",
+                                                             "retry":  2,
+                                                             "retryIntervalInSeconds":  30,
+                                                             "secureOutput":  false,
+                                                             "secureInput":  false
+                                                         },
+                                              "userProperties":  [
+
+                                                                 ],
+                                              "typeProperties":  {
+                                                                     "storedProcedureName":  "[dbo].[usp_LogBatchStart]",
+                                                                     "storedProcedureParameters":  {
+                                                                                                       "BatchId":  {
+                                                                                                                       "value":  {
+                                                                                                                                     "value":  "@variables(\u0027BatchId\u0027)",
+                                                                                                                                     "type":  "Expression"
+                                                                                                                                 },
+                                                                                                                       "type":  "String"
+                                                                                                                   },
+                                                                                                       "PipelineRunId":  {
+                                                                                                                             "value":  {
+                                                                                                                                           "value":  "@pipeline().RunId",
+                                                                                                                                           "type":  "Expression"
+                                                                                                                                       },
+                                                                                                                             "type":  "String"
+                                                                                                                         },
+                                                                                                       "StartTime":  {
+                                                                                                                         "value":  {
+                                                                                                                                       "value":  "@utcNow()",
+                                                                                                                                       "type":  "Expression"
+                                                                                                                                   },
+                                                                                                                         "type":  "DateTime"
+                                                                                                                     }
+                                                                                                   }
+                                                                 },
+                                              "linkedServiceName":  {
+                                                                        "referenceName":  "LS_AzureSqlDatabase",
+                                                                        "type":  "LinkedServiceReference"
+                                                                    }
+                                          },
+                                          {
+                                              "name":  "Log_BatchComplete",
+                                              "type":  "SqlServerStoredProcedure",
+                                              "dependsOn":  [
+                                                                {
+                                                                    "activity":  "ForEach_Library",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                }
+                                                            ],
+                                              "policy":  {
+                                                             "timeout":  "0.00:05:00",
+                                                             "retry":  2,
+                                                             "retryIntervalInSeconds":  30,
+                                                             "secureOutput":  false,
+                                                             "secureInput":  false
+                                                         },
+                                              "userProperties":  [
+
+                                                                 ],
+                                              "typeProperties":  {
+                                                                     "storedProcedureName":  "[dbo].[usp_LogBatchComplete]",
+                                                                     "storedProcedureParameters":  {
+                                                                                                       "BatchId":  {
+                                                                                                                       "value":  {
+                                                                                                                                     "value":  "@variables(\u0027BatchId\u0027)",
+                                                                                                                                     "type":  "Expression"
+                                                                                                                                 },
+                                                                                                                       "type":  "String"
+                                                                                                                   },
+                                                                                                       "Status":  {
+                                                                                                                      "value":  "Completed",
+                                                                                                                      "type":  "String"
+                                                                                                                  },
+                                                                                                       "EndTime":  {
+                                                                                                                       "value":  {
+                                                                                                                                     "value":  "@utcNow()",
+                                                                                                                                     "type":  "Expression"
+                                                                                                                                 },
+                                                                                                                       "type":  "DateTime"
+                                                                                                                   }
+                                                                                                   }
+                                                                 },
+                                              "linkedServiceName":  {
+                                                                        "referenceName":  "LS_AzureSqlDatabase",
+                                                                        "type":  "LinkedServiceReference"
+                                                                    }
+                                          },
+                                          {
+                                              "name":  "If_NoLibrariesToProcess",
+                                              "type":  "IfCondition",
+                                              "dependsOn":  [
+                                                                {
+                                                                    "activity":  "Lookup_PendingLibraries",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                }
+                                                            ],
+                                              "userProperties":  [
+
+                                                                 ],
+                                              "typeProperties":  {
+                                                                     "expression":  {
+                                                                                        "value":  "@equals(activity(\u0027Lookup_PendingLibraries\u0027).output.count, 0)",
+                                                                                        "type":  "Expression"
+                                                                                    },
+                                                                     "ifTrueActivities":  [
+                                                                                              {
+                                                                                                  "name":  "Log_NoWork",
+                                                                                                  "type":  "SetVariable",
+                                                                                                  "dependsOn":  [
+
+                                                                                                                ],
+                                                                                                  "policy":  {
+                                                                                                                 "secureOutput":  false,
+                                                                                                                 "secureInput":  false
+                                                                                                             },
+                                                                                                  "userProperties":  [
+
+                                                                                                                     ],
+                                                                                                  "typeProperties":  {
+                                                                                                                         "variableName":  "NoWorkMessage",
+                                                                                                                         "value":  "No pending libraries found in control table. All migrations complete or maximum retries exceeded."
+                                                                                                                     }
+                                                                                              }
+                                                                                          ]
+                                                                 }
+                                          }
+                                      ],
+                       "parameters":  {
+                                          "BatchSize":  {
+                                                            "type":  "int",
+                                                            "defaultValue":  10
+                                                        },
+                                          "ParallelLibraries":  {
+                                                                    "type":  "int",
+                                                                    "defaultValue":  4
+                                                                },
+                                          "MaxRetries":  {
+                                                             "type":  "int",
+                                                             "defaultValue":  3
+                                                         },
+                                          "TargetContainerName":  {
+                                                                      "type":  "string",
+                                                                      "defaultValue":  "sharepoint-migration"
+                                                                  },
+                                          "SharePointTenantUrl":  {
+                                                                      "type":  "string",
+                                                                      "defaultValue":  "https://hydroone.sharepoint.com"
+                                                                  },
+                                          "ServicePrincipalId":  {
+                                                                     "type":  "string",
+                                                                     "defaultValue":  ""
+                                                                 },
+                                          "ServicePrincipalTenantId":  {
+                                                                           "type":  "string",
+                                                                           "defaultValue":  ""
+                                                                       },
+                                          "KeyVaultUrl":  {
+                                                              "type":  "string",
+                                                              "defaultValue":  ""
+                                                          },
+                                          "PageSize":  {
+                                                           "type":  "int",
+                                                           "defaultValue":  200
+                                                       },
+                                          "CopyBatchCount":  {
+                                                                 "type":  "int",
+                                                                 "defaultValue":  10
+                                                             },
+                                          "ThrottleDelaySeconds":  {
+                                                                       "type":  "int",
+                                                                       "defaultValue":  2
+                                                                   }
+                                      },
+                       "variables":  {
+                                         "BatchId":  {
+                                                         "type":  "String"
+                                                     },
+                                         "NoWorkMessage":  {
+                                                               "type":  "String"
+                                                           }
+                                     },
+                       "annotations":  [
+                                           "master-pipeline",
+                                           "orchestrator",
+                                           "hydro-one-migration",
+                                           "sharepoint-to-adls",
+                                           "production"
+                                       ],
+                       "folder":  {
+                                      "name":  "SharePoint Migration"
+                                  }
+                   }
 }

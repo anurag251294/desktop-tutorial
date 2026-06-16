@@ -1,456 +1,488 @@
 {
-  "properties": {
-    "description": "Production pipeline to process files within a SharePoint subfolder via Microsoft Graph API. Handles pagination via Until loop with @odata.nextLink, refreshes OAuth2 token every 45 minutes, and applies configurable throttle delays between pages.",
-    "activities": [
-      {
-        "name": "Set_InternalAccessToken",
-        "description": "Copy AccessToken parameter to a variable (parameters are immutable in ADF)",
-        "type": "SetVariable",
-        "dependsOn": [],
-        "policy": {
-          "secureOutput": true,
-          "secureInput": true
-        },
-        "userProperties": [],
-        "typeProperties": {
-          "variableName": "InternalAccessToken",
-          "value": {
-            "value": "@pipeline().parameters.AccessToken",
-            "type": "Expression"
-          }
-        }
-      },
-      {
-        "name": "Set_InternalTokenAcquiredTime",
-        "description": "Copy TokenAcquiredTime parameter to a variable for refresh tracking",
-        "type": "SetVariable",
-        "dependsOn": [],
-        "policy": {
-          "secureOutput": false,
-          "secureInput": false
-        },
-        "userProperties": [],
-        "typeProperties": {
-          "variableName": "InternalTokenAcquiredTime",
-          "value": {
-            "value": "@pipeline().parameters.TokenAcquiredTime",
-            "type": "Expression"
-          }
-        }
-      },
-      {
-        "name": "Set_InitialPageUrl",
-        "description": "Set the initial folder children URL with configurable page size",
-        "type": "SetVariable",
-        "dependsOn": [
-          {
-            "activity": "Set_InternalAccessToken",
-            "dependencyConditions": [
-              "Succeeded"
-            ]
-          },
-          {
-            "activity": "Set_InternalTokenAcquiredTime",
-            "dependencyConditions": [
-              "Succeeded"
-            ]
-          }
-        ],
-        "policy": {
-          "secureOutput": false,
-          "secureInput": false
-        },
-        "userProperties": [],
-        "typeProperties": {
-          "variableName": "CurrentPageUrl",
-          "value": {
-            "value": "@concat('https://graph.microsoft.com/v1.0/drives/', pipeline().parameters.DriveId, '/items/', pipeline().parameters.FolderId, '/children?$top=', string(pipeline().parameters.PageSize))",
-            "type": "Expression"
-          }
-        }
-      },
-      {
-        "name": "Until_AllPagesProcessed",
-        "description": "Paginate through all folder children pages until no more @odata.nextLink is returned",
-        "type": "Until",
-        "dependsOn": [
-          {
-            "activity": "Set_InitialPageUrl",
-            "dependencyConditions": [
-              "Succeeded"
-            ]
-          }
-        ],
-        "userProperties": [],
-        "typeProperties": {
-          "expression": {
-            "value": "@equals(variables('HasMorePages'), false)",
-            "type": "Expression"
-          },
-          "activities": [
-            {
-              "name": "Refresh_ClientSecret",
-              "description": "Retrieve fresh client secret from Key Vault each iteration",
-              "type": "WebActivity",
-              "dependsOn": [],
-              "policy": {
-                "timeout": "0.00:05:00",
-                "retry": 2,
-                "retryIntervalInSeconds": 30,
-                "secureOutput": true,
-                "secureInput": false
-              },
-              "userProperties": [],
-              "typeProperties": {
-                "method": "GET",
-                "url": {
-                  "value": "@concat(pipeline().parameters.KeyVaultUrl, '/secrets/sharepoint-client-secret?api-version=7.0')",
-                  "type": "Expression"
-                },
-                "authentication": {
-                  "type": "MSI",
-                  "resource": "https://vault.azure.net"
-                }
-              }
-            },
-            {
-              "name": "Refresh_AccessToken",
-              "description": "Acquire OAuth2 token (AAD returns cached token if still valid)",
-              "type": "WebActivity",
-              "dependsOn": [
-                {
-                  "activity": "Refresh_ClientSecret",
-                  "dependencyConditions": [
-                    "Succeeded"
-                  ]
-                }
-              ],
-              "policy": {
-                "timeout": "0.00:05:00",
-                "retry": 2,
-                "retryIntervalInSeconds": 30,
-                "secureOutput": true,
-                "secureInput": true
-              },
-              "userProperties": [],
-              "typeProperties": {
-                "method": "POST",
-                "headers": {
-                  "Content-Type": "application/x-www-form-urlencoded"
-                },
-                "url": {
-                  "value": "@concat('https://login.microsoftonline.com/', pipeline().parameters.ServicePrincipalTenantId, '/oauth2/v2.0/token')",
-                  "type": "Expression"
-                },
-                "body": {
-                  "value": "@concat('grant_type=client_credentials&client_id=', pipeline().parameters.ServicePrincipalId, '&client_secret=', encodeUriComponent(activity('Refresh_ClientSecret').output.value), '&scope=https%3A%2F%2Fgraph.microsoft.com%2F.default')",
-                  "type": "Expression"
-                }
-              }
-            },
-            {
-              "name": "Set_RefreshedToken",
-              "type": "SetVariable",
-              "dependsOn": [
-                {
-                  "activity": "Refresh_AccessToken",
-                  "dependencyConditions": [
-                    "Succeeded"
-                  ]
-                }
-              ],
-              "policy": {
-                "secureOutput": true,
-                "secureInput": true
-              },
-              "userProperties": [],
-              "typeProperties": {
-                "variableName": "InternalAccessToken",
-                "value": {
-                  "value": "@activity('Refresh_AccessToken').output.access_token",
-                  "type": "Expression"
-                }
-              }
-            },
-            {
-              "name": "Get_FolderPage",
-              "description": "Fetch current page of folder children from Graph API",
-              "type": "WebActivity",
-              "dependsOn": [
-                {
-                  "activity": "Set_RefreshedToken",
-                  "dependencyConditions": [
-                    "Succeeded"
-                  ]
-                }
-              ],
-              "policy": {
-                "timeout": "0.00:10:00",
-                "retry": 5,
-                "retryIntervalInSeconds": 60,
-                "secureOutput": false,
-                "secureInput": true
-              },
-              "userProperties": [],
-              "typeProperties": {
-                "method": "GET",
-                "headers": {
-                  "Authorization": {
-                    "value": "@concat('Bearer ', variables('InternalAccessToken'))",
-                    "type": "Expression"
-                  }
-                },
-                "url": {
-                  "value": "@variables('CurrentPageUrl')",
-                  "type": "Expression"
-                }
-              }
-            },
-            {
-              "name": "Filter_Files",
-              "description": "Filter Graph response to only file items",
-              "type": "Filter",
-              "dependsOn": [
-                {
-                  "activity": "Get_FolderPage",
-                  "dependencyConditions": [
-                    "Succeeded"
-                  ]
-                }
-              ],
-              "userProperties": [],
-              "typeProperties": {
-                "items": {
-                  "value": "@activity('Get_FolderPage').output.value",
-                  "type": "Expression"
-                },
-                "condition": {
-                  "value": "@contains(string(item()), '\"file\"')",
-                  "type": "Expression"
-                }
-              }
-            },
-            {
-              "name": "Execute_CopyFileBatch",
-              "description": "Delegate file copying to child pipeline (works around ADF restriction on ForEach inside Until)",
-              "type": "ExecutePipeline",
-              "dependsOn": [
-                {
-                  "activity": "Filter_Files",
-                  "dependencyConditions": [
-                    "Succeeded"
-                  ]
-                }
-              ],
-              "userProperties": [],
-              "typeProperties": {
-                "pipeline": {
-                  "referenceName": "PL_Copy_File_Batch",
-                  "type": "PipelineReference"
-                },
-                "waitOnCompletion": true,
-                "parameters": {
-                  "FileItems": {
-                    "value": "@activity('Filter_Files').output.value",
-                    "type": "Expression"
-                  },
-                  "DriveId": {
-                    "value": "@pipeline().parameters.DriveId",
-                    "type": "Expression"
-                  },
-                  "AccessToken": {
-                    "value": "@variables('InternalAccessToken')",
-                    "type": "Expression"
-                  },
-                  "ContainerName": {
-                    "value": "@pipeline().parameters.ContainerName",
-                    "type": "Expression"
-                  },
-                  "SiteName": {
-                    "value": "@replace(pipeline().parameters.SiteUrl, '/sites/', '')",
-                    "type": "Expression"
-                  },
-                  "LibraryName": {
-                    "value": "@pipeline().parameters.LibraryName",
-                    "type": "Expression"
-                  },
-                  "FolderPath": {
-                    "value": "@pipeline().parameters.FolderRelativePath",
-                    "type": "Expression"
-                  },
-                  "SourcePathPrefix": {
-                    "value": "@concat(pipeline().parameters.SiteUrl, '/', pipeline().parameters.LibraryName, '/', pipeline().parameters.FolderRelativePath)",
-                    "type": "Expression"
-                  },
-                  "DestPathPrefix": {
-                    "value": "@concat(pipeline().parameters.ContainerName, '/', replace(pipeline().parameters.SiteUrl, '/sites/', ''), '/', pipeline().parameters.LibraryName, '/', pipeline().parameters.FolderRelativePath)",
-                    "type": "Expression"
-                  },
-                  "MigrationStatus": "Success",
-                  "ParentRunId": {
-                    "value": "@pipeline().RunId",
-                    "type": "Expression"
-                  }
-                }
-              }
-            },
-            {
-              "name": "Set_HasMorePages",
-              "description": "Set pagination flag based on presence of @odata.nextLink",
-              "type": "SetVariable",
-              "dependsOn": [
-                {
-                  "activity": "Execute_CopyFileBatch",
-                  "dependencyConditions": [
-                    "Succeeded"
-                  ]
-                }
-              ],
-              "policy": {
-                "secureOutput": false,
-                "secureInput": false
-              },
-              "userProperties": [],
-              "typeProperties": {
-                "variableName": "HasMorePages",
-                "value": {
-                  "value": "@contains(string(activity('Get_FolderPage').output), '@odata.nextLink')",
-                  "type": "Expression"
-                }
-              }
-            },
-            {
-              "name": "Set_CurrentPageUrl_Next",
-              "description": "Update page URL to nextLink if present",
-              "type": "SetVariable",
-              "dependsOn": [
-                {
-                  "activity": "Set_HasMorePages",
-                  "dependencyConditions": [
-                    "Succeeded"
-                  ]
-                }
-              ],
-              "policy": {
-                "secureOutput": false,
-                "secureInput": false
-              },
-              "userProperties": [],
-              "typeProperties": {
-                "variableName": "CurrentPageUrl",
-                "value": {
-                  "value": "@if(contains(string(activity('Get_FolderPage').output), '@odata.nextLink'), activity('Get_FolderPage').output['@odata.nextLink'], '')",
-                  "type": "Expression"
-                }
-              }
-            },
-            {
-              "name": "Wait_ThrottleDelay",
-              "description": "Wait between pages to avoid Graph API throttling",
-              "type": "Wait",
-              "dependsOn": [
-                {
-                  "activity": "Set_CurrentPageUrl_Next",
-                  "dependencyConditions": [
-                    "Succeeded"
-                  ]
-                }
-              ],
-              "userProperties": [],
-              "typeProperties": {
-                "waitTimeInSeconds": {
-                  "value": "@pipeline().parameters.ThrottleDelaySeconds",
-                  "type": "Expression"
-                }
-              }
-            }
-          ],
-          "timeout": "1.00:00:00"
-        }
-      }
-    ],
-    "parameters": {
-      "SiteUrl": {
-        "type": "string"
-      },
-      "LibraryName": {
-        "type": "string"
-      },
-      "ContainerName": {
-        "type": "string",
-        "defaultValue": "sharepoint-migration"
-      },
-      "AccessToken": {
-        "type": "string"
-      },
-      "DriveId": {
-        "type": "string"
-      },
-      "FolderId": {
-        "type": "string"
-      },
-      "FolderRelativePath": {
-        "type": "string"
-      },
-      "SharePointTenantUrl": {
-        "type": "string",
-        "defaultValue": "https://hydroone.sharepoint.com"
-      },
-      "PageSize": {
-        "type": "int",
-        "defaultValue": 200
-      },
-      "ThrottleDelaySeconds": {
-        "type": "int",
-        "defaultValue": 2
-      },
-      "CopyBatchCount": {
-        "type": "int",
-        "defaultValue": 10
-      },
-      "KeyVaultUrl": {
-        "type": "string",
-        "defaultValue": ""
-      },
-      "ServicePrincipalId": {
-        "type": "string",
-        "defaultValue": ""
-      },
-      "ServicePrincipalTenantId": {
-        "type": "string",
-        "defaultValue": ""
-      },
-      "TokenAcquiredTime": {
-        "type": "string"
-      }
-    },
-    "variables": {
-      "InternalAccessToken": {
-        "type": "String",
-        "defaultValue": ""
-      },
-      "InternalTokenAcquiredTime": {
-        "type": "String",
-        "defaultValue": ""
-      },
-      "HasMorePages": {
-        "type": "Boolean",
-        "defaultValue": true
-      },
-      "CurrentPageUrl": {
-        "type": "String",
-        "defaultValue": ""
-      }
-    },
-    "annotations": [
-      "recursive-subfolder",
-      "hydro-one-migration",
-      "graph-api",
-      "paginated",
-      "production"
-    ],
-    "folder": {
-      "name": "SharePoint Migration"
-    }
-  }
+    "properties":  {
+                       "description":  "Production pipeline to process files within a SharePoint subfolder via Microsoft Graph API. Handles pagination via Until loop with @odata.nextLink, refreshes OAuth2 token every 45 minutes, and applies configurable throttle delays between pages.",
+                       "activities":  [
+                                          {
+                                              "name":  "Set_InternalAccessToken",
+                                              "description":  "Copy AccessToken parameter to a variable (parameters are immutable in ADF)",
+                                              "type":  "SetVariable",
+                                              "dependsOn":  [
+
+                                                            ],
+                                              "policy":  {
+                                                             "secureOutput":  true,
+                                                             "secureInput":  true
+                                                         },
+                                              "userProperties":  [
+
+                                                                 ],
+                                              "typeProperties":  {
+                                                                     "variableName":  "InternalAccessToken",
+                                                                     "value":  {
+                                                                                   "value":  "@pipeline().parameters.AccessToken",
+                                                                                   "type":  "Expression"
+                                                                               }
+                                                                 }
+                                          },
+                                          {
+                                              "name":  "Set_InternalTokenAcquiredTime",
+                                              "description":  "Copy TokenAcquiredTime parameter to a variable for refresh tracking",
+                                              "type":  "SetVariable",
+                                              "dependsOn":  [
+
+                                                            ],
+                                              "policy":  {
+                                                             "secureOutput":  false,
+                                                             "secureInput":  false
+                                                         },
+                                              "userProperties":  [
+
+                                                                 ],
+                                              "typeProperties":  {
+                                                                     "variableName":  "InternalTokenAcquiredTime",
+                                                                     "value":  {
+                                                                                   "value":  "@pipeline().parameters.TokenAcquiredTime",
+                                                                                   "type":  "Expression"
+                                                                               }
+                                                                 }
+                                          },
+                                          {
+                                              "name":  "Set_InitialPageUrl",
+                                              "description":  "Set the initial folder children URL with configurable page size",
+                                              "type":  "SetVariable",
+                                              "dependsOn":  [
+                                                                {
+                                                                    "activity":  "Set_InternalAccessToken",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                },
+                                                                {
+                                                                    "activity":  "Set_InternalTokenAcquiredTime",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                }
+                                                            ],
+                                              "policy":  {
+                                                             "secureOutput":  false,
+                                                             "secureInput":  false
+                                                         },
+                                              "userProperties":  [
+
+                                                                 ],
+                                              "typeProperties":  {
+                                                                     "variableName":  "CurrentPageUrl",
+                                                                     "value":  {
+                                                                                   "value":  "@concat(\u0027https://graph.microsoft.com/v1.0/drives/\u0027, pipeline().parameters.DriveId, \u0027/items/\u0027, pipeline().parameters.FolderId, \u0027/children?$top=\u0027, string(pipeline().parameters.PageSize))",
+                                                                                   "type":  "Expression"
+                                                                               }
+                                                                 }
+                                          },
+                                          {
+                                              "name":  "Until_AllPagesProcessed",
+                                              "description":  "Paginate through all folder children pages until no more @odata.nextLink is returned",
+                                              "type":  "Until",
+                                              "dependsOn":  [
+                                                                {
+                                                                    "activity":  "Set_InitialPageUrl",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                }
+                                                            ],
+                                              "userProperties":  [
+
+                                                                 ],
+                                              "typeProperties":  {
+                                                                     "expression":  {
+                                                                                        "value":  "@equals(variables(\u0027HasMorePages\u0027), false)",
+                                                                                        "type":  "Expression"
+                                                                                    },
+                                                                     "activities":  [
+                                                                                        {
+                                                                                            "name":  "Refresh_ClientSecret",
+                                                                                            "description":  "Retrieve fresh client secret from Key Vault each iteration",
+                                                                                            "type":  "WebActivity",
+                                                                                            "dependsOn":  [
+
+                                                                                                          ],
+                                                                                            "policy":  {
+                                                                                                           "timeout":  "0.00:05:00",
+                                                                                                           "retry":  2,
+                                                                                                           "retryIntervalInSeconds":  30,
+                                                                                                           "secureOutput":  true,
+                                                                                                           "secureInput":  false
+                                                                                                       },
+                                                                                            "userProperties":  [
+
+                                                                                                               ],
+                                                                                            "typeProperties":  {
+                                                                                                                   "method":  "GET",
+                                                                                                                   "url":  {
+                                                                                                                               "value":  "@concat(pipeline().parameters.KeyVaultUrl, \u0027/secrets/sharepoint-client-secret?api-version=7.0\u0027)",
+                                                                                                                               "type":  "Expression"
+                                                                                                                           },
+                                                                                                                   "authentication":  {
+                                                                                                                                          "type":  "MSI",
+                                                                                                                                          "resource":  "https://vault.azure.net"
+                                                                                                                                      }
+                                                                                                               }
+                                                                                        },
+                                                                                        {
+                                                                                            "name":  "Refresh_AccessToken",
+                                                                                            "description":  "Acquire OAuth2 token (AAD returns cached token if still valid)",
+                                                                                            "type":  "WebActivity",
+                                                                                            "dependsOn":  [
+                                                                                                              {
+                                                                                                                  "activity":  "Refresh_ClientSecret",
+                                                                                                                  "dependencyConditions":  [
+                                                                                                                                               "Succeeded"
+                                                                                                                                           ]
+                                                                                                              }
+                                                                                                          ],
+                                                                                            "policy":  {
+                                                                                                           "timeout":  "0.00:05:00",
+                                                                                                           "retry":  2,
+                                                                                                           "retryIntervalInSeconds":  30,
+                                                                                                           "secureOutput":  true,
+                                                                                                           "secureInput":  true
+                                                                                                       },
+                                                                                            "userProperties":  [
+
+                                                                                                               ],
+                                                                                            "typeProperties":  {
+                                                                                                                   "method":  "POST",
+                                                                                                                   "headers":  {
+                                                                                                                                   "Content-Type":  "application/x-www-form-urlencoded"
+                                                                                                                               },
+                                                                                                                   "url":  {
+                                                                                                                               "value":  "@concat(\u0027https://login.microsoftonline.com/\u0027, pipeline().parameters.ServicePrincipalTenantId, \u0027/oauth2/v2.0/token\u0027)",
+                                                                                                                               "type":  "Expression"
+                                                                                                                           },
+                                                                                                                   "body":  {
+                                                                                                                                "value":  "@concat(\u0027grant_type=client_credentials\u0026client_id=\u0027, pipeline().parameters.ServicePrincipalId, \u0027\u0026client_secret=\u0027, encodeUriComponent(activity(\u0027Refresh_ClientSecret\u0027).output.value), \u0027\u0026scope=https%3A%2F%2Fgraph.microsoft.com%2F.default\u0027)",
+                                                                                                                                "type":  "Expression"
+                                                                                                                            }
+                                                                                                               }
+                                                                                        },
+                                                                                        {
+                                                                                            "name":  "Set_RefreshedToken",
+                                                                                            "type":  "SetVariable",
+                                                                                            "dependsOn":  [
+                                                                                                              {
+                                                                                                                  "activity":  "Refresh_AccessToken",
+                                                                                                                  "dependencyConditions":  [
+                                                                                                                                               "Succeeded"
+                                                                                                                                           ]
+                                                                                                              }
+                                                                                                          ],
+                                                                                            "policy":  {
+                                                                                                           "secureOutput":  true,
+                                                                                                           "secureInput":  true
+                                                                                                       },
+                                                                                            "userProperties":  [
+
+                                                                                                               ],
+                                                                                            "typeProperties":  {
+                                                                                                                   "variableName":  "InternalAccessToken",
+                                                                                                                   "value":  {
+                                                                                                                                 "value":  "@activity(\u0027Refresh_AccessToken\u0027).output.access_token",
+                                                                                                                                 "type":  "Expression"
+                                                                                                                             }
+                                                                                                               }
+                                                                                        },
+                                                                                        {
+                                                                                            "name":  "Get_FolderPage",
+                                                                                            "description":  "Fetch current page of folder children from Graph API",
+                                                                                            "type":  "WebActivity",
+                                                                                            "dependsOn":  [
+                                                                                                              {
+                                                                                                                  "activity":  "Set_RefreshedToken",
+                                                                                                                  "dependencyConditions":  [
+                                                                                                                                               "Succeeded"
+                                                                                                                                           ]
+                                                                                                              }
+                                                                                                          ],
+                                                                                            "policy":  {
+                                                                                                           "timeout":  "0.00:10:00",
+                                                                                                           "retry":  5,
+                                                                                                           "retryIntervalInSeconds":  60,
+                                                                                                           "secureOutput":  false,
+                                                                                                           "secureInput":  true
+                                                                                                       },
+                                                                                            "userProperties":  [
+
+                                                                                                               ],
+                                                                                            "typeProperties":  {
+                                                                                                                   "method":  "GET",
+                                                                                                                   "headers":  {
+                                                                                                                                   "Authorization":  {
+                                                                                                                                                         "value":  "@concat(\u0027Bearer \u0027, variables(\u0027InternalAccessToken\u0027))",
+                                                                                                                                                         "type":  "Expression"
+                                                                                                                                                     }
+                                                                                                                               },
+                                                                                                                   "url":  {
+                                                                                                                               "value":  "@variables(\u0027CurrentPageUrl\u0027)",
+                                                                                                                               "type":  "Expression"
+                                                                                                                           }
+                                                                                                               }
+                                                                                        },
+                                                                                        {
+                                                                                            "name":  "Filter_Files",
+                                                                                            "description":  "Filter Graph response to only file items",
+                                                                                            "type":  "Filter",
+                                                                                            "dependsOn":  [
+                                                                                                              {
+                                                                                                                  "activity":  "Get_FolderPage",
+                                                                                                                  "dependencyConditions":  [
+                                                                                                                                               "Succeeded"
+                                                                                                                                           ]
+                                                                                                              }
+                                                                                                          ],
+                                                                                            "userProperties":  [
+
+                                                                                                               ],
+                                                                                            "typeProperties":  {
+                                                                                                                   "items":  {
+                                                                                                                                 "value":  "@activity(\u0027Get_FolderPage\u0027).output.value",
+                                                                                                                                 "type":  "Expression"
+                                                                                                                             },
+                                                                                                                   "condition":  {
+                                                                                                                                     "value":  "@contains(string(item()), \u0027\"file\"\u0027)",
+                                                                                                                                     "type":  "Expression"
+                                                                                                                                 }
+                                                                                                               }
+                                                                                        },
+                                                                                        {
+                                                                                            "name":  "Execute_CopyFileBatch",
+                                                                                            "description":  "Delegate file copying to child pipeline (works around ADF restriction on ForEach inside Until)",
+                                                                                            "type":  "ExecutePipeline",
+                                                                                            "dependsOn":  [
+                                                                                                              {
+                                                                                                                  "activity":  "Filter_Files",
+                                                                                                                  "dependencyConditions":  [
+                                                                                                                                               "Succeeded"
+                                                                                                                                           ]
+                                                                                                              }
+                                                                                                          ],
+                                                                                            "userProperties":  [
+
+                                                                                                               ],
+                                                                                            "typeProperties":  {
+                                                                                                                   "pipeline":  {
+                                                                                                                                    "referenceName":  "PL_Copy_File_Batch",
+                                                                                                                                    "type":  "PipelineReference"
+                                                                                                                                },
+                                                                                                                   "waitOnCompletion":  true,
+                                                                                                                   "parameters":  {
+                                                                                                                                      "FileItems":  {
+                                                                                                                                                        "value":  "@activity(\u0027Filter_Files\u0027).output.value",
+                                                                                                                                                        "type":  "Expression"
+                                                                                                                                                    },
+                                                                                                                                      "DriveId":  {
+                                                                                                                                                      "value":  "@pipeline().parameters.DriveId",
+                                                                                                                                                      "type":  "Expression"
+                                                                                                                                                  },
+                                                                                                                                      "AccessToken":  {
+                                                                                                                                                          "value":  "@variables(\u0027InternalAccessToken\u0027)",
+                                                                                                                                                          "type":  "Expression"
+                                                                                                                                                      },
+                                                                                                                                      "ContainerName":  {
+                                                                                                                                                            "value":  "@pipeline().parameters.ContainerName",
+                                                                                                                                                            "type":  "Expression"
+                                                                                                                                                        },
+                                                                                                                                      "SiteName":  {
+                                                                                                                                                       "value":  "@replace(pipeline().parameters.SiteUrl, \u0027/sites/\u0027, \u0027\u0027)",
+                                                                                                                                                       "type":  "Expression"
+                                                                                                                                                   },
+                                                                                                                                      "LibraryName":  {
+                                                                                                                                                          "value":  "@pipeline().parameters.LibraryName",
+                                                                                                                                                          "type":  "Expression"
+                                                                                                                                                      },
+                                                                                                                                      "FolderPath":  {
+                                                                                                                                                         "value":  "@pipeline().parameters.FolderRelativePath",
+                                                                                                                                                         "type":  "Expression"
+                                                                                                                                                     },
+                                                                                                                                      "SourcePathPrefix":  {
+                                                                                                                                                               "value":  "@concat(pipeline().parameters.SiteUrl, \u0027/\u0027, pipeline().parameters.LibraryName, \u0027/\u0027, pipeline().parameters.FolderRelativePath)",
+                                                                                                                                                               "type":  "Expression"
+                                                                                                                                                           },
+                                                                                                                                      "DestPathPrefix":  {
+                                                                                                                                                             "value":  "@concat(pipeline().parameters.ContainerName, \u0027/\u0027, replace(pipeline().parameters.SiteUrl, \u0027/sites/\u0027, \u0027\u0027), \u0027/\u0027, pipeline().parameters.LibraryName, \u0027/\u0027, pipeline().parameters.FolderRelativePath)",
+                                                                                                                                                             "type":  "Expression"
+                                                                                                                                                         },
+                                                                                                                                      "MigrationStatus":  "Success",
+                                                                                                                                      "ParentRunId":  {
+                                                                                                                                                          "value":  "@pipeline().RunId",
+                                                                                                                                                          "type":  "Expression"
+                                                                                                                                                      }
+                                                                                                                                  }
+                                                                                                               }
+                                                                                        },
+                                                                                        {
+                                                                                            "name":  "Set_HasMorePages",
+                                                                                            "description":  "Set pagination flag based on presence of @odata.nextLink",
+                                                                                            "type":  "SetVariable",
+                                                                                            "dependsOn":  [
+                                                                                                              {
+                                                                                                                  "activity":  "Execute_CopyFileBatch",
+                                                                                                                  "dependencyConditions":  [
+                                                                                                                                               "Succeeded"
+                                                                                                                                           ]
+                                                                                                              }
+                                                                                                          ],
+                                                                                            "policy":  {
+                                                                                                           "secureOutput":  false,
+                                                                                                           "secureInput":  false
+                                                                                                       },
+                                                                                            "userProperties":  [
+
+                                                                                                               ],
+                                                                                            "typeProperties":  {
+                                                                                                                   "variableName":  "HasMorePages",
+                                                                                                                   "value":  {
+                                                                                                                                 "value":  "@contains(string(activity(\u0027Get_FolderPage\u0027).output), \u0027@odata.nextLink\u0027)",
+                                                                                                                                 "type":  "Expression"
+                                                                                                                             }
+                                                                                                               }
+                                                                                        },
+                                                                                        {
+                                                                                            "name":  "Set_CurrentPageUrl_Next",
+                                                                                            "description":  "Update page URL to nextLink if present",
+                                                                                            "type":  "SetVariable",
+                                                                                            "dependsOn":  [
+                                                                                                              {
+                                                                                                                  "activity":  "Set_HasMorePages",
+                                                                                                                  "dependencyConditions":  [
+                                                                                                                                               "Succeeded"
+                                                                                                                                           ]
+                                                                                                              }
+                                                                                                          ],
+                                                                                            "policy":  {
+                                                                                                           "secureOutput":  false,
+                                                                                                           "secureInput":  false
+                                                                                                       },
+                                                                                            "userProperties":  [
+
+                                                                                                               ],
+                                                                                            "typeProperties":  {
+                                                                                                                   "variableName":  "CurrentPageUrl",
+                                                                                                                   "value":  {
+                                                                                                                                 "value":  "@if(contains(string(activity(\u0027Get_FolderPage\u0027).output), \u0027@odata.nextLink\u0027), activity(\u0027Get_FolderPage\u0027).output[\u0027@odata.nextLink\u0027], \u0027\u0027)",
+                                                                                                                                 "type":  "Expression"
+                                                                                                                             }
+                                                                                                               }
+                                                                                        },
+                                                                                        {
+                                                                                            "name":  "Wait_ThrottleDelay",
+                                                                                            "description":  "Wait between pages to avoid Graph API throttling",
+                                                                                            "type":  "Wait",
+                                                                                            "dependsOn":  [
+                                                                                                              {
+                                                                                                                  "activity":  "Set_CurrentPageUrl_Next",
+                                                                                                                  "dependencyConditions":  [
+                                                                                                                                               "Succeeded"
+                                                                                                                                           ]
+                                                                                                              }
+                                                                                                          ],
+                                                                                            "userProperties":  [
+
+                                                                                                               ],
+                                                                                            "typeProperties":  {
+                                                                                                                   "waitTimeInSeconds":  {
+                                                                                                                                             "value":  "@pipeline().parameters.ThrottleDelaySeconds",
+                                                                                                                                             "type":  "Expression"
+                                                                                                                                         }
+                                                                                                               }
+                                                                                        }
+                                                                                    ],
+                                                                     "timeout":  "1.00:00:00"
+                                                                 }
+                                          }
+                                      ],
+                       "parameters":  {
+                                          "SiteUrl":  {
+                                                          "type":  "string"
+                                                      },
+                                          "LibraryName":  {
+                                                              "type":  "string"
+                                                          },
+                                          "ContainerName":  {
+                                                                "type":  "string",
+                                                                "defaultValue":  "sharepoint-migration"
+                                                            },
+                                          "AccessToken":  {
+                                                              "type":  "string"
+                                                          },
+                                          "DriveId":  {
+                                                          "type":  "string"
+                                                      },
+                                          "FolderId":  {
+                                                           "type":  "string"
+                                                       },
+                                          "FolderRelativePath":  {
+                                                                     "type":  "string"
+                                                                 },
+                                          "SharePointTenantUrl":  {
+                                                                      "type":  "string",
+                                                                      "defaultValue":  "https://hydroone.sharepoint.com"
+                                                                  },
+                                          "PageSize":  {
+                                                           "type":  "int",
+                                                           "defaultValue":  200
+                                                       },
+                                          "ThrottleDelaySeconds":  {
+                                                                       "type":  "int",
+                                                                       "defaultValue":  2
+                                                                   },
+                                          "CopyBatchCount":  {
+                                                                 "type":  "int",
+                                                                 "defaultValue":  10
+                                                             },
+                                          "KeyVaultUrl":  {
+                                                              "type":  "string",
+                                                              "defaultValue":  ""
+                                                          },
+                                          "ServicePrincipalId":  {
+                                                                     "type":  "string",
+                                                                     "defaultValue":  ""
+                                                                 },
+                                          "ServicePrincipalTenantId":  {
+                                                                           "type":  "string",
+                                                                           "defaultValue":  ""
+                                                                       },
+                                          "TokenAcquiredTime":  {
+                                                                    "type":  "string"
+                                                                }
+                                      },
+                       "variables":  {
+                                         "InternalAccessToken":  {
+                                                                     "type":  "String",
+                                                                     "defaultValue":  ""
+                                                                 },
+                                         "InternalTokenAcquiredTime":  {
+                                                                           "type":  "String",
+                                                                           "defaultValue":  ""
+                                                                       },
+                                         "HasMorePages":  {
+                                                              "type":  "Boolean",
+                                                              "defaultValue":  true
+                                                          },
+                                         "CurrentPageUrl":  {
+                                                                "type":  "String",
+                                                                "defaultValue":  ""
+                                                            }
+                                     },
+                       "annotations":  [
+                                           "recursive-subfolder",
+                                           "hydro-one-migration",
+                                           "graph-api",
+                                           "paginated",
+                                           "production"
+                                       ],
+                       "folder":  {
+                                      "name":  "SharePoint Migration"
+                                  }
+                   }
 }

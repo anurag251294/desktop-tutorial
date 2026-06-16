@@ -1,0 +1,19 @@
+{
+  "lakehouseName": "HydroOneMigration",
+
+  "_comment_connection": "Create a Fabric SharePoint Online connection in the workspace and paste its GUID here. Leave blank to deploy the inventory pipeline as a skeleton (the rest of the stack still deploys).",
+  "sharePointConnectionId": "",
+
+  "_comment_graph": "Service principal used by the Spark notebook to read SharePoint via Microsoft Graph (Sites.Read.All / Files.Read.All). The secret is read from Key Vault at run time; never store it here.",
+  "graph": {
+    "tenantId": "<entra-tenant-guid>",
+    "clientId": "<app-registration-client-id>",
+    "keyVaultUri": "https://<your-keyvault>.vault.azure.net/",
+    "clientSecretName": "graph-client-secret"
+  },
+
+  "_comment_sites": "Document libraries to migrate. The master pipeline runs once per entry (SiteUrl/LibraryName/Mode).",
+  "sites": [
+    { "siteUrl": "https://<tenant>.sharepoint.com/sites/<site>", "libraryName": "Documents", "mode": "full" }
+  ]
+}

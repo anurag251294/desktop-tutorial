@@ -1,12 +1,12 @@
 {
-  "config": {
-    "logicalId": "0512e0b4-12aa-5d3f-8a45-bbcebe4a8513"
-  },
-  "version": "2.0",
-  "metadata": {
-    "description": "Production delta/incremental synchronization pipeline using Microsoft Graph API delta query. Handles pagination via Until loop with @odata.nextLink, refreshes OAuth2 token every 45 minutes, persists deltaLink for true incremental sync, and processes libraries sequentially to avoid variable scoping conflicts.",
-    "type": "DataPipeline",
-    "displayName": "PL_Incremental_Sync"
-  },
-  "$schema": "https://developer.microsoft.com/json-schemas/fabric/platform/platformProperties.json"
+    "config":  {
+                   "version":  "2.0",
+                   "logicalId":  "0512e0b4-12aa-5d3f-8a45-bbcebe4a8513"
+               },
+    "$schema":  "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+    "metadata":  {
+                     "description":  "Production delta/incremental synchronization pipeline using Microsoft Graph API delta query. Handles pagination via Until loop with @odata.nextLink, refreshes OAuth2 token every 45 minutes, persists deltaLink for true incremental sync, and processes libraries sequentially to avoid variable scoping conflicts.",
+                     "displayName":  "PL_Incremental_Sync",
+                     "type":  "DataPipeline"
+                 }
 }

@@ -147,8 +147,11 @@ function Get-ItemDefinitionPayload {
         throw "Missing .platform in $ItemDirectory"
     }
 
+    # DataPipeline definitions take NO 'format' field — that property is only for
+    # typed formats such as Notebook ("ipynb"). Sending format = "Default" is
+    # rejected with InvalidDefinitionFormat. The definition is just the parts:
+    # the pipeline body plus the .platform metadata file.
     return @{
-        format = "Default"
         parts = @(
             @{
                 path = "pipeline-content.json"
@@ -230,6 +233,15 @@ foreach ($dir in $pipelineDirs) {
     $displayName = [string]$platform.metadata.displayName
     $definition = Get-ItemDefinitionPayload -ItemDirectory $dir.FullName
 
+    # The Fabric item 'description' on the create request is capped at 256 chars
+    # (InvalidParameter otherwise). The full pipeline description still lives in
+    # the .platform metadata inside the definition; this only trims the workspace
+    # item's catalog description.
+    $description = [string]$platform.metadata.description
+    if ($description.Length -gt 256) {
+        $description = $description.Substring(0, 253) + "..."
+    }
+
     if ($existingByName.ContainsKey($displayName)) {
         $itemId = $existingByName[$displayName].id
         Write-Step "Updating DataPipeline '$displayName' ($itemId)..."
@@ -249,7 +261,7 @@ foreach ($dir in $pipelineDirs) {
             $response = Invoke-FabricRequest -Method POST -Path "/workspaces/$WorkspaceId/items" -Body @{
                 displayName = $displayName
                 type = "DataPipeline"
-                description = [string]$platform.metadata.description
+                description = $description
                 definition = $definition
             }
             Wait-FabricOperation -Response $response

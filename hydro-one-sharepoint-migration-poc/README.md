@@ -6,6 +6,21 @@ This solution migrates approximately **25 TB** of documents and files from **Sha
 
 All file access is handled through the **Microsoft Graph API** with cross-tenant OAuth2 authentication, enabling ADF (running in the MCAPS tenant) to securely read from Hydro One's SharePoint tenant and write to Azure storage.
 
+> ### ⭐ Recommended: Fabric-native → OneLake
+>
+> A **Fabric-native** migration path supersedes the ADF/ADLS design below. It lands
+> content directly in **OneLake** (no external storage account) using the native
+> **SharePoint Online connector** for inventory and a **Spark notebook** for content,
+> orchestrated by one master pipeline. One idempotent command deploys the whole stack:
+>
+> ```powershell
+> .\scripts\Deploy-FabricNative.ps1 -WorkspaceId "<workspace-guid>" -ConfigPath .\fabric-native\config\fabric-native.json
+> ```
+>
+> See **[docs/fabric-native-migration.md](docs/fabric-native-migration.md)**. Artifacts
+> live under `fabric-native/`. This path was deployed and the OneLake write verified
+> end to end on a live Fabric workspace.
+
 ### Why This Migration?
 
 Hydro One's SharePoint Online environment is at storage capacity. This migration offloads ~25 TB of document library content to ADLS Gen2, providing scalable, cost-effective storage while maintaining full audit trails and the ability to keep data synchronized through incremental delta sync.

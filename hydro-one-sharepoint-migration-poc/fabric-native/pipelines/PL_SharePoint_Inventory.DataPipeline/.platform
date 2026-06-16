@@ -1,0 +1,12 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "DataPipeline",
+    "displayName": "PL_SharePoint_Inventory",
+    "description": "Inventories SharePoint document libraries via the native SharePoint Online connector into a Lakehouse Delta table."
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "c3a2d5b1-2e3f-4a4b-8c9d-6b7f6e5d4c3b"
+  }
+}

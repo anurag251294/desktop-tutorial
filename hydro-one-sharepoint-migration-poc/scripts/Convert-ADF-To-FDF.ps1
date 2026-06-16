@@ -78,7 +78,14 @@ function Write-JsonFile {
         # can only mark start-of-value followed by an ARM-escaped bracket.
         $json = $json -replace '"\[\[', '"['
     }
-    Set-Content -Path $Path -Value $json -Encoding UTF8
+    # Write UTF-8 WITHOUT a BOM. Windows PowerShell 5.1's `Set-Content -Encoding
+    # UTF8` prepends a BOM (EF BB BF); once these files are base64-encoded into a
+    # Fabric item definition, the leading BOM bytes make the JSON unparseable and
+    # Fabric rejects the deploy with "InvalidPlatformFile" / invalid content.
+    # [System.IO.File]::WriteAllText with a no-BOM UTF8Encoding is BOM-free on
+    # both PowerShell 5.1 and 7+.
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($Path, $json, $utf8NoBom)
 }
 
 function Copy-JsonObject {
@@ -192,6 +199,55 @@ function Convert-LinkedServiceReference {
     }
 }
 
+function Resolve-DatasetParameters {
+    # Fabric inlines datasets as an activity's 'datasetSettings'. Unlike ADF there
+    # is no separate dataset entity at run time, so @dataset().<param> expressions
+    # cannot be resolved and Fabric rejects the pipeline (HTTP 400 UnknownError).
+    # We substitute each @dataset().<param> with a concrete value -- the value the
+    # activity supplied, else the dataset's own defaultValue -- and drop the
+    # now-meaningless parameters block.
+    param($DatasetSettings, $SuppliedParameters)
+
+    $values = @{}
+    $defs = Get-ObjectPropertyValue -Object $DatasetSettings -Name "parameters"
+    if ($null -ne $defs) {
+        foreach ($p in $defs.PSObject.Properties) {
+            $dv = Get-ObjectPropertyValue -Object $p.Value -Name "defaultValue"
+            if ($null -ne $dv) { $values[$p.Name] = $dv }
+        }
+    }
+    if ($null -ne $SuppliedParameters) {
+        foreach ($p in $SuppliedParameters.PSObject.Properties) { $values[$p.Name] = $p.Value }
+    }
+
+    $typeProperties = Get-ObjectPropertyValue -Object $DatasetSettings -Name "typeProperties"
+    if ($null -ne $typeProperties -and $values.Count -gt 0) {
+        $tpJson = $typeProperties | ConvertTo-Json -Depth 100
+        foreach ($name in $values.Keys) {
+            $val = $values[$name]
+            if ($val -is [string] -and $val.StartsWith("@")) {
+                # The value is itself an expression -> keep it as an expression object.
+                $replacement = (@{ value = $val; type = "Expression" } | ConvertTo-Json -Compress)
+            }
+            else {
+                $replacement = ($val | ConvertTo-Json -Depth 100)
+            }
+            # A MatchEvaluator emits the replacement literally (no $1/$$ surprises).
+            $sb = { param($m) $replacement }.GetNewClosure()
+            $evaluator = [System.Text.RegularExpressions.MatchEvaluator]$sb
+            # 1) expression object: { "value": "@dataset().Name", "type": "Expression" }
+            $exprObject = '\{\s*"value"\s*:\s*"@dataset\(\)\.' + [regex]::Escape($name) + '"\s*,\s*"type"\s*:\s*"Expression"\s*\}'
+            $tpJson = [regex]::Replace($tpJson, $exprObject, $evaluator)
+            # 2) bare string value: "@dataset().Name"
+            $bare = '"@dataset\(\)\.' + [regex]::Escape($name) + '"'
+            $tpJson = [regex]::Replace($tpJson, $bare, $evaluator)
+        }
+        Add-OrReplaceProperty -Object $DatasetSettings -Name "typeProperties" -Value ($tpJson | ConvertFrom-Json)
+    }
+
+    Remove-ObjectProperty -Object $DatasetSettings -Name "parameters"
+}
+
 function Convert-DatasetReference {
     param($DatasetReference)
 
@@ -206,10 +262,8 @@ function Convert-DatasetReference {
     }
 
     $datasetSettings = Copy-JsonObject -InputObject $script:DatasetMap[$referenceName]
-    $parameters = Get-ObjectPropertyValue -Object $DatasetReference -Name "parameters"
-    if ($null -ne $parameters) {
-        Add-OrReplaceProperty -Object $datasetSettings -Name "parameters" -Value $parameters
-    }
+    $suppliedParameters = Get-ObjectPropertyValue -Object $DatasetReference -Name "parameters"
+    Resolve-DatasetParameters -DatasetSettings $datasetSettings -SuppliedParameters $suppliedParameters
 
     Convert-LinkedServiceReference -Object $datasetSettings
     return $datasetSettings
@@ -305,16 +359,20 @@ function Convert-PipelineTemplate {
         }
         Write-JsonFile -InputObject $content -Path (Join-Path $itemDir "pipeline-content.json") -UnescapeArm
 
+        # Fabric .platform schema (git-integration platformProperties 2.0.0):
+        # 'version' lives INSIDE 'config', not at the top level, and the $schema
+        # URL is the gitIntegration one. The earlier top-level 'version' + the
+        # platform/platformProperties URL are rejected by the Fabric REST API.
         $platform = @{
-            version = "2.0"
-            '$schema' = "https://developer.microsoft.com/json-schemas/fabric/platform/platformProperties.json"
-            config = @{
-                logicalId = New-StableGuid -Value $pipelineName
-            }
+            '$schema' = "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json"
             metadata = @{
                 type = "DataPipeline"
                 displayName = $pipelineName
                 description = [string](Get-ObjectPropertyValue -Object $pipelineProperties -Name "description")
+            }
+            config = @{
+                version = "2.0"
+                logicalId = New-StableGuid -Value $pipelineName
             }
         }
         Write-JsonFile -InputObject $platform -Path (Join-Path $itemDir ".platform")

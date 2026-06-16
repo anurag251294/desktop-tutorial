@@ -1,12 +1,12 @@
 {
-  "config": {
-    "logicalId": "81afa2ea-5ca1-3831-9463-bb01c61dd894"
-  },
-  "version": "2.0",
-  "metadata": {
-    "description": "Production pipeline to process files within a SharePoint subfolder via Microsoft Graph API. Handles pagination via Until loop with @odata.nextLink, refreshes OAuth2 token every 45 minutes, and applies configurable throttle delays between pages.",
-    "type": "DataPipeline",
-    "displayName": "PL_Process_Subfolder"
-  },
-  "$schema": "https://developer.microsoft.com/json-schemas/fabric/platform/platformProperties.json"
+    "config":  {
+                   "version":  "2.0",
+                   "logicalId":  "81afa2ea-5ca1-3831-9463-bb01c61dd894"
+               },
+    "$schema":  "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+    "metadata":  {
+                     "description":  "Production pipeline to process files within a SharePoint subfolder via Microsoft Graph API. Handles pagination via Until loop with @odata.nextLink, refreshes OAuth2 token every 45 minutes, and applies configurable throttle delays between pages.",
+                     "displayName":  "PL_Process_Subfolder",
+                     "type":  "DataPipeline"
+                 }
 }

@@ -1,12 +1,12 @@
 {
-  "config": {
-    "logicalId": "5cccf00e-505f-1733-befe-3ad7506ecf89"
-  },
-  "version": "2.0",
-  "metadata": {
-    "description": "Production pipeline to migrate a single SharePoint document library to ADLS Gen2 using Microsoft Graph API delta query. Enumerates ALL files at ALL folder depths via /root/delta, handles pagination via Until loop with @odata.nextLink, refreshes OAuth2 token every 45 minutes, and applies configurable throttle delays between pages.",
-    "type": "DataPipeline",
-    "displayName": "PL_Migrate_Single_Library"
-  },
-  "$schema": "https://developer.microsoft.com/json-schemas/fabric/platform/platformProperties.json"
+    "config":  {
+                   "version":  "2.0",
+                   "logicalId":  "5cccf00e-505f-1733-befe-3ad7506ecf89"
+               },
+    "$schema":  "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+    "metadata":  {
+                     "description":  "Production pipeline to migrate a single SharePoint document library to ADLS Gen2 using Microsoft Graph API delta query. Enumerates ALL files at ALL folder depths via /root/delta, handles pagination via Until loop with @odata.nextLink, refreshes OAuth2 token every 45 minutes, and applies configurable throttle delays between pages.",
+                     "displayName":  "PL_Migrate_Single_Library",
+                     "type":  "DataPipeline"
+                 }
 }

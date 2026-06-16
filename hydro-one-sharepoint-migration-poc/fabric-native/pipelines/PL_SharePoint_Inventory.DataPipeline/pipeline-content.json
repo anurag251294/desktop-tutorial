@@ -1,0 +1,72 @@
+{
+  "properties": {
+    "description": "Copies SharePoint document-library metadata into the Lakehouse Delta table 'sharepoint_inventory' using the native SharePoint Online connector. Bind __SHAREPOINT_CONNECTION__ to a Fabric SharePoint connection (Deploy-FabricNative.ps1 substitutes it from config). Workspace/Lakehouse placeholders are resolved at deploy time.",
+    "activities": [
+      {
+        "name": "Copy_SharePoint_Inventory",
+        "type": "Copy",
+        "dependsOn": [],
+        "policy": {
+          "timeout": "0.02:00:00",
+          "retry": 1,
+          "retryIntervalInSeconds": 30,
+          "secureInput": false,
+          "secureOutput": false
+        },
+        "userProperties": [],
+        "typeProperties": {
+          "source": {
+            "type": "SharePointOnlineListSource",
+            "httpRequestTimeout": "00:05:00",
+            "datasetSettings": {
+              "annotations": [],
+              "type": "SharePointOnlineListResource",
+              "typeProperties": {
+                "siteUrl": {
+                  "value": "@pipeline().parameters.SiteUrl",
+                  "type": "Expression"
+                },
+                "listName": {
+                  "value": "@pipeline().parameters.LibraryName",
+                  "type": "Expression"
+                }
+              },
+              "externalReferences": {
+                "connection": "__SHAREPOINT_CONNECTION__"
+              }
+            }
+          },
+          "sink": {
+            "type": "LakehouseTableSink",
+            "tableActionOption": "OverwriteSchema",
+            "datasetSettings": {
+              "annotations": [],
+              "type": "LakehouseTable",
+              "schema": [],
+              "typeProperties": {
+                "table": "sharepoint_inventory"
+              },
+              "linkedService": {
+                "name": "HydroOneMigration",
+                "properties": {
+                  "type": "Lakehouse",
+                  "typeProperties": {
+                    "workspaceId": "__WORKSPACE_ID__",
+                    "artifactId": "__LAKEHOUSE_ID__",
+                    "rootFolder": "Tables"
+                  },
+                  "annotations": []
+                }
+              }
+            }
+          },
+          "enableStaging": false
+        }
+      }
+    ],
+    "parameters": {
+      "SiteUrl": { "type": "string", "defaultValue": "" },
+      "LibraryName": { "type": "string", "defaultValue": "Documents" }
+    }
+  }
+}

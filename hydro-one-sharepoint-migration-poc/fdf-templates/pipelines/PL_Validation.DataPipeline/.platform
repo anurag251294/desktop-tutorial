@@ -1,12 +1,12 @@
 {
-  "config": {
-    "logicalId": "d3ca5cfb-efd1-e93e-92d0-a7a32aae4a97"
-  },
-  "version": "2.0",
-  "metadata": {
-    "description": "Post-migration validation pipeline. Compares file counts and sizes between SharePoint source and ADLS destination for each migrated library. Generates validation report and flags discrepancies.",
-    "type": "DataPipeline",
-    "displayName": "PL_Validation"
-  },
-  "$schema": "https://developer.microsoft.com/json-schemas/fabric/platform/platformProperties.json"
+    "config":  {
+                   "version":  "2.0",
+                   "logicalId":  "d3ca5cfb-efd1-e93e-92d0-a7a32aae4a97"
+               },
+    "$schema":  "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+    "metadata":  {
+                     "description":  "Post-migration validation pipeline. Compares file counts and sizes between SharePoint source and ADLS destination for each migrated library. Generates validation report and flags discrepancies.",
+                     "displayName":  "PL_Validation",
+                     "type":  "DataPipeline"
+                 }
 }
