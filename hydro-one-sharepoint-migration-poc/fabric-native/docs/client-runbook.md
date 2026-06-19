@@ -46,7 +46,7 @@ no external storage account to provision or pay for.
 
 | # | Item | Notes |
 |---|------|-------|
-| 1 | **Fabric workspace** on a capacity (F-SKU or trial) | The migration items and OneLake storage live here. |
+| 1 | **Fabric workspace** on a capacity (F-SKU or trial) | The migration items and OneLake storage live here. To attach a capacity: `.\fabric-native\scripts\Assign-WorkspaceCapacity.ps1 -Workspace "<name-or-guid>" -Capacity "<name-or-guid>"` (use `-Unassign` to detach). |
 | 2 | **Azure CLI** signed in (`az login`) | The deploy script gets its Fabric token from the CLI. Account needs **Contributor** on the workspace. |
 | 3 | **Windows PowerShell 5.1** or **PowerShell 7+** | The deploy script runs on the stock Windows shell — no `pwsh` install required. |
 | 4 | **Entra app registration** (service principal) | Used by the Spark notebook to read SharePoint via Graph. |
