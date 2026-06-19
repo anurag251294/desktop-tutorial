@@ -29,6 +29,7 @@ mode             = "incremental"   # "full" or "incremental"
 
 audit_table      = "migration_audit"
 watermark_table  = "migration_watermark"
+inventory_table  = "sharepoint_inventory"   # built natively from Graph -- no SharePoint connection needed
 
 # CELL ========================================================================
 # OneLake paths + Graph helpers
@@ -124,6 +125,24 @@ def write_audit(records):
     (spark.createDataFrame([Row(**r) for r in records])
         .write.mode("append").format("delta").save(table_uri(audit_table)))
 
+def write_inventory(upserts, deletes):
+    """Upsert the document-library inventory into Delta, keyed by item_id, and
+    remove tombstoned items. This replaces the SharePoint-connector inventory
+    pipeline: the rows come straight from the Graph enumeration the migration
+    already performs, so no Fabric SharePoint connection is required."""
+    uri = table_uri(inventory_table)
+    if upserts:
+        df = spark.createDataFrame([Row(**r) for r in upserts])
+        if not _table_exists(inventory_table):
+            df.write.format("delta").save(uri)
+        else:
+            tgt = DeltaTable.forPath(spark, uri)
+            (tgt.alias("t").merge(df.alias("s"), "t.item_id = s.item_id")
+                .whenMatchedUpdateAll().whenNotMatchedInsertAll().execute())
+    if deletes and _table_exists(inventory_table):
+        ids = ",".join("'" + d.replace("'", "''") + "'" for d in deletes)
+        DeltaTable.forPath(spark, uri).delete(f"item_id IN ({ids})")
+
 # CELL ========================================================================
 # Core migration: enumerate (delta or full) and stream content into OneLake Files
 def site_key():
@@ -158,13 +177,38 @@ def dest_rel(item):
     sub = parent.split("root:", 1)[1].lstrip("/") if "root:" in parent else ""
     return [p for p in [site_seg, library_name, sub, item["name"]] if p]
 
+def inventory_row(item):
+    # One inventory record per drive item (files and folders), straight from Graph.
+    parent = item.get("parentReference", {}).get("path", "")
+    sub = parent.split("root:", 1)[1].lstrip("/") if "root:" in parent else ""
+    kind = "folder" if "folder" in item else ("file" if "file" in item else "other")
+    return dict(
+        item_id=item["id"],
+        site=site_url,
+        library=library_name,
+        name=item.get("name"),
+        kind=kind,
+        size=int(item.get("size", 0) or 0),
+        relative_path="/".join([p for p in [sub, item.get("name")] if p]),
+        web_url=item.get("webUrl"),
+        last_modified=item.get("lastModifiedDateTime"),
+        created=item.get("createdDateTime"),
+        synced_utc=_now(),
+    )
+
 def migrate():
     token = graph_token()
     site_id, drive_id = resolve_drive(token)
     state = {}
     audit, copied, skipped, errors = [], 0, 0, 0
+    inv_upserts, inv_deletes = [], []
     for it in enumerate_items(token, site_id, drive_id, state):
-        if it.get("deleted") or "file" not in it:   # skip folders & tombstones
+        # Inventory: record every item (files + folders); track tombstones to remove.
+        if it.get("deleted"):
+            inv_deletes.append(it["id"])
+        else:
+            inv_upserts.append(inventory_row(it))
+        if it.get("deleted") or "file" not in it:   # content step: skip folders & tombstones
             skipped += 1
             continue
         dest = files_uri(*dest_rel(it))
@@ -193,19 +237,21 @@ def migrate():
         if len(audit) >= 200:
             write_audit(audit); audit = []
     write_audit(audit)
+    write_inventory(inv_upserts, inv_deletes)   # native sharepoint_inventory, no connector
     # Advance the watermark only on a clean run (no errors), so failed files are
     # re-enumerated and retried next time. A clean 'full' run also sets the
     # baseline so subsequent 'incremental' runs resume correctly.
     if errors == 0 and state.get("delta_link"):
         write_watermark(site_key(), state["delta_link"])
-    return copied, skipped, errors
+    return copied, skipped, errors, len(inv_upserts)
 
 # CELL ========================================================================
 # Entry point
 if site_url:
-    copied, skipped, errors = migrate()
+    copied, skipped, errors, inventoried = migrate()
     result = {"site": site_url, "library": library_name, "mode": mode,
-              "copied": copied, "skipped": skipped, "errors": errors}
+              "copied": copied, "skipped": skipped, "errors": errors,
+              "inventoried": inventoried}
     print(json.dumps(result))
     notebookutils.notebook.exit(json.dumps(result))
 else:

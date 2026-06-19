@@ -51,7 +51,7 @@ no external storage account to provision or pay for.
 | 3 | **Windows PowerShell 5.1** or **PowerShell 7+** | The deploy script runs on the stock Windows shell — no `pwsh` install required. |
 | 4 | **Entra app registration** (service principal) | Used by the Spark notebook to read SharePoint via Graph. |
 | 5 | **Azure Key Vault** | Stores the app's client secret. The notebook reads it at run time; the secret is never written to config or code. |
-| 6 | **Fabric SharePoint Online connection** | *Optional* — only for the inventory pipeline (metadata table). The content migration does **not** need it. |
+| 6 | **Fabric SharePoint Online connection** | *Not required.* The notebook now builds `sharepoint_inventory` itself over Graph. The legacy connector pipeline (`PL_SharePoint_Inventory`) is only an optional alternative — leave `sharePointConnectionId` blank and skip step 2c. |
 
 > The whole flow is **Azure CLI–driven**: `az login` → run the deploy script (it
 > gets its Fabric token from `az`) → start the migration with `az rest`. The only
@@ -99,13 +99,21 @@ az role assignment create --assignee "$appId" --role "Key Vault Secrets User" \
   --scope $(az keyvault show --name <your-keyvault> --query id -o tsv)
 ```
 
-### 2c. (Optional) Create the Fabric SharePoint connection
+### 2c. (Skip — no longer needed) Fabric SharePoint connection
 
-Only needed if you want the inventory pipeline to populate `sharepoint_inventory`.
-**Skip it to start** — the content migration works without it. When you want it:
-Fabric portal → **Settings → Manage connections and gateways → New** →
-**SharePoint Online list** → authenticate → **Create**, then copy the connection
-**GUID** into `sharePointConnectionId` and re-run the deploy.
+**You can skip this step entirely.** The migration notebook now writes the
+`sharepoint_inventory` table itself, from the same Graph enumeration it uses to
+move content — so no Fabric SharePoint connection is required. Leave
+`sharePointConnectionId` blank; `PL_SharePoint_Inventory` deploys as a harmless
+empty skeleton and is simply unused.
+
+> Only if you specifically want the low-code **SharePoint Online list** connector
+> instead: Fabric portal → **Settings → Manage connections and gateways → New** →
+> **SharePoint Online list** → authenticate with an **organizational account**
+> (the connector does *not* accept the app's service principal) → **Create**, then
+> put the connection **GUID** in `sharePointConnectionId` and re-deploy. Common
+> failure: pasting a deep library URL — use the **root site URL**
+> (`https://<tenant>.sharepoint.com`).
 
 ---
 
@@ -236,7 +244,9 @@ then schedule it with `mode=incremental` — each run only transfers what change
   (`copied` or `error: …`), `dest`, `ts_utc`.
 - `Tables/migration_watermark` — the Graph delta link per `site::library`
   (the incremental resume point).
-- `Tables/sharepoint_inventory` — the library listing from the connector.
+- `Tables/sharepoint_inventory` — the full library listing (files + folders with
+  `relative_path`, `size`, `web_url`, `last_modified`), built by the notebook over
+  Graph and upserted by `item_id` on every run. No SharePoint connection needed.
 
 **Quick checks (SQL analytics endpoint of the Lakehouse):**
 
@@ -260,7 +270,8 @@ WHERE status LIKE 'error:%' ORDER BY ts_utc DESC;
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | Deploy: *"InvalidPlatformFile" / "InvalidDefinitionFormat"* | Old tooling. | Use the current `Deploy-FabricNative.ps1`; it sends the correct definition shape. |
-| Inventory pipeline left as a skeleton | `sharePointConnectionId` blank. | Create the SharePoint connection (2c), set the GUID, re-deploy. |
+| `PL_SharePoint_Inventory` is empty / has no activities | `sharePointConnectionId` blank — **expected**. | None needed: the notebook now builds `sharepoint_inventory`. (Only bind a connection + re-deploy if you specifically want the connector pipeline instead.) |
+| `sharepoint_inventory` table missing | Notebook hasn't run yet, or `site_url` blank. | Run `PL_Migrate_Master` (or the notebook); the table appears after the first run alongside `migration_audit`. |
 | Notebook job fails immediately | Missing Graph permission or secret. | Confirm `Sites.Read.All`/`Files.Read.All` + admin consent, and that the Key Vault secret exists and the run identity has **Secrets User**. |
 | `migration_audit` rows show `error: 403` | App lacks access to that site/library. | Grant the app access to the site collection (or use sites-selected consent). |
 | Want to re-copy everything | Watermark already advanced. | Run with `Mode = full` (ignores the watermark). |
