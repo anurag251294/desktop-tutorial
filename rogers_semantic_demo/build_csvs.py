@@ -305,6 +305,7 @@ def gen_facts():
                         date_key, bu_id, pid, region_id,
                         round(revenue, 2),
                         round(reg_arpu, 4),
+                        int(round(reg_subs)),
                     ])
 
                     # Subscribers split by segment
@@ -341,7 +342,7 @@ def gen_facts():
 
     write_csv("fact_revenue_monthly",
               ["date_key", "bu_id", "product_id", "region_id",
-               "revenue", "list_arpu"],
+               "revenue", "list_arpu", "avg_subscribers"],
               revenue_rows)
     write_csv("fact_subscribers_monthly",
               ["date_key", "bu_id", "product_id", "region_id", "segment_id",
