@@ -45,7 +45,23 @@ class Fabric:
 
     def request(self, method, path, **kwargs):
         url = path if path.startswith("http") else f"{BASE}{path}"
-        response = self.session.request(method, url, timeout=180, **kwargs)
+        # The Fabric endpoint intermittently resets connections mid-provision. Without
+        # a retry, provisioning stops partway and later notebooks silently keep their
+        # previous definition -- which looks exactly like "my fix didn't work".
+        last_error = None
+        for attempt in range(4):
+            try:
+                response = self.session.request(method, url, timeout=180, **kwargs)
+                break
+            except (requests.exceptions.ConnectionError,
+                    requests.exceptions.Timeout) as error:
+                last_error = error
+                wait = 2 ** attempt
+                print(f"  transient {type(error).__name__} on {method} {url.split('/')[-1]}; "
+                      f"retry {attempt + 1}/3 in {wait}s")
+                time.sleep(wait)
+        else:
+            raise RuntimeError(f"{method} {url} failed after 4 attempts: {last_error}")
         if response.status_code == 202:
             return self._poll(response)
         if not response.ok:
