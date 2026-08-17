@@ -37,3 +37,6 @@ dependencies:
       # Export and map artifacts (gold)
       - pyshp
       - folium
+      # Data agent configuration (configure_data_agent notebook). The datasource
+      # attachment REST API is undocumented preview; this SDK is the supported path.
+      - fabric-data-agent-sdk

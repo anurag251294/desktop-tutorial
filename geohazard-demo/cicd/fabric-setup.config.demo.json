@@ -66,6 +66,11 @@
       "displayName": "agent_handoff_publisher",
       "localPath": "fabric/notebooks/agent_handoff_publisher.ipynb",
       "lakehouse": "gold_lakehouse"
+    },
+    {
+      "displayName": "configure_data_agent",
+      "localPath": "fabric/notebooks/configure_data_agent.ipynb",
+      "lakehouse": "gold_lakehouse"
     }
   ],
   "dataPipeline": {
