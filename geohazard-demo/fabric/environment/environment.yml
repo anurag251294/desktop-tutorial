@@ -8,12 +8,21 @@
 # Fabric's environment API accepts .jar, .py, .whl, .tar.gz, or environment.yml -- a
 # plain requirements.txt is rejected with EnvironmentValidationFailed.
 #
-# Versions are left open so the Fabric runtime resolves a compatible set; pin them here
-# if you need byte-identical reruns across a promotion.
+# Most versions are left open so the Fabric runtime resolves a compatible set. `affine`
+# is the exception and must stay pinned: with an unpinned resolve, silver fails at
+# GeoBox construction with
+#
+#     TypeError: No '__dict__' attribute on 'Affine' instance to cache '_astuple' property
+#
+# because that release declares `_astuple` as a functools.cached_property on a class
+# that defines __slots__, so there is nowhere to cache it. 2.3.1 predates that change
+# and is the version rasterio and odc-geo are exercised against.
 name: geohazard_env
 dependencies:
   - pip
   - pip:
+      # Pinned deliberately -- see the note above before changing.
+      - affine==2.3.1
       # STAC access and on-demand COG extraction (silver)
       - pystac-client
       - planetary-computer
