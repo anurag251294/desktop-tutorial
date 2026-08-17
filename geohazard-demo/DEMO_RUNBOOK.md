@@ -165,12 +165,51 @@ python scripts/fabric/provision_fabric_demo.py \
 Idempotent — it updates the existing workspace items in place rather than duplicating
 them. Use it to push notebook edits from the repo into the workspace.
 
+## Act 4 — The grounded report (3 min)
+
+Two agents exist, deliberately serving different jobs.
+
+**`geohazard_data_agent` (Fabric)** — published over the six curated tables. Ask it live:
+
+* *"What soil unit and drainage class underlie the top three hotspots?"*
+* *"Which configured sources returned no records for this run?"*
+
+**`geohazard-report-agent` (Foundry)** — writes the screening report from the handoff
+contract. Show `cicd/report-output.sample.json`, generated against run
+`b538ce7e-69bb-4fd1-8f00-7ba7e7fc0a0a`:
+
+* Risk distribution matches the gold tables exactly — the model copied evidence rather
+  than computing anything.
+* Every hotspot summary names its soil unit, drainage class, and parent material, and
+  cites the evidence ID it came from.
+* **63 evidence citations, all of which resolve.** The validator rejects any report
+  referencing an ID that was not supplied.
+* Data gaps are reported honestly: Sentinel-1 GRD unavailable, *and* the Fabric tool
+  itself unavailable for that request.
+
+Regenerate live with:
+
+```bash
+python scripts/foundry/create_report_agent.py \
+  --foundry cicd/foundry-setup.output.json \
+  --report-input cicd/report-input.sample.json
+```
+
+> The report agent runs the **unattended path**: the handoff JSON goes straight to the
+> model. The Fabric data-agent *tool inside Foundry* is not wired — its connection
+> category is not creatable through the ARM connections API in this version, so it is a
+> portal step. The system prompt already treats a missing tool as a data gap, which is
+> why the report is complete without it.
+
 ## Known gaps
 
-* The **Foundry report agent and browser experience are not built.** The handoff contract
-  they consume is implemented and validated; the agent itself is still architecture
-  (`agent-architecture/`).
-* The **Fabric data agent is not yet published** — the scope and instructions are
-  written, but creating it is a portal step.
+* The **browser report experience is not built**. The report JSON and web-map manifest
+  it would consume are both published and validated.
+* The Fabric data-agent **tool binding inside Foundry** is not configured (see above).
+  The Fabric data agent itself works standalone.
+* The reference architecture names `gpt-4.1-mini`; this deployment uses **`gpt-5.4-mini`**
+  because gpt-4.1-mini is not deployable in Canada Central on this subscription under
+  any SKU.
 * `bronze_pc_sentinel1` is deployed but not in the pipeline DAG: it isn't parameterized
-  and its `sentinel-1-rtc` output duplicates `bronze_pc_collections`.
+  and its `sentinel-1-rtc` output duplicates `bronze_pc_collections`. This is why
+  `bronze_sentinel_1_grd` shows as a data gap in the report — correctly.
