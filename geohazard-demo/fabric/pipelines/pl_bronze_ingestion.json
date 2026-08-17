@@ -1,0 +1,489 @@
+{
+  "properties": {
+    "description": "Geohazard end-to-end medallion orchestration for a user-selected latitude, longitude, and radius: ingest Planetary Computer STAC metadata, BC DataBC surficial geology, and BC soil survey in parallel; build the bronze overview maps; then run the silver soil-susceptibility model and the gold RF-1 risk matrix in sequence.",
+    "parameters": {
+      "LATITUDE": {
+        "type": "Float",
+        "defaultValue": 49.2193
+      },
+      "LONGITUDE": {
+        "type": "Float",
+        "defaultValue": -122.5984
+      },
+      "RADIUS_KM": {
+        "type": "Int",
+        "defaultValue": 20
+      },
+      "ANALYSIS_RADIUS_KM": {
+        "type": "Float",
+        "defaultValue": 3.0
+      }
+    },
+    "activities": [
+      {
+        "name": "Ingest_PC_Collections",
+        "type": "TridentNotebook",
+        "description": "Bronze ingestion of Microsoft Planetary Computer STAC collections for the selected AOI.",
+        "dependsOn": [],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 1,
+          "retryIntervalInSeconds": 60,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "notebookId": "{{NOTEBOOK_ID:bronze_pc_collections}}",
+          "workspaceId": "{{WORKSPACE_ID}}",
+          "parameters": {
+            "LATITUDE": {
+              "value": {
+                "value": "@pipeline().parameters.LATITUDE",
+                "type": "Expression"
+              },
+              "type": "float"
+            },
+            "LONGITUDE": {
+              "value": {
+                "value": "@pipeline().parameters.LONGITUDE",
+                "type": "Expression"
+              },
+              "type": "float"
+            },
+            "RADIUS_KM": {
+              "value": {
+                "value": "@pipeline().parameters.RADIUS_KM",
+                "type": "Expression"
+              },
+              "type": "int"
+            }
+          }
+        }
+      },
+      {
+        "name": "Ingest_Planetary",
+        "type": "TridentNotebook",
+        "description": "Bronze ingestion of Planetary Computer satellite STAC items (bronze_satellite_stac_items) for the selected AOI.",
+        "dependsOn": [],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 1,
+          "retryIntervalInSeconds": 60,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "notebookId": "{{NOTEBOOK_ID:bronze_planetary_ingestion}}",
+          "workspaceId": "{{WORKSPACE_ID}}",
+          "parameters": {
+            "LATITUDE": {
+              "value": {
+                "value": "@pipeline().parameters.LATITUDE",
+                "type": "Expression"
+              },
+              "type": "float"
+            },
+            "LONGITUDE": {
+              "value": {
+                "value": "@pipeline().parameters.LONGITUDE",
+                "type": "Expression"
+              },
+              "type": "float"
+            },
+            "RADIUS_KM": {
+              "value": {
+                "value": "@pipeline().parameters.RADIUS_KM",
+                "type": "Expression"
+              },
+              "type": "int"
+            }
+          }
+        }
+      },
+      {
+        "name": "Ingest_BC_Geology",
+        "type": "TridentNotebook",
+        "description": "Bronze ingestion of BC DataBC WFS geology layers (quaternary, bedrock, faults) for the selected AOI.",
+        "dependsOn": [],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 1,
+          "retryIntervalInSeconds": 60,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "notebookId": "{{NOTEBOOK_ID:bronze_bc_surficial_geology}}",
+          "workspaceId": "{{WORKSPACE_ID}}",
+          "parameters": {
+            "LATITUDE": {
+              "value": {
+                "value": "@pipeline().parameters.LATITUDE",
+                "type": "Expression"
+              },
+              "type": "float"
+            },
+            "LONGITUDE": {
+              "value": {
+                "value": "@pipeline().parameters.LONGITUDE",
+                "type": "Expression"
+              },
+              "type": "float"
+            },
+            "RADIUS_KM": {
+              "value": {
+                "value": "@pipeline().parameters.RADIUS_KM",
+                "type": "Expression"
+              },
+              "type": "int"
+            }
+          }
+        }
+      },
+      {
+        "name": "Ingest_BC_Soil_Survey",
+        "type": "TridentNotebook",
+        "description": "Bronze ingestion of BC soil survey polygons and project boundaries (bronze_bc_soil_survey_polygons, bronze_bc_soil_project_boundaries) for the selected AOI.",
+        "dependsOn": [],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 1,
+          "retryIntervalInSeconds": 60,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "notebookId": "{{NOTEBOOK_ID:bronze_bc_soil_survey}}",
+          "workspaceId": "{{WORKSPACE_ID}}",
+          "parameters": {
+            "LATITUDE": {
+              "value": {
+                "value": "@pipeline().parameters.LATITUDE",
+                "type": "Expression"
+              },
+              "type": "float"
+            },
+            "LONGITUDE": {
+              "value": {
+                "value": "@pipeline().parameters.LONGITUDE",
+                "type": "Expression"
+              },
+              "type": "float"
+            },
+            "RADIUS_KM": {
+              "value": {
+                "value": "@pipeline().parameters.RADIUS_KM",
+                "type": "Expression"
+              },
+              "type": "int"
+            }
+          }
+        }
+      },
+      {
+        "name": "Build_Overview",
+        "type": "TridentNotebook",
+        "description": "Reads all bronze tables and renders the per-layer raster + geology overview maps.",
+        "dependsOn": [
+          {
+            "activity": "Ingest_PC_Collections",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          },
+          {
+            "activity": "Ingest_Planetary",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          },
+          {
+            "activity": "Ingest_BC_Geology",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          },
+          {
+            "activity": "Ingest_BC_Soil_Survey",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "notebookId": "{{NOTEBOOK_ID:bronze_data_overview}}",
+          "workspaceId": "{{WORKSPACE_ID}}",
+          "parameters": {
+            "LATITUDE": {
+              "value": {
+                "value": "@pipeline().parameters.LATITUDE",
+                "type": "Expression"
+              },
+              "type": "float"
+            },
+            "LONGITUDE": {
+              "value": {
+                "value": "@pipeline().parameters.LONGITUDE",
+                "type": "Expression"
+              },
+              "type": "float"
+            },
+            "RADIUS_KM": {
+              "value": {
+                "value": "@pipeline().parameters.RADIUS_KM",
+                "type": "Expression"
+              },
+              "type": "int"
+            }
+          }
+        }
+      },
+      {
+        "name": "Silver_Soil_Susceptibility",
+        "type": "TridentNotebook",
+        "description": "Silver RF-1 model: combines Planetary Computer rasters with bronze BC soil survey polygons to produce the silver_rf1_soil_susceptibility table.",
+        "dependsOn": [
+          {
+            "activity": "Ingest_PC_Collections",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          },
+          {
+            "activity": "Ingest_Planetary",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          },
+          {
+            "activity": "Ingest_BC_Geology",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          },
+          {
+            "activity": "Ingest_BC_Soil_Survey",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 1,
+          "retryIntervalInSeconds": 60,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "notebookId": "{{NOTEBOOK_ID:silver_rf1_soil_susceptibility}}",
+          "workspaceId": "{{WORKSPACE_ID}}",
+          "parameters": {
+            "LATITUDE": {
+              "value": {
+                "value": "@pipeline().parameters.LATITUDE",
+                "type": "Expression"
+              },
+              "type": "float"
+            },
+            "LONGITUDE": {
+              "value": {
+                "value": "@pipeline().parameters.LONGITUDE",
+                "type": "Expression"
+              },
+              "type": "float"
+            },
+            "RADIUS_KM": {
+              "value": {
+                "value": "@pipeline().parameters.ANALYSIS_RADIUS_KM",
+                "type": "Expression"
+              },
+              "type": "float"
+            },
+            "_inlineInstallationEnabled": {
+              "value": true,
+              "type": "bool"
+            },
+            "PIPELINE_RUN_ID": {
+              "value": {
+                "value": "@pipeline().RunId",
+                "type": "Expression"
+              },
+              "type": "string"
+            }
+          }
+        }
+      },
+      {
+        "name": "Silver_Source_Features",
+        "type": "TridentNotebook",
+        "description": "Flatten bronze WFS features into a queryable per-feature table plus source coverage.",
+        "dependsOn": [
+          {
+            "activity": "Ingest_PC_Collections",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          },
+          {
+            "activity": "Ingest_Planetary",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          },
+          {
+            "activity": "Ingest_BC_Geology",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          },
+          {
+            "activity": "Ingest_BC_Soil_Survey",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 1,
+          "retryIntervalInSeconds": 60,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "notebookId": "{{NOTEBOOK_ID:silver_source_features}}",
+          "workspaceId": "{{WORKSPACE_ID}}",
+          "parameters": {
+            "LATITUDE": {
+              "value": {
+                "value": "@pipeline().parameters.LATITUDE",
+                "type": "Expression"
+              },
+              "type": "float"
+            },
+            "LONGITUDE": {
+              "value": {
+                "value": "@pipeline().parameters.LONGITUDE",
+                "type": "Expression"
+              },
+              "type": "float"
+            },
+            "RADIUS_KM": {
+              "value": {
+                "value": "@pipeline().parameters.RADIUS_KM",
+                "type": "Expression"
+              },
+              "type": "int"
+            },
+            "PIPELINE_RUN_ID": {
+              "value": {
+                "value": "@pipeline().RunId",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "_inlineInstallationEnabled": {
+              "value": true,
+              "type": "bool"
+            }
+          }
+        }
+      },
+      {
+        "name": "Gold_Risk_Matrix",
+        "type": "TridentNotebook",
+        "description": "Gold RF-1 layer: builds risk tables, dissolved risk-area polygons, GeoJSON and Shapefile exports, and an interactive web map.",
+        "dependsOn": [
+          {
+            "activity": "Silver_Soil_Susceptibility",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          },
+          {
+            "activity": "Silver_Source_Features",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 1,
+          "retryIntervalInSeconds": 60,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "notebookId": "{{NOTEBOOK_ID:gold_rf1_risk_matrix}}",
+          "workspaceId": "{{WORKSPACE_ID}}",
+          "parameters": {
+            "PIPELINE_RUN_ID": {
+              "value": {
+                "value": "@pipeline().RunId",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "_inlineInstallationEnabled": {
+              "value": true,
+              "type": "bool"
+            }
+          }
+        }
+      },
+      {
+        "name": "Agent_Handoff",
+        "type": "TridentNotebook",
+        "description": "Publish the validated report-input contract and completion marker for the run.",
+        "dependsOn": [
+          {
+            "activity": "Gold_Risk_Matrix",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 1,
+          "retryIntervalInSeconds": 60,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "notebookId": "{{NOTEBOOK_ID:agent_handoff_publisher}}",
+          "workspaceId": "{{WORKSPACE_ID}}",
+          "parameters": {
+            "PIPELINE_RUN_ID": {
+              "value": {
+                "value": "@pipeline().RunId",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "BRONZE_RADIUS_KM": {
+              "value": {
+                "value": "@pipeline().parameters.RADIUS_KM",
+                "type": "Expression"
+              },
+              "type": "float"
+            },
+            "PIPELINE_NAME": {
+              "value": "pl_bronze_ingestion",
+              "type": "string"
+            }
+          }
+        }
+      }
+    ]
+  }
+}

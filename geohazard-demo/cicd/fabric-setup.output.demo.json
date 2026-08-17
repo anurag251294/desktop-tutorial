@@ -1,0 +1,67 @@
+{
+  "workspace": {
+    "displayName": "Geohazard_Demo",
+    "id": "dcfeb6a8-515b-43d5-be76-f7c56788abd6",
+    "capacityId": "5d0e6ac2-80d1-4cce-95a4-00ebe8d2681e"
+  },
+  "lakehouses": [
+    {
+      "displayName": "bronze_lakehouse",
+      "id": "73586c5b-0059-4cd8-862e-4b1d72a473c4"
+    },
+    {
+      "displayName": "silver_lakehouse",
+      "id": "cb318f38-1019-4757-b0ae-703f22c59d44"
+    },
+    {
+      "displayName": "gold_lakehouse",
+      "id": "f63ee308-54c5-4ffd-a8c0-f8de1b4345f4"
+    }
+  ],
+  "notebooks": [
+    {
+      "displayName": "bronze_pc_collections",
+      "id": "e1e6ead8-78d6-4bae-9537-ec22ac9f666b"
+    },
+    {
+      "displayName": "bronze_bc_surficial_geology",
+      "id": "42ff34aa-5584-425b-8bd3-eae29314755a"
+    },
+    {
+      "displayName": "bronze_bc_soil_survey",
+      "id": "5e33ed0c-46f1-4204-bb61-10549aa3920c"
+    },
+    {
+      "displayName": "bronze_pc_sentinel1",
+      "id": "4df4a7fe-710b-482c-b151-b989966c798c"
+    },
+    {
+      "displayName": "bronze_data_overview",
+      "id": "43e113ce-e617-47b9-a3b4-9c711c8e03ad"
+    },
+    {
+      "displayName": "bronze_planetary_ingestion",
+      "id": "356a1848-2cd0-462a-ad68-6c3af321980f"
+    },
+    {
+      "displayName": "silver_source_features",
+      "id": "a1cdf41d-8ab0-43b9-ba60-06bc27f9d88f"
+    },
+    {
+      "displayName": "silver_rf1_soil_susceptibility",
+      "id": "93df632f-59e6-4541-9607-23ff0891654f"
+    },
+    {
+      "displayName": "gold_rf1_risk_matrix",
+      "id": "49aa58e7-4ef3-4110-b452-afdc52a9c723"
+    },
+    {
+      "displayName": "agent_handoff_publisher",
+      "id": "cce9c6d6-8577-4399-85e1-ece3e92cb04a"
+    }
+  ],
+  "dataPipeline": {
+    "displayName": "pl_bronze_ingestion",
+    "id": "fee776a5-33f8-48da-a6b5-c6bd2c2a51f0"
+  }
+}

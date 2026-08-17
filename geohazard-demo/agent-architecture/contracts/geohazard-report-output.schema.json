@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/geohazard/contracts/geohazard-report-output.schema.json",
+  "title": "Geohazard Report Output",
+  "description": "Strict structured output returned by the Foundry geohazard report agent.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "runId",
+    "title",
+    "executiveSummary",
+    "keyFindings",
+    "sections",
+    "limitations",
+    "dataGaps",
+    "disclaimer"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "runId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "executiveSummary": {
+      "$ref": "#/$defs/citedText"
+    },
+    "keyFindings": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "$ref": "#/$defs/finding"
+      }
+    },
+    "sections": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 8,
+      "items": {
+        "$ref": "#/$defs/section"
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/citedText"
+      }
+    },
+    "dataGaps": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/citedText"
+      }
+    },
+    "mapReferences": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "$ref": "#/$defs/mapReference"
+      }
+    },
+    "disclaimer": {
+      "const": "This output is an automated screening summary for demonstration purposes. It is not a site investigation, hazard certification, engineering design, or substitute for review by qualified geotechnical and geospatial professionals using authoritative local data."
+    }
+  },
+  "$defs": {
+    "evidenceId": {
+      "type": "string",
+      "pattern": "^E[1-9][0-9]*$"
+    },
+    "citations": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/evidenceId"
+      }
+    },
+    "citedText": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "citations"],
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1
+        },
+        "citations": {
+          "$ref": "#/$defs/citations"
+        }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["statement", "level", "citations"],
+      "properties": {
+        "statement": {
+          "type": "string",
+          "minLength": 1
+        },
+        "level": {
+          "type": "string",
+          "enum": ["information", "watch", "priority-review"]
+        },
+        "citations": {
+          "$ref": "#/$defs/citations"
+        }
+      }
+    },
+    "section": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "heading", "body", "citations"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "heading": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "body": {
+          "type": "string",
+          "minLength": 1
+        },
+        "citations": {
+          "$ref": "#/$defs/citations"
+        }
+      }
+    },
+    "mapReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sectionId", "featureId", "label"],
+      "properties": {
+        "sectionId": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "featureId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        }
+      }
+    }
+  }
+}

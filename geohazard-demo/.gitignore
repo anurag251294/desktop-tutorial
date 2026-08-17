@@ -1,0 +1,6 @@
+.ipynb_checkpoints/
+.env
+*.pyc
+__pycache__/
+.vscode/
+cicd/fabric-setup.output.json

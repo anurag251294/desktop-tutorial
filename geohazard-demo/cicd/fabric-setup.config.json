@@ -1,0 +1,86 @@
+{
+  "workspaceName": "Englobecorp_Geohazard",
+  "capacityId": "",
+  "workspaceDescription": "Fabric CI/CD geohazard bronze ingestion demo",
+  "lakehouses": [
+    {
+      "displayName": "bronze_lakehouse",
+      "description": "Bronze ingestion storage for planetary metadata"
+    },
+    {
+      "displayName": "silver_lakehouse",
+      "description": "Silver curated geohazard tables"
+    },
+    {
+      "displayName": "gold_lakehouse",
+      "description": "Gold analytics-ready geohazard tables"
+    }
+  ],
+  "notebooks": [
+    {
+      "displayName": "bronze_pc_collections",
+      "localPath": "fabric/notebooks/bronze_pc_collections.ipynb",
+      "lakehouse": "bronze_lakehouse"
+    },
+    {
+      "displayName": "bronze_bc_surficial_geology",
+      "localPath": "fabric/notebooks/bronze_bc_surficial_geology.ipynb",
+      "lakehouse": "bronze_lakehouse"
+    },
+    {
+      "displayName": "bronze_bc_soil_survey",
+      "localPath": "fabric/notebooks/bronze_bc_soil_survey.ipynb",
+      "lakehouse": "bronze_lakehouse"
+    },
+    {
+      "displayName": "bronze_pc_sentinel1",
+      "localPath": "fabric/notebooks/bronze_pc_sentinel1.ipynb",
+      "lakehouse": "bronze_lakehouse"
+    },
+    {
+      "displayName": "bronze_data_overview",
+      "localPath": "fabric/notebooks/bronze_data_overview.ipynb",
+      "lakehouse": "bronze_lakehouse"
+    },
+    {
+      "displayName": "bronze_planetary_ingestion",
+      "localPath": "fabric/notebooks/bronze_planetary_ingestion.ipynb",
+      "lakehouse": "bronze_lakehouse"
+    },
+    {
+      "displayName": "silver_source_features",
+      "localPath": "fabric/notebooks/silver_source_features.ipynb",
+      "lakehouse": "silver_lakehouse"
+    },
+    {
+      "displayName": "silver_rf1_soil_susceptibility",
+      "localPath": "fabric/notebooks/silver_rf1_soil_susceptibility.ipynb",
+      "lakehouse": "silver_lakehouse"
+    },
+    {
+      "displayName": "gold_rf1_risk_matrix",
+      "localPath": "fabric/notebooks/gold_rf1_risk_matrix.ipynb",
+      "lakehouse": "gold_lakehouse"
+    },
+    {
+      "displayName": "agent_handoff_publisher",
+      "localPath": "fabric/notebooks/agent_handoff_publisher.ipynb",
+      "lakehouse": "gold_lakehouse"
+    }
+  ],
+  "dataPipeline": {
+    "displayName": "pl_bronze_ingestion",
+    "localPath": "fabric/pipelines/pl_bronze_ingestion.json",
+    "parametersPath": "cicd/parameters.dev.json",
+    "description": "Bronze orchestration pipeline (portable, name-based notebook tokens)"
+  },
+  "deploymentPipeline": {
+    "displayName": "geohazard-demo-single-pipeline",
+    "description": "Single-workspace pipeline demo for geohazard bronze ingestion"
+  },
+  "environment": {
+    "displayName": "geohazard_env",
+    "description": "Geospatial stack for the geohazard medallion notebooks",
+    "requirements": "fabric/environment/requirements.txt"
+  }
+}
