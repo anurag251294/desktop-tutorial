@@ -111,6 +111,9 @@ def main():
     parser.add_argument("--config", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--capacity-id", default="")
+    parser.add_argument("--skip-environment", action="store_true",
+                        help="Reuse the already-published environment instead of "
+                             "republishing it. Use for notebook-only changes.")
     args = parser.parse_args()
 
     root = Path(__file__).resolve().parents[2]
@@ -154,7 +157,19 @@ def main():
     # the libraries instead, and resolves them once rather than per session.
     environment_id = None
     environment_config = config.get("environment")
-    if environment_config:
+    if environment_config and args.skip_environment:
+        # Republishing costs ~20 minutes of live capacity, so skip it when only notebook
+        # content changed. The existing published environment stays bound to the
+        # notebooks below.
+        existing_environment = by_type_name.get(("Environment", environment_config["displayName"]))
+        if existing_environment:
+            environment_id = existing_environment
+            print(f"Environment reused (publish skipped): "
+                  f"{environment_config['displayName']} ({environment_id})")
+        else:
+            raise SystemExit("--skip-environment was passed but no published environment "
+                             f"named {environment_config['displayName']} exists yet.")
+    elif environment_config:
         name = environment_config["displayName"]
         environment_id = by_type_name.get(("Environment", name))
         if environment_id:
