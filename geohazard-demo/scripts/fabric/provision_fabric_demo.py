@@ -167,13 +167,17 @@ def main():
             environment_id = created["id"]
             print(f"Created environment: {name} ({environment_id})")
 
+        # Fabric accepts .jar, .py, .whl, .tar.gz, or environment.yml here. A plain
+        # requirements.txt is rejected with EnvironmentValidationFailed, and the
+        # filename -- not just the content -- is what gets validated.
         requirements = root / environment_config["requirements"]
         upload_url = (f"{BASE}/workspaces/{workspace_id}/environments/{environment_id}"
                       "/staging/libraries")
         upload = requests.post(
             upload_url,
             headers={"Authorization": fabric.session.headers["Authorization"]},
-            files={"file": ("requirements.txt", requirements.read_bytes(), "text/plain")},
+            files={"file": (requirements.name, requirements.read_bytes(),
+                            "application/octet-stream")},
             timeout=300,
         )
         if not upload.ok:

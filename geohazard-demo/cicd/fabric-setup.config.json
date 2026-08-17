@@ -81,6 +81,6 @@
   "environment": {
     "displayName": "geohazard_env",
     "description": "Geospatial stack for the geohazard medallion notebooks",
-    "requirements": "fabric/environment/requirements.txt"
+    "requirements": "fabric/environment/environment.yml"
   }
 }

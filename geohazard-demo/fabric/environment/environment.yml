@@ -1,0 +1,30 @@
+# Public libraries for the geohazard medallion notebooks.
+#
+# Published once as a Fabric Environment and attached to the notebooks, instead of
+# per-run `%pip install`. Inline installation is disabled in many tenants (it raises
+# MagicUsageError when a notebook runs from a pipeline), and an Environment is faster
+# anyway because packages resolve once rather than on every session start.
+#
+# Fabric's environment API accepts .jar, .py, .whl, .tar.gz, or environment.yml -- a
+# plain requirements.txt is rejected with EnvironmentValidationFailed.
+#
+# Versions are left open so the Fabric runtime resolves a compatible set; pin them here
+# if you need byte-identical reruns across a promotion.
+name: geohazard_env
+dependencies:
+  - pip
+  - pip:
+      # STAC access and on-demand COG extraction (silver)
+      - pystac-client
+      - planetary-computer
+      - odc-stac
+      - odc-geo
+      - rioxarray
+      - rasterio
+      # Geometry, projections, clustering (silver + gold)
+      - shapely
+      - pyproj
+      - scipy
+      # Export and map artifacts (gold)
+      - pyshp
+      - folium
