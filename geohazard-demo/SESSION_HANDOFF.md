@@ -27,6 +27,31 @@ Report agent output on that run: every evidence citation resolves, the document
 to the gold tables, and both data gaps are reported (Sentinel-1 GRD unavailable, and the
 Fabric tool unavailable for that request).
 
+### Full end-to-end re-run, 2026-08-21
+
+`pl_bronze_ingestion` was re-run from scratch — public APIs through bronze, silver, gold,
+and the agent handoff. Job `0f61627d-d21d-47cc-bfc7-a13d7347517a`, **Completed** in
+14m48s, all 9 activities `Succeeded`.
+
+It reproduced the canonical run **exactly**: Low 40.8961 / Moderate 22.2258 /
+High 33.0344 / Extreme 3.8436, 25 hotspots, 64 evidence records, 360,000 pixels, and the
+same single data gap (Sentinel-1 GRD). Its handoff was fed to the Foundry agent and the
+report passed both citation and schema validation. Two independent runs a fortnight apart
+agreeing to four decimal places is worth saying out loud.
+
+Gold now holds five runs. The agent stayed pinned to the canonical one throughout.
+
+**The demo's own visual artifacts were the real gap**, and neither was covered by any
+earlier check:
+
+* `bronze_data_overview` — Act 1 — opened as **code with no outputs**. Pipeline runs
+  write to a run snapshot, not back into the notebook item, and this notebook had only
+  ever been run by the pipeline. Fixed by running it interactively once (~2.5 min);
+  11 folium maps now render and survive a cold reload.
+* The gold web map is published to OneLake as a self-contained 2.8 MB HTML and renders
+  correctly — 29 risk polygons, 25 ranked hotspot pins with evidence popups, layer
+  toggle, legend. Better to demo than the notebook cell, and it needs no capacity.
+
 ### Re-verified 2026-08-21
 
 * All 22 Delta tables intact and queryable; `gold_rf1_risk_pixels` holds 1.44 M rows.

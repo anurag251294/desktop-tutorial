@@ -58,6 +58,12 @@ produced a report that passes both citation and JSON Schema validation.
 
 **Open `bronze_data_overview` and scroll the rendered maps.**
 
+> The maps are saved in the notebook as of 2026-08-21 and survive a cold reload. Note
+> **a pipeline run does not put them there** — pipeline output goes to a run snapshot,
+> not back into the notebook item, so a notebook that has only ever been run by the
+> pipeline opens as code with no outputs. If you need them refreshed, open the notebook
+> and **Run all** once (about 2.5 minutes); AutoSave persists the result.
+
 Talking points:
 
 * No files were uploaded and no credentials are configured. Bronze is built entirely
@@ -113,6 +119,20 @@ This is the setup for Act 2. Point at `geometry_json` and `properties_json`:
   to the nearest mapped fault.
 * The interactive map at the bottom has the risk bands *and* the ranked hotspot markers.
   Click one — the popup is the evidence, not a guess.
+
+> **Show the standalone map instead of the notebook cell.** Gold publishes a
+> self-contained 2.8 MB HTML map to OneLake, which opens in any browser with the capacity
+> paused and is far steadier than scrolling a notebook. Grab it once and keep it locally:
+>
+> ```text
+> Files/gold_rf1_webmap/runs/<run-id>/gold_rf1_webmap.html
+> ```
+>
+> Verified 2026-08-21: OpenStreetMap basemap, 29 risk-band polygons, 25 numbered hotspot
+> pins, a layer toggle, and a legend. The `hs-001` popup reads: *Extreme — score 25,
+> 0.2512 km² over 2,512 px, Soil: ALBION, Drainage: poorly drained, Land cover: Built-up,
+> Nearest mapped fault: 5.26 km.* The same folder holds the GeoJSON, Shapefile, and the
+> manifest, which carries a per-layer `queryHash` for provenance.
 
 > "The dissolved bands tell you *how much*. The hotspots tell you *where* and *why*.
 > That second part is what a report actually needs."
