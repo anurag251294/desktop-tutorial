@@ -82,18 +82,36 @@ resources → **Microsoft Fabric**, name it `fabric_geohazard`, then attach it t
 Not a blocker: the report agent runs the unattended handoff path, and the Fabric data
 agent answers standalone.
 
-**2. Deselect four columns on the data agent.**
-All columns are currently selected. Remove `geometry_wkt` and `properties_json` on
-`silver_source_features`, and `geometry_json` on `gold_rf1_risk_hotspots` and
-`gold_rf1_risk_areas`. A `SELECT *` on a soil query otherwise returns a wall of
-coordinates.
+**2. Data agent hardening — done 2026-08-21, verified through the portal chat.**
+Driving the published agent through its own chat UI (not the SDK) surfaced a defect the
+SDK path never showed. Asked *"what are the historical trends across all my data?"* the
+agent answered from a **superseded pre-SIFT-fix run**, reported its inflated figures as
+current, and called the canonical run "an older run". The stock instruction — "if the
+caller has not supplied a run_id, use the most recent one" — is unimplementable, because
+run IDs are UUIDs and carry no ordering.
 
-**3. Four runs live in gold; only one is good.**
-`b538ce7e-69bb-4fd1-8f00-7ba7e7fc0a0a` is the only run produced after the SIFT decoding
-fix. `0da6944e-…`, `777d9049-…`, and `b50e84ae-…` predate it and each report 71.9% of
-the AOI in one band. The agent resolved to the correct run under test and the good run
-happens to sort last, but that is luck, not design. Either name the run when asking, or
-delete the three stale runs — they are pure pre-fix output:
+Also fixed in the same pass: `datasource.select()` selects a table with all of its
+columns, so `geometry_wkt`, `properties_json`, and `geometry_json` were exposed despite
+the configure notebook documenting them as excluded.
+
+Both are applied by `scripts/fabric/harden_data_agent.py`, to the draft **and** published
+configs — patching only the draft changes nothing until someone clicks Publish.
+
+```bash
+python scripts/fabric/harden_data_agent.py \
+    --canonical b538ce7e-69bb-4fd1-8f00-7ba7e7fc0a0a \
+    --superseded 0da6944e-32c1-4c2f-b5a9-5b2c5666e8cf \
+    --superseded 777d9049-b89f-427f-b6e2-a4aa3db8d192 \
+    --superseded b50e84ae-8814-43d7-b418-17b1d050a02b
+```
+
+All seven demo questions were re-run through the portal chat afterwards and answer
+against the canonical run, including the two that previously failed.
+
+**3. Optional: delete the three superseded runs.**
+Pinning the agent removes the demo risk, but the stale partitions are still in gold and
+silver. Deleting them would make "most recent" unambiguous again and let the generic
+instruction stand:
 
 ```sql
 DELETE FROM gold_rf1_band_summary WHERE run_id <> 'b538ce7e-69bb-4fd1-8f00-7ba7e7fc0a0a'

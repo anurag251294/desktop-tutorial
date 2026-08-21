@@ -42,11 +42,13 @@ produced a report that passes both citation and JSON Schema validation.
 1. **Resume the capacity** (above). It reaches Active in well under a minute, but the
    lakehouse SQL endpoints need a further minute or two before the data agent answers.
    Resume at least five minutes before you present.
-2. **Name the run in data-agent questions.** Gold holds four runs: `b538ce7e-69bb-4fd1-8f00-7ba7e7fc0a0a`
-   is the only one produced after the SIFT decoding fix. The other three predate it and
-   report ~72% of the AOI in a single band. The agent's instructions tell it to use the
-   most recent run and it resolved to the correct one under test, but saying the run ID
-   out loud removes the risk entirely — and run scoping is a feature worth showing.
+2. **Run scoping is handled, but worth showing.** Gold holds four runs;
+   `b538ce7e-69bb-4fd1-8f00-7ba7e7fc0a0a` is the only one produced after the SIFT
+   decoding fix, and the agent is now pinned to it by name. Earlier it was told to "use
+   the most recent run" — unimplementable, since run IDs are UUIDs with no ordering — and
+   on an open-ended question it picked a superseded run and reported its inflated
+   figures as current. Fixed by `scripts/fabric/harden_data_agent.py`; all seven demo
+   questions were re-verified through the portal chat afterwards.
 3. **Have the committed samples open as a fallback.** `cicd/report-input.sample.json`
    and `cicd/report-output.sample.json` need no capacity at all.
 
