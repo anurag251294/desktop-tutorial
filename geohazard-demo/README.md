@@ -11,17 +11,31 @@ ms.topic: overview
 > Added here: `silver_source_features`, source-feature identity carried through silver,
 > `gold_rf1_risk_hotspots`, run scoping on every table, `agent_handoff_publisher`, a
 > Fabric Environment replacing inline `%pip`, portable Python provisioning and run
-> scripts, and [DEMO_RUNBOOK.md](DEMO_RUNBOOK.md). See
+> scripts, a published **Fabric data agent**, an end-to-end **Microsoft Foundry** report
+> agent with schema-enforced output, and [DEMO_RUNBOOK.md](DEMO_RUNBOOK.md). See
 > [Grounding the report agent in the spatial data](#grounding-the-report-agent-in-the-spatial-data)
-> for why.
+> and [The Foundry layer](#the-foundry-layer--turning-evidence-into-a-written-report) for why.
+>
+> One correctness fix travelled with the fork and is **still open upstream**: BC SIFT
+> stores *coded* soil attributes (`DRAIN_1=W`, `MDEP_1=COLL`, `TEXTURE_1=SL`), which the
+> original keyword scorer matched none of — so surveyed soil, the only direct ground
+> truth, contributed a flat `0.4` constant. Decoding the codes moved the AOI from ~92%
+> High/Extreme to Low 41 / Moderate 22 / High 33 / Extreme 3.8%, and split two merged
+> blobs into 25 discrete attributed hotspots.
 
 ## Overview
 
-An end-to-end Microsoft Fabric demo that ingests public geospatial data and builds a
-**bronze → silver → gold** medallion pipeline for a geohazard screening workflow. It
-shows realistic data-engineering patterns (parameterized ingestion, Delta lakehouses,
-pipeline orchestration) together with CI/CD controls (Git integration and a Fabric
-deployment pipeline).
+An end-to-end **Microsoft Fabric + Microsoft Foundry** demo that ingests public
+geospatial data, builds a **bronze → silver → gold** medallion pipeline for a geohazard
+screening workflow, and hands the result to two AI agents: one that answers spatial
+questions live, and one that writes a cited screening report. It shows realistic
+data-engineering patterns (parameterized ingestion, Delta lakehouses, pipeline
+orchestration) together with CI/CD controls (Git integration and a Fabric deployment
+pipeline).
+
+The point of the AI half is not that a model can write prose about data. It is that
+**every number in the report is traceable to a row in a Delta table**, and that two
+automated checks reject the document if it is not.
 
 The default worked example is **RF-1 soft-soil susceptibility** over Maple Ridge,
 British Columbia. A pipeline run can select another latitude, longitude, catalog
@@ -40,7 +54,11 @@ other locations.
 | **Gold** | `agent_handoff_publisher` | `gold_lakehouse` | Validated `report-input.json` evidence envelope for the Foundry report agent |
 
 ```text
-bronze (catalogue metadata)  ─►  silver (flatten + clip + score)  ─►  gold (risk, hotspots)  ─►  agent handoff
+bronze (catalogue metadata)  ─►  silver (flatten + clip + score)  ─►  gold (risk, hotspots)
+                                                                        │
+                                        ┌───────────────────────────────┴──────────────┐
+                                        ▼                                              ▼
+                          Fabric data agent (live Q&A)              handoff contract ─► Foundry report agent
 ```
 
 Every table is partitioned by `run_id`, so one workspace can hold many screening runs
@@ -81,6 +99,10 @@ scripts/
     provision_fabric_demo.py            # same provisioning, portable (Python + az CLI)
     run_pipeline.py                     # starts pl_bronze_ingestion and polls to completion
     run_notebooks.ps1                   # runs notebooks on demand
+    harden_data_agent.py                # pins the canonical run, deselects geometry columns
+  foundry/
+    provision_foundry.py                # AI Services account, project, model deployment
+    create_report_agent.py              # creates the report agent, generates and validates a report
 agent-architecture/
   README.md                             # Foundry report + deterministic web-map design
   contracts/                            # strict report and map JSON Schemas
@@ -136,26 +158,158 @@ Together these let the agent answer questions the gold aggregates alone cannot:
 `report-input.json` contract — every number carrying an `evidenceId` — and refuses to
 publish if the gold tables disagree on totals or any reference is malformed.
 
+## The Foundry layer — turning evidence into a written report
+
+Fabric produces the numbers. **Microsoft Foundry** writes the document. They are
+deliberately separate, and the boundary between them is a versioned contract rather than
+a prompt.
+
+```mermaid
+flowchart LR
+  G[gold tables<br/>risk, hotspots, coverage] --> H[agent_handoff_publisher]
+  H --> C["report-input.json<br/>64 evidence records, each with an evidenceId"]
+  C --> F[Foundry<br/>geohazard-report-agent]
+  F --> R["report-output.json<br/>cited, schema-validated"]
+  G --> D[Fabric<br/>geohazard_data_agent]
+  D -. "live questions" .-> U((analyst))
+  R --> U
+```
+
+### Two agents, two jobs
+
+| | `geohazard_data_agent` (Fabric) | `geohazard-report-agent` (Foundry) |
+| --- | --- | --- |
+| **Job** | Answer ad-hoc spatial questions, live | Write the screening report for one run |
+| **Sees** | Six curated gold/silver tables over the SQL endpoint | Only the handoff contract — no pixels, no geometry, no raw bronze JSON |
+| **Output** | Conversational answers with the source table named | One JSON document against a strict schema |
+| **Runs on** | Fabric capacity (must be Active) | Foundry `gpt-5.4-mini` (no capacity needed) |
+
+The data agent is scoped by *selection*: a table it has not been given is invisible to
+it, so `agent-architecture/fabric-data-agent.md` is enforced rather than merely
+documented. `scripts/fabric/harden_data_agent.py` also deselects `geometry_wkt`,
+`properties_json`, and `geometry_json`, and names the canonical `run_id` so an
+open-ended question cannot silently resolve to a superseded run.
+
+### The handoff contract
+
+`agent_handoff_publisher` packages one run into `report-input.json`. Every quantitative
+value carries an **`evidenceId`** (`E1`, `E2`, …), and the publisher validates before
+*and* after writing, writing `_SUCCESS` last — if the gold tables disagree on totals, the
+run is quarantined and nothing is published.
+
+What deliberately does **not** cross the boundary: pixel rows, geometry, and raw bronze
+property JSON. The model receives a compact, bounded evidence envelope, which is what
+makes the grounding claim checkable rather than aspirational.
+
+### The report agent
+
+`agent-architecture/prompts/report-agent-system.md` holds the system message. It forbids
+the model from calculating risk, inventing geometry, estimating missing measurements, or
+offering engineering advice — its only job is to explain supplied evidence. Output must
+match `agent-architecture/contracts/geohazard-report-output.schema.json`:
+
+| Field | Contents |
+| --- | --- |
+| `executiveSummary` | Cited prose |
+| `keyFindings` | Graded *information* / *watch* / *priority-review*, each cited |
+| `sections` | Methodology, source coverage, risk distribution, hotspots |
+| `limitations`, `dataGaps` | Derived from what the run actually saw, not boilerplate |
+| `mapReferences` | Ties narrative back to `hs-NNN` features on the web map |
+| `disclaimer` | Fixed screening disclaimer, verbatim |
+
+`scripts/foundry/create_report_agent.py` runs **two independent checks** and exits
+non-zero if either fails:
+
+1. **Citation resolution** — every `E<n>` referenced in the document was actually
+   supplied in the input.
+2. **Schema validation** — the document validates against the contract.
+
+The second check exists because the first was not enough. Citation checking alone let a
+completely different document shape pass repeatedly: the model was emitting invented
+top-level keys and omitting every required one, while every citation resolved perfectly.
+Validate the contract, not just the values inside it.
+
+### Provisioning Foundry
+
+```bash
+python scripts/foundry/provision_foundry.py          # account, project, model deployment
+python scripts/foundry/create_report_agent.py \
+    --foundry cicd/foundry-setup.output.json \
+    --report-input cicd/report-input.sample.json
+```
+
+Both `cicd/report-input.sample.json` and `cicd/report-output.sample.json` are committed,
+so **the report half of the demo runs with the Fabric capacity paused**.
+
+Three things that cost real time and are worth knowing before you provision:
+
+* **`gpt-4.1-mini` is not deployable in Canada Central** on this subscription under any
+  SKU, despite the catalogue claiming GlobalStandard support. This deployment uses
+  `gpt-5.4-mini`.
+* **The agents data plane needs its role at *project* scope.** Assigned at account scope
+  it returns 401 indefinitely, which reads exactly like propagation delay. The built-in
+  `Azure AI User` role does not exist in every tenant — a custom role carrying
+  `Microsoft.CognitiveServices/accounts/AIServices/agents/*` may be required.
+* **A project must be created with a system-assigned identity in the same request.**
+  `az resource create` omits the identity block, and assigning one afterwards does not
+  clear the "must enable a managed identity" error; a raw ARM `PUT` works.
+
+### Calling the Fabric data agent *from* Foundry
+
+Not possible on this project type, and the reason is worth stating precisely because the
+obvious diagnosis is wrong.
+
+The `MicrosoftFabric` connection can be created (in the portal — the ARM connections API
+rejects that category) and **attaches to the agent successfully**. Every *run* then fails:
+
+```text
+missing_required_parameter: AML connections are required for Fabric tool.
+```
+
+identically for the project-scoped ARM id, the account-scoped id, and the bare connection
+name; `tool_resources` rejects every `fabric_*` key as `unknown_parameter`. The runtime
+resolves Fabric tool connections through an **Azure ML workspace connection store**,
+which a `Microsoft.CognitiveServices/accounts/projects` Foundry project does not have. A
+**hub-based** project is required — a re-provisioning decision, not a configuration fix.
+
+This costs the demo nothing. The report agent runs the unattended path by design, and its
+system prompt already reports an unavailable tool as a data gap rather than failing.
+
 ## Provisioned identifiers
 
-Workspace `Englobecorp_Geohazard` = `a7d0f907-bf14-4169-8d34-b8765824aa09`. Resolved IDs
-are recorded in `cicd/fabric-setup.output.json`.
+The live demo deployment. Resolved IDs are recorded in
+`cicd/fabric-setup.output.demo.json` and `cicd/foundry-setup.output.json`; full state,
+including the canonical run and every open item, is in [SESSION_HANDOFF.md](SESSION_HANDOFF.md).
+
+**Fabric** — workspace `Geohazard_Demo` = `dcfeb6a8-515b-43d5-be76-f7c56788abd6`
 
 | Item | Display name | ID |
 | --- | --- | --- |
-| Lakehouse | `bronze_lakehouse` | `fbdd7d1d-00a2-4e0f-84f8-655fce72e4c9` |
-| Lakehouse | `silver_lakehouse` | `7818d0c8-eacb-4599-a91c-68d795175857` |
-| Lakehouse | `gold_lakehouse` | `05034b20-db81-4356-8b7c-dbf6ac86f929` |
-| Data pipeline | `pl_bronze_ingestion` | `1bcd4990-7fca-4e8b-a356-c5f20405a5dc` |
-| Deployment pipeline | `geohazard-demo-single-pipeline` | `965750c8-3575-4cb9-855d-82ada8c65a75` |
-| Notebook (PC) | `bronze_pc_collections` | `2ea8d23a-e499-412b-a096-ec78ebe08145` |
-| Notebook (BC) | `bronze_bc_surficial_geology` | `4cc8d648-1183-4a7a-85dd-d1f9bf5ea91b` |
-| Notebook (soil) | `bronze_bc_soil_survey` | _resolved on next `setup_fabric_demo.ps1` run_ |
-| Notebook (map) | `bronze_data_overview` | `e6047d17-ef87-4aaa-b044-d07acdc41d6e` |
+| Lakehouse | `bronze_lakehouse` | `73586c5b-0059-4cd8-862e-4b1d72a473c4` |
+| Lakehouse | `silver_lakehouse` | `cb318f38-1019-4757-b0ae-703f22c59d44` |
+| Lakehouse | `gold_lakehouse` | `f63ee308-54c5-4ffd-a8c0-f8de1b4345f4` |
+| Data pipeline | `pl_bronze_ingestion` | `fee776a5-33f8-48da-a6b5-c6bd2c2a51f0` |
+| Environment | `geohazard_env` | `8782d53b-e684-4563-b19d-2679cda41a00` |
+| Data agent | `geohazard_data_agent` | `ca0561cd-c396-44ef-b913-6fb601f29a75` |
+
+**Foundry** — account `geohazard-foundry-mcap`, project `geohazard-project`
+
+| Item | Value |
+| --- | --- |
+| Project endpoint | `https://geohazard-foundry-mcap.services.ai.azure.com/api/projects/geohazard-project` |
+| Model deployment | `gpt-5-4-mini` (GlobalStandard) |
+| Report agent | `geohazard-report-agent` |
+
+Canonical run: `b538ce7e-69bb-4fd1-8f00-7ba7e7fc0a0a` — Low 40.90% · Moderate 22.23% ·
+High 33.03% · Extreme 3.84% over 360,000 pixels, with 25 ranked hotspots.
 
 > Each notebook must have its layer lakehouse set as the **default lakehouse** (stored in
 > the notebook's `metadata.dependencies.lakehouse`). Without it, relative `saveAsTable` /
 > `spark.read.table` calls fail and the Spark session is cancelled.
+>
+> Libraries come from the `geohazard_env` Environment, not inline `%pip` — inline
+> installation is disabled in this tenant and `_inlineInstallationEnabled` does not
+> override it.
 
 ## Deploy guides
 
@@ -181,12 +335,18 @@ are updated rather than recreated.
 
 Prerequisites:
 
-* Azure CLI signed in: `az login` (tenant `711a9076-1115-4c36-b7b4-82b4f3a05f6f`).
-* The Fabric capacity backing the workspace must be **Active** (not paused):
+* Azure CLI signed in: `az login`.
+* The Fabric capacity backing the workspace must be **Active** (not paused). For this
+  deployment:
 
-  ```powershell
-  az fabric capacity resume --resource-group rg-fabric --capacity-name cpfabric
+  ```bash
+  CAP="/subscriptions/<sub>/resourceGroups/rg-fabric-demo/providers/Microsoft.Fabric/capacities/fabdemo85829"
+  az resource invoke-action --action resume --ids "$CAP"
+  az resource show --ids "$CAP" --query "properties.state" -o tsv
   ```
+
+  Allow about five minutes: the capacity reports **Active** in under a minute, but the
+  lakehouse SQL endpoints need another minute or two before the data agent will answer.
 
 ## Run the Complete Medallion Pipeline
 
@@ -293,11 +453,16 @@ Each pipeline run also writes these files under
 
 ## Foundry report and web-map architecture
 
-The [agent architecture](agent-architecture/README.md) defines an implementation-ready
-Microsoft Foundry report agent, strict evidence and report contracts, a Fabric data
-agent boundary, and a deterministic interactive web-map design. It intentionally does
-not deploy an application. The model explains validated Fabric evidence; Spark and the
-map adapter remain responsible for scores, coordinates, geometry, bounds, and layers.
+The [agent architecture](agent-architecture/README.md) defines the Microsoft Foundry
+report agent, strict evidence and report contracts, the Fabric data agent boundary, and a
+deterministic interactive web-map design. Both agents are **deployed and verified** — see
+[The Foundry layer](#the-foundry-layer--turning-evidence-into-a-written-report). What is
+still not built is the **browser application** that would render the report and web map;
+the JSON and the map manifest it would consume are both published and validated.
+
+The division of labour holds throughout: the model explains validated Fabric evidence,
+while Spark and the map adapter remain responsible for scores, coordinates, geometry,
+bounds, and layers.
 
 ## CI/CD path
 
@@ -309,9 +474,19 @@ map adapter remain responsible for scores, coordinates, geometry, bounds, and la
 
 ## Cost — pause when finished
 
-```powershell
-az fabric capacity suspend --resource-group rg-fabric --capacity-name cpfabric
+An F64 bills at roughly **$11.52/hour** while Active, whether or not anything is running.
+Suspending immediately after a demo is the single easiest way to avoid burning money on
+this project.
+
+```bash
+CAP="/subscriptions/<sub>/resourceGroups/rg-fabric-demo/providers/Microsoft.Fabric/capacities/fabdemo85829"
+az resource invoke-action --action suspend --ids "$CAP"
+az resource show --ids "$CAP" --query "properties.state" -o tsv
 ```
+
+Foundry is consumption-priced and costs nothing while idle, so the report agent needs no
+pausing — and the committed sample input and output mean the report can be shown with the
+Fabric capacity suspended.
 
 ## Scope note
 
