@@ -35,22 +35,85 @@ Set `SUB` to the subscription holding `fabdemo85829`.
 
 ## Before you start
 
-Verified live on **2026-08-21**: pipeline outputs intact (22 Delta tables), the Fabric
-data agent answered correctly against the canonical run, and the Foundry report agent
-produced a report that passes both citation and JSON Schema validation.
+Verified end to end on **2026-08-21**: the pipeline re-ran clean in 14m48s and reproduced
+the canonical run to four decimal places, the data agent answered every demo question
+through its portal chat, and the Foundry agent produced a report passing both citation
+and schema validation.
 
-1. **Resume the capacity** (above). It reaches Active in well under a minute, but the
-   lakehouse SQL endpoints need a further minute or two before the data agent answers.
-   Resume at least five minutes before you present.
-2. **Run scoping is handled, but worth showing.** Gold holds four runs;
-   `b538ce7e-69bb-4fd1-8f00-7ba7e7fc0a0a` is the only one produced after the SIFT
-   decoding fix, and the agent is now pinned to it by name. Earlier it was told to "use
-   the most recent run" — unimplementable, since run IDs are UUIDs with no ordering — and
-   on an open-ended question it picked a superseded run and reported its inflated
-   figures as current. Fixed by `scripts/fabric/harden_data_agent.py`; all seven demo
-   questions were re-verified through the portal chat afterwards.
-3. **Have the committed samples open as a fallback.** `cicd/report-input.sample.json`
-   and `cicd/report-output.sample.json` need no capacity at all.
+### Resume the capacity 30 minutes before you present — not 5
+
+This is the one that will actually bite you.
+
+The capacity reports **Active** within a minute, and the Fabric API, lakehouses, and SQL
+endpoints all come back within a few minutes. **The data agent editor does not.** After a
+resume it shows
+
+```text
+Couldn't load the data agent
+Try refreshing, or wait a little while and try again.
+```
+
+for roughly **20–25 minutes**, while every backend check passes: the tables API responds,
+`getDefinition` succeeds, and `refreshMetadata` reports the SQL endpoints already in sync.
+There is nothing to fix and nothing to retry faster. It simply needs the time.
+
+Measured on 2026-08-21: agent working at 16:05, paused 16:10, resumed 16:15, editor
+failing 16:20 through 16:30, healthy again by ~16:40.
+
+```bash
+CAP="/subscriptions/<sub>/resourceGroups/rg-fabric-demo/providers/Microsoft.Fabric/capacities/fabdemo85829"
+az resource invoke-action --action resume  --ids "$CAP"
+az resource show --ids "$CAP" --query "properties.state" -o tsv
+```
+
+**Do not pause between a rehearsal and the real thing.** Leave it Active and suspend once,
+afterwards.
+
+### Warm it up with one throwaway question
+
+Before anyone is watching, open the data agent and ask anything. First response after a
+resume is slower; later ones land in 4–15 seconds.
+
+### Keep two things on the Desktop
+
+Both work with the capacity **paused**, so they are your fallback if Fabric is having a
+bad day:
+
+* `risk-webmap.html` — the full interactive risk map with hotspot popups
+* `report-output.json` — a validated grounded report
+
+Fetch them from OneLake with `Files/gold_rf1_webmap/runs/<run-id>/gold_rf1_webmap.html`
+and `Files/agent-handoff/<run-id>/report-input.json`; the committed
+`cicd/report-*.sample.json` serve the same purpose.
+
+### Tab order
+
+Open these left to right and never alt-tab out of the browser:
+
+| # | Tab | Used in |
+| --- | --- | --- |
+| 1 | Workspace item list | Opening |
+| 2 | `bronze_data_overview` | Act 1 |
+| 3 | `bronze_lakehouse` → `bronze_bc_soil_survey_polygons` | Act 1 |
+| 4 | `silver_source_features` | Act 2 |
+| 5 | `gold_rf1_risk_matrix` | Act 2 |
+| 6 | `risk-webmap.html` | Act 2 |
+| 7 | `agent_handoff_publisher` | Act 3 |
+| 8 | `geohazard_data_agent` | Act 3 |
+| 9 | `report-output.json` | Act 4 |
+| 10 | Foundry project | Act 4 |
+| 11 | GitHub repo | Close |
+
+### Run scoping is handled — and it is worth a sentence
+
+Gold holds five runs. Only the canonical one is post-SIFT-fix, and the agent is pinned to
+it by name. It used to be told to "use the most recent run", which is unimplementable —
+run IDs are UUIDs and carry no ordering — and on an open-ended question it picked a
+superseded run, reported its inflated figures as current, and called the good run "an
+older run". Fixed by `scripts/fabric/harden_data_agent.py`.
+
+Worth showing rather than hiding: ask *"talk to me about my data"* and it names the run it
+used, unprompted.
 
 ---
 
@@ -253,6 +316,44 @@ python scripts/foundry/create_report_agent.py \
 > connections through an Azure ML workspace store that a Foundry project does not have.
 > A hub-based project would be required. The system prompt already treats a missing tool
 > as a data gap, which is why the report is complete without it.
+
+## Question crib sheet
+
+Every question below was run through the portal chat on 2026-08-21 and answered from the
+canonical run. Response times were 4–18 seconds. Ask them roughly in this order — it
+builds from "it can read the data" to "it knows what the data means".
+
+| Ask | You should hear |
+| --- | --- |
+| *Talk to me about my data* | Names the canonical run unprompted, gives the full band breakdown, the top hotspot, the soil units, the Sentinel-1 gap, and the ground-truth caveat |
+| *How much of the area is at High or Extreme risk?* | 13.28 km², 36.88% |
+| *What is the highest-ranked hotspot and what is it sitting on?* | `hs-001`, Extreme, 0.2512 km², ALBION, poorly drained, Built-up, slope 3.1°, fault 5.26 km |
+| *Which soil units underlie the Extreme risk area, and how are they drained?* | ALBION, CARVOLTH, SCAT, HAZELWOOD, CLOVERDALE, PAGE, TRIGGS, GRAVEL PIT — mostly poorly or very poorly drained |
+| *How far is the nearest mapped fault from hotspot hs-003?* | 4.98 km |
+| *Which configured sources returned no records for this run?* | Sentinel-1 GRD, status `unavailable` — described as absent data, not zero hazard |
+| *What surficial materials are mapped within 2 km of the AOI centre?* | Glaciomarine, eolian, fluvial, marine, open water, intrusive rock, with named soil units |
+
+Two worth landing deliberately:
+
+* **The Sentinel-1 question** demonstrates the distinction the whole design rests on —
+  *missing coverage is not a measured zero*. The agent says the data is absent.
+* **"Talk to me about my data"** is the open-ended one that used to fail. Now it names the
+  run it used and refuses to blend runs.
+
+## If something goes wrong
+
+| Symptom | Cause | What to do |
+| --- | --- | --- |
+| "Couldn't load the data agent" | Capacity resumed under ~25 minutes ago | Nothing. It resolves itself. Show the web map and the report JSON meanwhile — neither needs capacity |
+| Agent quotes ~72% High/Extreme | It resolved to a superseded run | Name the canonical run in the question. Re-run `harden_data_agent.py` afterwards |
+| Notebook opens with no maps | It has only ever been run by the pipeline | Run all once (~2.5 min). Pipeline runs never populate the notebook item |
+| Notebook cell fails on `Affine` | `affine` not pinned to 2.3.1 in the Environment | Republish `geohazard_env` (~20 min) — do not attempt during a demo |
+| Report generation exits non-zero | Citation or schema validation failed | That is the control working. Show `cicd/report-output.sample.json` instead |
+| Fabric portal is slow or erroring | — | Fall back to the Desktop copies; the whole Act 4 story works from them |
+
+**The safest demo path if the capacity is misbehaving:** Acts 1 and 2 from the web map and
+the committed samples, Act 4 from `report-output.json`. Only the live agent Q&A genuinely
+needs Fabric to be healthy.
 
 ## Known gaps
 

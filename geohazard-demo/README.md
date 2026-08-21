@@ -43,6 +43,88 @@ radius, and detailed analysis radius. Planetary Computer sources have broad cove
 DataBC geology and soil layers are specific to British Columbia and can be empty for
 other locations.
 
+## The end-to-end flow
+
+Two public APIs in, a screening report and a live analyst Q&A out. Nothing is uploaded,
+no credentials are configured, and every number in the report traces back to a row in a
+Delta table.
+
+```mermaid
+flowchart TB
+  subgraph SRC["Public APIs - no keys, no uploads"]
+    PC["Planetary Computer STAC<br/>satellite, DEM, land cover"]
+    BC["DataBC WFS<br/>geology, faults, SIFT soil survey"]
+  end
+
+  subgraph BRONZE["Bronze - catalogue, verbatim"]
+    B["13 Delta tables<br/>STAC items + raw GeoJSON<br/><i>not queryable by SQL or an agent</i>"]
+  end
+
+  subgraph SILVER["Silver - make it answerable"]
+    S1["silver_source_features<br/>4,269 features flattened to typed columns"]
+    S2["silver_rf1_soil_susceptibility<br/>360,000 pixels on one 10 m UTM grid<br/>+ which mapped polygon each pixel sits on"]
+  end
+
+  subgraph GOLD["Gold - score and localise"]
+    G1["risk = S x C, banded<br/>Low 40.9 / Mod 22.2 / High 33.0 / Extreme 3.8%"]
+    G2["25 ranked hotspots<br/>each with soil, drainage, geology, slope, fault distance"]
+    G3["web map + GeoJSON + Shapefile<br/>+ manifest with per-layer queryHash"]
+  end
+
+  subgraph AI["Two agents, two jobs"]
+    D["Fabric data agent<br/>live spatial questions"]
+    C2["report-input.json<br/>64 evidence records"]
+    F["Foundry report agent<br/>cited, schema-validated report"]
+  end
+
+  PC --> B
+  BC --> B
+  B --> S1 --> S2 --> G1 --> G2 --> G3
+  G2 --> C2 --> F
+  G2 --> D
+```
+
+### Stage by stage, with the numbers from a real run
+
+| Stage | Input | Output | Why it matters |
+| --- | --- | --- | --- |
+| **Bronze** | 2 public APIs, 1 AOI | 13 tables, 476 STAC items, 4,235 soil polygons | Raw fidelity, preserved verbatim. **Deliberately useless to SQL** — this is where most geospatial demos stop |
+| **Silver flatten** | Bronze GeoJSON | 4,269 typed feature rows | Drainage, parent material, texture, rock type, fault type — now answerable |
+| **Silver grid** | Rasters + soil polygons | 360,000 pixels on one shared GeoBox | Every source co-registers pixel-for-pixel; each pixel records the mapped polygon beneath it |
+| **Gold risk** | S and C ratings | 4 bands over 36 km² | The *how much* |
+| **Gold hotspots** | Contiguous High/Extreme pixels | 25 ranked features, largest 0.25 km² | The *where* and the *why* — `hs-001` is ALBION, poorly drained, glaciomarine, built-up, 5.26 km from the nearest mapped fault |
+| **Handoff** | Gold tables | `report-input.json`, 64 evidence records | Quarantines the run if the tables disagree on totals |
+| **Report** | The contract only | Cited, schema-validated document | Two automated checks reject it otherwise |
+
+### What the client actually sees
+
+1. **An interactive map** — risk bands, 25 numbered hotspot pins. Click one and the popup
+   is the evidence: soil unit, drainage class, land cover, slope, fault distance.
+2. **A live conversation with the data** — *"Which soil units underlie the Extreme risk
+   area, and how are they drained?"* answers in seconds, naming its source table and run.
+3. **A written screening report** — every quantitative claim carrying an evidence ID that
+   resolves back to a Delta row, and a data-gap section derived from what the run actually
+   saw.
+
+### It reproduces
+
+The pipeline was run twice, two weeks apart, against live public APIs:
+
+| | 2026-08-17 | 2026-08-21 |
+| --- | --- | --- |
+| Low | 40.8961% | 40.8961% |
+| Moderate | 22.2258% | 22.2258% |
+| High | 33.0344% | 33.0344% |
+| Extreme | 3.8436% | 3.8436% |
+| Hotspots / evidence records | 25 / 64 | 25 / 64 |
+| Wall clock | 12m03s | 14m48s |
+
+Same figures to four decimal places, and the same single data gap. Determinism is the
+point: the model is never asked to compute anything, only to explain values Spark already
+produced.
+
+---
+
 ## Medallion architecture
 
 | Layer | Notebook | Lakehouse | What it produces |
@@ -52,14 +134,6 @@ other locations.
 | **Silver** | `silver_rf1_soil_susceptibility` | `silver_lakehouse` | AOI pixels clipped to a 10 m grid; RF-1 factor metrics, surveyed soil ground truth, per-pixel S/C ratings, and the **source feature identity** each pixel sits on |
 | **Gold** | `gold_rf1_risk_matrix` | `gold_lakehouse` | Risk tables, **ranked hotspots with spatial attribution**, dissolved risk-area polygons, GeoJSON/Shapefile exports, manifest, and interactive web map |
 | **Gold** | `agent_handoff_publisher` | `gold_lakehouse` | Validated `report-input.json` evidence envelope for the Foundry report agent |
-
-```text
-bronze (catalogue metadata)  ─►  silver (flatten + clip + score)  ─►  gold (risk, hotspots)
-                                                                        │
-                                        ┌───────────────────────────────┴──────────────┐
-                                        ▼                                              ▼
-                          Fabric data agent (live Q&A)              handoff contract ─► Foundry report agent
-```
 
 Every table is partitioned by `run_id`, so one workspace can hold many screening runs
 and every query — including the data agent's — can be scoped to a single run.
