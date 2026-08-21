@@ -71,16 +71,30 @@ Sample input and output are committed under `cicd/`, so the report can be demoed
 
 ## Open items
 
-**1. Bind the Fabric tool inside Foundry — portal only.**
-The ARM connections API rejects every Fabric category (`FabricDataAgent`, `Fabric`,
-`MicrosoftFabric`, `FabricAISkill`) across four preview API versions; only generic
-categories like `ApiKey` are accepted. Create the connection in
-[ai.azure.com](https://ai.azure.com) → project → Management center → Connected
-resources → **Microsoft Fabric**, name it `fabric_geohazard`, then attach it to
-`geohazard-report-agent`. Resume capacity first or the connection test fails.
+**1. Fabric tool inside Foundry — blocked by project type, not by the connection.**
+Resolved 2026-08-21, and the earlier diagnosis was incomplete. The connection was never
+the real obstacle:
 
-Not a blocker: the report agent runs the unattended handoff path, and the Fabric data
-agent answers standalone.
+* The `fabric_geohazard` connection **exists** on the project, category
+  `MicrosoftFabric`, Entra ID auth, targeting the data agent. It was created in the
+  portal; the ARM connections API refuses that category, which is why it looked
+  portal-only.
+* Attaching it to `geohazard-report-agent` as a tool **succeeds**. The assistant accepts
+  `{"type": "fabric_dataagent", "fabric_dataagent": {"connections": [{"connection_id":
+  "<arm-id>"}]}}` and echoes it back.
+* Every **run** then fails with `missing_required_parameter: AML connections are
+  required for Fabric tool.` Tried the project-scoped ARM id, the account-scoped ARM id,
+  and the bare connection name — same error each time. `tool_resources` rejects any
+  `fabric_*` key outright (`unknown_parameter`).
+
+The runtime resolves Fabric tool connections through an **Azure ML workspace connection
+store**, which a Foundry project (`Microsoft.CognitiveServices/accounts/projects`) does
+not have. Supporting it needs a **hub-based** AI Foundry project. That is a
+re-provisioning decision, not a configuration fix.
+
+The tool was removed again so the agent runs clean. The unattended handoff path is
+unaffected — it never used the tool, and the system prompt already reports an
+unavailable tool as a data gap.
 
 **2. Data agent hardening — done 2026-08-21, verified through the portal chat.**
 Driving the published agent through its own chat UI (not the SDK) surfaced a defect the

@@ -227,17 +227,20 @@ python scripts/foundry/create_report_agent.py \
 ```
 
 > The report agent runs the **unattended path**: the handoff JSON goes straight to the
-> model. The Fabric data-agent *tool inside Foundry* is not wired — its connection
-> category is not creatable through the ARM connections API in this version, so it is a
-> portal step. The system prompt already treats a missing tool as a data gap, which is
-> why the report is complete without it.
+> model. The Fabric data-agent *tool inside Foundry* is not wired, and it cannot be on
+> this project. The connection exists and attaches to the agent fine, but every run
+> fails with `AML connections are required for Fabric tool` — the runtime resolves those
+> connections through an Azure ML workspace store that a Foundry project does not have.
+> A hub-based project would be required. The system prompt already treats a missing tool
+> as a data gap, which is why the report is complete without it.
 
 ## Known gaps
 
 * The **browser report experience is not built**. The report JSON and web-map manifest
   it would consume are both published and validated.
-* The Fabric data-agent **tool binding inside Foundry** is not configured (see above).
-  The Fabric data agent itself works standalone.
+* The Fabric data-agent **tool binding inside Foundry** is not possible on this project
+  type (see above). The Fabric data agent itself works standalone, and was driven
+  through its portal chat on 2026-08-21.
 * The reference architecture names `gpt-4.1-mini`; this deployment uses **`gpt-5.4-mini`**
   because gpt-4.1-mini is not deployable in Canada Central on this subscription under
   any SKU.
