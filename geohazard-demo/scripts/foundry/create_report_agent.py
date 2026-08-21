@@ -56,6 +56,8 @@ def main():
     parser.add_argument("--prompt", default="agent-architecture/prompts/report-agent-system.md")
     parser.add_argument("--agent-name", default="geohazard-report-agent")
     parser.add_argument("--output", default="cicd/report-output.sample.json")
+    parser.add_argument("--schema",
+                        default="agent-architecture/contracts/geohazard-report-output.schema.json")
     args = parser.parse_args()
 
     config = json.loads(Path(args.foundry).read_text(encoding="utf-8"))
@@ -148,16 +150,42 @@ def main():
     print(f"\nwrote {args.output}")
 
     # ------------------------------------------------------------ validation
+    failures = []
+
     declared = {e["id"] for e in report_input["evidence"]}
     cited = set(re.findall(r"\bE[1-9][0-9]*\b", json.dumps(document)))
     unknown = cited - declared
     print(f"evidence cited: {len(cited)}  unknown citations: {sorted(unknown) or 'none'}")
     if unknown:
-        print("FAIL: report references evidence IDs that do not exist. Reject before rendering.")
+        failures.append("report references evidence IDs that were not supplied")
+        print("FAIL: report references evidence IDs that do not exist.")
     else:
         print("PASS: every citation resolves to supplied evidence.")
-    print(f"top-level keys: {sorted(document.keys())}")
 
+    # Citation checking alone let a completely different document shape through -- the
+    # model was inventing top-level keys and omitting required ones. Validate the
+    # contract itself, not just the citations inside it.
+    try:
+        import jsonschema
+    except ImportError:
+        print("SKIP: jsonschema not installed; contract shape unverified "
+              "(pip install jsonschema)")
+    else:
+        schema = json.loads(Path(args.schema).read_text(encoding="utf-8"))
+        errors = sorted(jsonschema.Draft202012Validator(schema).iter_errors(document),
+                        key=lambda error: list(error.absolute_path))
+        if errors:
+            failures.append(f"{len(errors)} schema violation(s)")
+            print(f"FAIL: {len(errors)} schema violation(s) against {args.schema}")
+            for error in errors[:10]:
+                location = "/".join(str(part) for part in error.absolute_path) or "<root>"
+                print(f"  {location}: {error.message[:160]}")
+        else:
+            print(f"PASS: document validates against {Path(args.schema).name}")
+
+    print(f"top-level keys: {sorted(document.keys())}")
+    if failures:
+        raise SystemExit("REJECT before rendering: " + "; ".join(failures))
 
 if __name__ == "__main__":
     main()

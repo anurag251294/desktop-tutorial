@@ -33,6 +33,25 @@ Set `SUB` to the subscription holding `fabdemo85829`.
 
 ---
 
+## Before you start
+
+Verified live on **2026-08-21**: pipeline outputs intact (22 Delta tables), the Fabric
+data agent answered correctly against the canonical run, and the Foundry report agent
+produced a report that passes both citation and JSON Schema validation.
+
+1. **Resume the capacity** (above). It reaches Active in well under a minute, but the
+   lakehouse SQL endpoints need a further minute or two before the data agent answers.
+   Resume at least five minutes before you present.
+2. **Name the run in data-agent questions.** Gold holds four runs: `b538ce7e-69bb-4fd1-8f00-7ba7e7fc0a0a`
+   is the only one produced after the SIFT decoding fix. The other three predate it and
+   report ~72% of the AOI in a single band. The agent's instructions tell it to use the
+   most recent run and it resolved to the correct one under test, but saying the run ID
+   out loud removes the risk entirely — and run scoping is a feature worth showing.
+3. **Have the committed samples open as a fallback.** `cicd/report-input.sample.json`
+   and `cicd/report-output.sample.json` need no capacity at all.
+
+---
+
 ## Act 1 — Everything comes from public APIs (3 min)
 
 **Open `bronze_data_overview` and scroll the rendered maps.**
@@ -119,11 +138,16 @@ share of the grid the soil survey actually covers — not boilerplate.
 `gold_rf1_risk_hotspots`, `gold_rf1_band_summary`, `gold_rf1_risk_matrix`, and
 `silver_source_features`):
 
-* *Which soil units underlie the Extreme risk area, and how are they drained?*
-* *What is the highest-ranked hotspot, and what is it sitting on?*
+* *For run `b538ce7e-69bb-4fd1-8f00-7ba7e7fc0a0a`, which soil units underlie
+  the Extreme risk area, and how are they drained?*
+* *What is the highest-ranked hotspot in that run, and what is it sitting on?*
 * *How far is the nearest mapped fault from hotspot `hs-003`?*
-* *Which configured sources returned no records for this run?*
+* *Which configured sources returned no records for that run?*
 * *What surficial materials are mapped within 2 km of the AOI centre?*
+
+Answers are attributed from `gold_rf1_risk_hotspots`, whose columns are `soil_name`,
+`soil_drainage_class`, `parent_material`, `worldcover_class`, `mean_slope_deg`,
+`mean_elevation_m`, and `nearest_fault_km`.
 
 Scope for `agent-architecture/fabric-data-agent.md` is already written to match these
 tables.
@@ -180,10 +204,15 @@ contract. Show `cicd/report-output.sample.json`, generated against run
 
 * Risk distribution matches the gold tables exactly — the model copied evidence rather
   than computing anything.
-* Every hotspot summary names its soil unit, drainage class, and parent material, and
-  cites the evidence ID it came from.
-* **63 evidence citations, all of which resolve.** The validator rejects any report
-  referencing an ID that was not supplied.
+* The document is the shape the contract demands: `title`, a cited `executiveSummary`,
+  `keyFindings` graded *information* / *watch* / *priority-review*, `sections`,
+  `limitations`, `dataGaps`, and `mapReferences` that tie narrative back to `hs-NNN`
+  feature IDs on the web map.
+* The hotspots section names each hotspot's soil unit, drainage class, parent material,
+  land cover, slope, elevation, and distance to the nearest mapped fault.
+* **Every evidence citation resolves, and the document validates against
+  `geohazard-report-output.schema.json`.** Both checks run automatically and the script
+  exits non-zero if either fails — so a malformed report never reaches a renderer.
 * Data gaps are reported honestly: Sentinel-1 GRD unavailable, *and* the Fabric tool
   itself unavailable for that request.
 

@@ -1,6 +1,6 @@
 # Session Handoff — Geohazard Demo
 
-State as of **2026-08-17 17:50 UTC**. Demo is **Friday 2026-08-21**.
+State as of **2026-08-21 14:20 UTC**, re-verified live on demo day.
 
 Capacity `fabdemo85829` is **Paused**. Nothing is running or billing.
 
@@ -22,9 +22,28 @@ Verified run: **`b538ce7e-69bb-4fd1-8f00-7ba7e7fc0a0a`**
 Risk distribution: Low 40.90% · Moderate 22.23% · High 33.03% · Extreme 3.84%
 (360,000 px over 36 km², 25 ranked hotspots, largest 0.25 km²)
 
-Report agent output on that run: 63 evidence citations, **all resolving**; risk figures
-identical to the gold tables; both data gaps reported (Sentinel-1 GRD unavailable, and
-the Fabric tool unavailable for that request).
+Report agent output on that run: every evidence citation resolves, the document
+**validates against `geohazard-report-output.schema.json`**, risk figures are identical
+to the gold tables, and both data gaps are reported (Sentinel-1 GRD unavailable, and the
+Fabric tool unavailable for that request).
+
+### Re-verified 2026-08-21
+
+* All 22 Delta tables intact and queryable; `gold_rf1_risk_pixels` holds 1.44 M rows.
+* Fabric data agent answered live through `FabricOpenAI` in the SDK: 25 hotspots for the
+  canonical run, top hotspot on **ALBION / poorly drained**, and it named the run it used.
+* Foundry report agent regenerated `cicd/report-output.sample.json` end to end.
+
+Three fixes went in on demo day, all in the report contract path:
+
+1. The report was **not conforming to its own schema** — the model was emitting ad-hoc
+   keys (`riskDistribution`, `hotspots`, `methodology`) and omitting every required one
+   (`title`, `keyFindings`, `sections`, `dataGaps`). Citation checking was the only
+   validation, so this went unnoticed. The OUTPUT RULES now enumerate the exact contract.
+2. `create_report_agent.py` now validates the document against the JSON Schema and exits
+   non-zero on any violation, so the shape cannot silently drift again.
+3. The disclaimer is a schema `const`; the prompt wrapped it across three lines and the
+   model paraphrased it. It is now given as one exact literal that must be copied.
 
 Sample input and output are committed under `cicd/`, so the report can be demoed
 **without resuming capacity**.
@@ -69,7 +88,21 @@ All columns are currently selected. Remove `geometry_wkt` and `properties_json` 
 `gold_rf1_risk_areas`. A `SELECT *` on a soil query otherwise returns a wall of
 coordinates.
 
-**3. Browser report UI** — not built. The report JSON and web-map manifest it would
+**3. Four runs live in gold; only one is good.**
+`b538ce7e-69bb-4fd1-8f00-7ba7e7fc0a0a` is the only run produced after the SIFT decoding
+fix. `0da6944e-…`, `777d9049-…`, and `b50e84ae-…` predate it and each report 71.9% of
+the AOI in one band. The agent resolved to the correct run under test and the good run
+happens to sort last, but that is luck, not design. Either name the run when asking, or
+delete the three stale runs — they are pure pre-fix output:
+
+```sql
+DELETE FROM gold_rf1_band_summary WHERE run_id <> 'b538ce7e-69bb-4fd1-8f00-7ba7e7fc0a0a'
+```
+
+...and the same for `gold_rf1_risk_hotspots`, `gold_rf1_risk_matrix`,
+`gold_rf1_risk_areas`, `gold_rf1_risk_pixels`, and the silver tables.
+
+**4. Browser report UI** — not built. The report JSON and web-map manifest it would
 consume are both published and validated.
 
 ---

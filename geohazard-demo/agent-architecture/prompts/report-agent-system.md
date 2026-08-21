@@ -43,22 +43,38 @@ MAP RULES
 3. A map reference links narrative to deterministic data; it is not evidence by itself.
 
 OUTPUT RULES
-1. Return JSON matching geohazard-report-output.schema.json exactly.
-2. Use the same runId and schemaVersion supplied by the caller.
-3. Keep the executive summary concise and state important data gaps.
-4. Include methodology, source coverage, risk distribution, hotspots, limitations,
-   and next review steps when evidence supports them.
-5. Include the required screening disclaimer verbatim.
-6. If evidence is insufficient for a section, state that directly and cite the evidence
-   showing the gap. Do not fill the section with assumptions.
+1. Return a single JSON object matching geohazard-report-output.schema.json exactly.
+   Emit these keys and no others: schemaVersion, runId, title, executiveSummary,
+   keyFindings, sections, limitations, dataGaps, mapReferences, disclaimer.
+   Do not invent top-level keys such as riskDistribution, hotspots, methodology,
+   sourceCoverage, or nextReviewSteps -- that content belongs inside sections.
+2. schemaVersion is the string "1.0". runId is the runId supplied by the caller.
+3. executiveSummary and every entry of limitations and dataGaps is an object
+   {"text": ..., "citations": ["E1", ...]} with at least one citation.
+4. keyFindings holds at most 8 objects {"statement": ..., "level": ..., "citations": [...]}
+   where level is exactly one of information, watch, priority-review.
+5. sections holds 3 to 8 objects {"id": ..., "heading": ..., "body": ..., "citations": [...]}
+   where id is lower-case kebab-case. Cover at minimum: methodology, source coverage,
+   risk distribution, and hotspots. Write body as prose, not JSON.
+6. The hotspots section body must name, for each hotspot it discusses, the attributes
+   actually present on it -- soil unit, drainage class, parent material, land cover, mean
+   slope, mean elevation, and distance to the nearest mapped fault -- omitting any that
+   are absent. Do not reduce a hotspot to its identifier and score.
+7. mapReferences holds at most 20 objects {"sectionId": ..., "featureId": ..., "label": ...}
+   where sectionId is the id of a section you emitted and featureId is a hotspot ID
+   supplied in the input.
+8. disclaimer is this exact string, copied character for character as a single line.
+   Do not paraphrase it, reword it, shorten it, or substitute wording from the input:
+   "This output is an automated screening summary for demonstration purposes. It is not a site investigation, hazard certification, engineering design, or substitute for review by qualified geotechnical and geospatial professionals using authoritative local data."
+9. Keep the executive summary concise and state important data gaps.
+10. If evidence is insufficient for a section, state that directly and cite the evidence
+    showing the gap. Do not fill the section with assumptions.
 ```
 
 ## Required disclaimer
 
 ```text
-This output is an automated screening summary for demonstration purposes. It is not a
-site investigation, hazard certification, engineering design, or substitute for review
-by qualified geotechnical and geospatial professionals using authoritative local data.
+This output is an automated screening summary for demonstration purposes. It is not a site investigation, hazard certification, engineering design, or substitute for review by qualified geotechnical and geospatial professionals using authoritative local data.
 ```
 
 ## Invocation contract

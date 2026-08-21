@@ -1,686 +1,331 @@
 {
-  "runId": "b538ce7e-69bb-4fd1-8f00-7ba7e7fc0a0a",
   "schemaVersion": "1.0",
-  "reportType": "geohazard-screening",
-  "methodology": {
-    "riskFactor": "RF-1",
-    "formula": "risk_score = s_rating * c_rating",
-    "bandDefinitions": [
-      {
-        "band": "Low",
-        "minimumScore": 1,
-        "maximumScore": 4
-      },
-      {
-        "band": "Moderate",
-        "minimumScore": 5,
-        "maximumScore": 9
-      },
-      {
-        "band": "High",
-        "minimumScore": 10,
-        "maximumScore": 19
-      },
-      {
-        "band": "Extreme",
-        "minimumScore": 20,
-        "maximumScore": 25
-      }
-    ],
-    "summary": "RF-1 screening uses the supplied deterministic risk equation and band definitions. The Fabric data-agent tool was unavailable, so the report is based only on the supplied input and evidenced pipeline outputs."
+  "runId": "b538ce7e-69bb-4fd1-8f00-7ba7e7fc0a0a",
+  "title": "RF-1 Geohazard Screening Report",
+  "executiveSummary": {
+    "text": "Screening results catalogued 360,000 analysis-grid pixels over the AOI, with 40.8961% Low, 22.2258% Moderate, 33.0344% High, and 3.8436% Extreme risk bands. The highest-ranked hotspots are all Extreme and are observed primarily in built-up areas over ALBION, CARVOLTH, HAZELWOOD, SCAT, CLOVERDALE, TRIGGS, and GRAVEL PIT soil units. A key data gap is that Sentinel-1 GRD source coverage is unavailable for this run, and soil survey coverage does not extend to 6.977% of the grid.",
+    "citations": [
+      "E1",
+      "E17",
+      "E18",
+      "E19",
+      "E20",
+      "E14",
+      "E64"
+    ]
   },
-  "executiveSummary": "For this run, the analysis grid contains 360,000 pixels over a 3.0 km radius AOI at 10 m resolution. The risk surface is distributed across Low, Moderate, High, and Extreme bands, with High occupying the largest share. The top 25 hotspots are all catalogued as Extreme and are concentrated in built-up areas. A key data gap is Sentinel-1 GRD, which is unavailable for this run.",
-  "sourceCoverage": [
+  "keyFindings": [
     {
-      "sourceName": "ALOS PALSAR mosaic STAC items",
-      "tableName": "bronze_alos_palsar_mosaic",
-      "status": "available",
-      "recordCount": 7,
-      "evidenceIds": [
-        "E3"
+      "statement": "The analysis grid contains 360,000 pixels across 36.0 km2.",
+      "level": "information",
+      "citations": [
+        "E1",
+        "E2"
       ]
     },
     {
-      "sourceName": "BC bedrock geology",
-      "tableName": "bronze_bc_bedrock_geology",
-      "status": "available",
-      "recordCount": 18,
-      "evidenceIds": [
-        "E4"
+      "statement": "Risk band extent is catalogued as 40.8961% Low, 22.2258% Moderate, 33.0344% High, and 3.8436% Extreme.",
+      "level": "information",
+      "citations": [
+        "E17",
+        "E18",
+        "E19",
+        "E20"
       ]
     },
     {
-      "sourceName": "BC geological fault lines",
-      "tableName": "bronze_bc_geological_faults",
-      "status": "available",
-      "recordCount": 8,
-      "evidenceIds": [
-        "E5"
+      "statement": "The 25 listed hotspots are all catalogued as Extreme with riskScore 25.",
+      "level": "watch",
+      "citations": [
+        "E39",
+        "E40",
+        "E41",
+        "E42",
+        "E43",
+        "E44",
+        "E45",
+        "E46",
+        "E47",
+        "E48",
+        "E49",
+        "E50",
+        "E51",
+        "E52",
+        "E53",
+        "E54",
+        "E55",
+        "E56",
+        "E57",
+        "E58",
+        "E59",
+        "E60",
+        "E61",
+        "E62",
+        "E63"
       ]
     },
     {
-      "sourceName": "BC quaternary / surficial geology",
-      "tableName": "bronze_bc_quaternary_geology",
-      "status": "available",
-      "recordCount": 1,
-      "evidenceIds": [
-        "E6"
-      ]
-    },
-    {
-      "sourceName": "BC SIFT - soil survey project boundaries",
-      "tableName": "bronze_bc_soil_project_boundaries",
-      "status": "available",
-      "recordCount": 7,
-      "evidenceIds": [
-        "E7"
-      ]
-    },
-    {
-      "sourceName": "BC Soil Information Finder Tool (SIFT) - soil survey polygons",
-      "tableName": "bronze_bc_soil_survey_polygons",
-      "status": "available",
-      "recordCount": 4235,
-      "evidenceIds": [
-        "E8"
-      ]
-    },
-    {
-      "sourceName": "Copernicus DEM GLO-30 STAC items",
-      "tableName": "bronze_cop_dem_glo_30",
-      "status": "available",
-      "recordCount": 1,
-      "evidenceIds": [
-        "E9"
-      ]
-    },
-    {
-      "sourceName": "ESA WorldCover STAC items",
-      "tableName": "bronze_esa_worldcover",
-      "status": "available",
-      "recordCount": 2,
-      "evidenceIds": [
-        "E10"
-      ]
-    },
-    {
-      "sourceName": "Harmonized global biomass STAC items",
-      "tableName": "bronze_hgb",
-      "status": "available",
-      "recordCount": 1,
-      "evidenceIds": [
-        "E11"
-      ]
-    },
-    {
-      "sourceName": "Esri 10 m land use / land cover STAC items",
-      "tableName": "bronze_io_lulc_9_class",
-      "status": "available",
-      "recordCount": 6,
-      "evidenceIds": [
-        "E12"
-      ]
-    },
-    {
-      "sourceName": "Single-collection parameterised demo table",
-      "tableName": "bronze_satellite_stac_items",
-      "status": "available",
-      "recordCount": 476,
-      "evidenceIds": [
-        "E13"
-      ]
-    },
-    {
-      "sourceName": "Sentinel-1 GRD radar STAC items",
-      "tableName": "bronze_sentinel_1_grd",
-      "status": "unavailable",
-      "recordCount": null,
-      "evidenceIds": [
+      "statement": "Sentinel-1 GRD input coverage is unavailable for this run.",
+      "level": "priority-review",
+      "citations": [
         "E14"
       ]
     },
     {
-      "sourceName": "Sentinel-1 RTC radar STAC items",
-      "tableName": "bronze_sentinel_1_rtc",
-      "status": "available",
-      "recordCount": 20,
-      "evidenceIds": [
-        "E15"
-      ]
-    },
-    {
-      "sourceName": "Sentinel-2 L2A optical STAC items",
-      "tableName": "bronze_sentinel_2_l2a",
-      "status": "available",
-      "recordCount": 20,
-      "evidenceIds": [
-        "E16"
+      "statement": "Soil survey polygons mapped 93.023% of the analysis grid, leaving 6.977% without that coverage.",
+      "level": "watch",
+      "citations": [
+        "E64"
       ]
     }
   ],
-  "riskDistribution": [
+  "sections": [
     {
-      "band": "Low",
-      "pixelCount": 147226,
-      "areaKm2": 14.7226,
-      "pct": 40.89611111111111,
-      "evidenceIds": [
-        "E17"
+      "id": "methodology",
+      "heading": "Methodology",
+      "body": "This report is a screening summary for RF-1 using the supplied formula risk_score = s_rating * c_rating and the provided band definitions for Low, Moderate, High, and Extreme. The report explains only deterministic values catalogued in the run evidence and does not infer missing measurements or recalculate scores.",
+      "citations": [
+        "E1",
+        "E2"
       ]
     },
     {
-      "band": "Moderate",
-      "pixelCount": 80013,
-      "areaKm2": 8.0013,
-      "pct": 22.225833333333334,
-      "evidenceIds": [
-        "E18"
+      "id": "source-coverage",
+      "heading": "Source coverage",
+      "body": "Source coverage is catalogued as available for ALOS PALSAR mosaic STAC items, BC bedrock geology, BC geological fault lines, BC quaternary / surficial geology, BC SIFT soil project boundaries, BC soil survey polygons, Copernicus DEM GLO-30, ESA WorldCover, Harmonized global biomass, Esri 10 m land use / land cover, a single-collection parameterised demo table, Sentinel-1 RTC radar STAC items, and Sentinel-2 L2A optical STAC items. Sentinel-1 GRD radar STAC items are unavailable. Soil survey coverage includes 334,883 of 360,000 pixels, or 93.023%, so 6.977% of the analysis grid lacks that surveyed-soil coverage.",
+      "citations": [
+        "E3",
+        "E4",
+        "E5",
+        "E6",
+        "E7",
+        "E8",
+        "E9",
+        "E10",
+        "E11",
+        "E12",
+        "E13",
+        "E14",
+        "E15",
+        "E16",
+        "E64"
       ]
     },
     {
-      "band": "High",
-      "pixelCount": 118924,
-      "areaKm2": 11.8924,
-      "pct": 33.034444444444446,
-      "evidenceIds": [
-        "E19"
-      ]
-    },
-    {
-      "band": "Extreme",
-      "pixelCount": 13837,
-      "areaKm2": 1.3837000000000002,
-      "pct": 3.8436111111111106,
-      "evidenceIds": [
+      "id": "risk-distribution",
+      "heading": "Risk distribution",
+      "body": "The risk band distribution over the 360,000-pixel analysis grid is catalogued as Low at 147,226 pixels, Moderate at 80,013 pixels, High at 118,924 pixels, and Extreme at 13,837 pixels. In percent terms, those bands are 40.8961%, 22.2258%, 33.0344%, and 3.8436%, respectively.",
+      "citations": [
+        "E1",
+        "E17",
+        "E18",
+        "E19",
         "E20"
       ]
-    }
-  ],
-  "riskMatrix": [
-    {
-      "sRating": 5,
-      "cRating": 1,
-      "riskScore": 5,
-      "riskBand": "Moderate",
-      "pixelCount": 26470,
-      "evidenceIds": [
-        "E21"
-      ]
     },
     {
-      "sRating": 1,
-      "cRating": 2,
-      "riskScore": 2,
-      "riskBand": "Low",
-      "pixelCount": 41057,
-      "evidenceIds": [
-        "E22"
-      ]
-    },
-    {
-      "sRating": 2,
-      "cRating": 2,
-      "riskScore": 4,
-      "riskBand": "Low",
-      "pixelCount": 92281,
-      "evidenceIds": [
-        "E23"
-      ]
-    },
-    {
-      "sRating": 3,
-      "cRating": 2,
-      "riskScore": 6,
-      "riskBand": "Moderate",
-      "pixelCount": 509,
-      "evidenceIds": [
-        "E24"
-      ]
-    },
-    {
-      "sRating": 4,
-      "cRating": 2,
-      "riskScore": 8,
-      "riskBand": "Moderate",
-      "pixelCount": 5,
-      "evidenceIds": [
-        "E25"
-      ]
-    },
-    {
-      "sRating": 5,
-      "cRating": 2,
-      "riskScore": 10,
-      "riskBand": "High",
-      "pixelCount": 36383,
-      "evidenceIds": [
-        "E26"
-      ]
-    },
-    {
-      "sRating": 1,
-      "cRating": 3,
-      "riskScore": 3,
-      "riskBand": "Low",
-      "pixelCount": 13711,
-      "evidenceIds": [
-        "E27"
-      ]
-    },
-    {
-      "sRating": 2,
-      "cRating": 3,
-      "riskScore": 6,
-      "riskBand": "Moderate",
-      "pixelCount": 31572,
-      "evidenceIds": [
-        "E28"
-      ]
-    },
-    {
-      "sRating": 3,
-      "cRating": 3,
-      "riskScore": 9,
-      "riskBand": "Moderate",
-      "pixelCount": 3485,
-      "evidenceIds": [
-        "E29"
-      ]
-    },
-    {
-      "sRating": 5,
-      "cRating": 3,
-      "riskScore": 15,
-      "riskBand": "High",
-      "pixelCount": 40016,
-      "evidenceIds": [
-        "E30"
-      ]
-    },
-    {
-      "sRating": 1,
-      "cRating": 4,
-      "riskScore": 4,
-      "riskBand": "Low",
-      "pixelCount": 177,
-      "evidenceIds": [
-        "E31"
-      ]
-    },
-    {
-      "sRating": 2,
-      "cRating": 4,
-      "riskScore": 8,
-      "riskBand": "Moderate",
-      "pixelCount": 491,
-      "evidenceIds": [
-        "E32"
-      ]
-    },
-    {
-      "sRating": 3,
-      "cRating": 4,
-      "riskScore": 12,
-      "riskBand": "High",
-      "pixelCount": 136,
-      "evidenceIds": [
-        "E33"
-      ]
-    },
-    {
-      "sRating": 5,
-      "cRating": 4,
-      "riskScore": 20,
-      "riskBand": "Extreme",
-      "pixelCount": 1937,
-      "evidenceIds": [
-        "E34"
-      ]
-    },
-    {
-      "sRating": 1,
-      "cRating": 5,
-      "riskScore": 5,
-      "riskBand": "Moderate",
-      "pixelCount": 17481,
-      "evidenceIds": [
-        "E35"
-      ]
-    },
-    {
-      "sRating": 2,
-      "cRating": 5,
-      "riskScore": 10,
-      "riskBand": "High",
-      "pixelCount": 42334,
-      "evidenceIds": [
-        "E36"
-      ]
-    },
-    {
-      "sRating": 3,
-      "cRating": 5,
-      "riskScore": 15,
-      "riskBand": "High",
-      "pixelCount": 55,
-      "evidenceIds": [
-        "E37"
-      ]
-    },
-    {
-      "sRating": 5,
-      "cRating": 5,
-      "riskScore": 25,
-      "riskBand": "Extreme",
-      "pixelCount": 11900,
-      "evidenceIds": [
-        "E38"
-      ]
-    }
-  ],
-  "hotspots": [
-    {
-      "featureId": "hs-001",
-      "rank": 1,
-      "riskBand": "Extreme",
-      "riskScore": 25,
-      "evidenceIds": [
-        "E39"
-      ],
-      "summary": "Catalogued as an Extreme hotspot. The hotspot is in a built-up area, with soilName ALBION, drainage class poorly drained, glaciomarine parent material, meanSlopeDeg 3.056, meanElevationM 52.56, and nearestFaultKm 5.262."
-    },
-    {
-      "featureId": "hs-002",
-      "rank": 2,
-      "riskBand": "Extreme",
-      "riskScore": 25,
-      "evidenceIds": [
-        "E40"
-      ],
-      "summary": "Catalogued as an Extreme hotspot. The hotspot is in a built-up area, with soilName ALBION, drainage class very poorly drained, glaciomarine parent material, meanSlopeDeg 3.163, meanElevationM 46.48, and nearestFaultKm 5.742."
-    },
-    {
-      "featureId": "hs-003",
-      "rank": 3,
-      "riskBand": "Extreme",
-      "riskScore": 25,
-      "evidenceIds": [
-        "E41"
-      ],
-      "summary": "Catalogued as an Extreme hotspot. The hotspot is in a built-up area, with soilName ALBION, drainage class very poorly drained, glaciomarine parent material, meanSlopeDeg 2.694, meanElevationM 44.12, and nearestFaultKm 4.98."
-    },
-    {
-      "featureId": "hs-004",
-      "rank": 4,
-      "riskBand": "Extreme",
-      "riskScore": 25,
-      "evidenceIds": [
-        "E42"
-      ],
-      "summary": "Catalogued as an Extreme hotspot. The hotspot is in a built-up area, with soilName ALBION, drainage class very poorly drained, glaciomarine parent material, meanSlopeDeg 3.078, meanElevationM 41.26, and nearestFaultKm 4.938."
-    },
-    {
-      "featureId": "hs-005",
-      "rank": 5,
-      "riskBand": "Extreme",
-      "riskScore": 25,
-      "evidenceIds": [
-        "E43"
-      ],
-      "summary": "Catalogued as an Extreme hotspot. The hotspot is in a built-up area, with soilName ALBION, drainage class very poorly drained, glaciomarine parent material, meanSlopeDeg 2.902, meanElevationM 51.53, and nearestFaultKm 5.23."
-    },
-    {
-      "featureId": "hs-006",
-      "rank": 6,
-      "riskBand": "Extreme",
-      "riskScore": 25,
-      "evidenceIds": [
-        "E44"
-      ],
-      "summary": "Catalogued as an Extreme hotspot. The hotspot is in a built-up area, with soilName CARVOLTH, drainage class poorly drained, fluvial parent material, meanSlopeDeg 3.352, meanElevationM 6.98, and nearestFaultKm 6.927."
-    },
-    {
-      "featureId": "hs-007",
-      "rank": 7,
-      "riskBand": "Extreme",
-      "riskScore": 25,
-      "evidenceIds": [
-        "E45"
-      ],
-      "summary": "Catalogued as an Extreme hotspot. The hotspot is in a built-up area, with soilName ALBION, drainage class very poorly drained, glaciomarine parent material, meanSlopeDeg 2.911, meanElevationM 39.41, and nearestFaultKm 4.762."
-    },
-    {
-      "featureId": "hs-008",
-      "rank": 8,
-      "riskBand": "Extreme",
-      "riskScore": 25,
-      "evidenceIds": [
-        "E46"
-      ],
-      "summary": "Catalogued as an Extreme hotspot. The hotspot is in a built-up area, with soilName CARVOLTH, drainage class poorly drained, fluvial parent material, meanSlopeDeg 4.034, meanElevationM 9.96, and nearestFaultKm 6.879."
-    },
-    {
-      "featureId": "hs-009",
-      "rank": 9,
-      "riskBand": "Extreme",
-      "riskScore": 25,
-      "evidenceIds": [
-        "E47"
-      ],
-      "summary": "Catalogued as an Extreme hotspot. The hotspot is in a built-up area, with soilName ALBION, drainage class very poorly drained, glaciomarine parent material, meanSlopeDeg 3.347, meanElevationM 46.4, and nearestFaultKm 6.074."
-    },
-    {
-      "featureId": "hs-010",
-      "rank": 10,
-      "riskBand": "Extreme",
-      "riskScore": 25,
-      "evidenceIds": [
-        "E48"
-      ],
-      "summary": "Catalogued as an Extreme hotspot. The hotspot is in a built-up area, with soilName ALBION, drainage class poorly drained, glaciomarine parent material, meanSlopeDeg 1.857, meanElevationM 47.6, and nearestFaultKm 6.122."
-    },
-    {
-      "featureId": "hs-011",
-      "rank": 11,
-      "riskBand": "Extreme",
-      "riskScore": 25,
-      "evidenceIds": [
-        "E49"
-      ],
-      "summary": "Catalogued as an Extreme hotspot. The hotspot is in a built-up area, with soilName HAZELWOOD, drainage class poorly drained, fluvial parent material, meanSlopeDeg 5.329, meanElevationM 6.64, and nearestFaultKm 8.051."
-    },
-    {
-      "featureId": "hs-012",
-      "rank": 12,
-      "riskBand": "Extreme",
-      "riskScore": 25,
-      "evidenceIds": [
-        "E50"
-      ],
-      "summary": "Catalogued as an Extreme hotspot. The hotspot is in a built-up area, with soilName SCAT, drainage class poorly drained, eolian parent material, meanSlopeDeg 2.539, meanElevationM 45.02, and nearestFaultKm 6.34."
-    },
-    {
-      "featureId": "hs-013",
-      "rank": 13,
-      "riskBand": "Extreme",
-      "riskScore": 25,
-      "evidenceIds": [
-        "E51"
-      ],
-      "summary": "Catalogued as an Extreme hotspot. The hotspot is in a built-up area, with soilName PAGE, drainage class poorly drained, fluvial parent material, meanSlopeDeg 4.197, meanElevationM 6.94, and nearestFaultKm 8.152."
-    },
-    {
-      "featureId": "hs-014",
-      "rank": 14,
-      "riskBand": "Extreme",
-      "riskScore": 25,
-      "evidenceIds": [
-        "E52"
-      ],
-      "summary": "Catalogued as an Extreme hotspot. The hotspot is in a built-up area, with soilName SCAT, drainage class poorly drained, eolian parent material, meanSlopeDeg 3.316, meanElevationM 44.83, and nearestFaultKm 6.412."
-    },
-    {
-      "featureId": "hs-015",
-      "rank": 15,
-      "riskBand": "Extreme",
-      "riskScore": 25,
-      "evidenceIds": [
-        "E53"
-      ],
-      "summary": "Catalogued as an Extreme hotspot. The hotspot is in a built-up area, with soilName CLOVERDALE, drainage class poorly drained, marine parent material, meanSlopeDeg 1.819, meanElevationM 9.55, and nearestFaultKm 4.773."
-    },
-    {
-      "featureId": "hs-016",
-      "rank": 16,
-      "riskBand": "Extreme",
-      "riskScore": 25,
-      "evidenceIds": [
-        "E54"
-      ],
-      "summary": "Catalogued as an Extreme hotspot. The hotspot is in a built-up area, with soilName ALBION, drainage class poorly drained, glaciomarine parent material, meanSlopeDeg 5.031, meanElevationM 10.98, and nearestFaultKm 6.776."
-    },
-    {
-      "featureId": "hs-017",
-      "rank": 17,
-      "riskBand": "Extreme",
-      "riskScore": 25,
-      "evidenceIds": [
-        "E55"
-      ],
-      "summary": "Catalogued as an Extreme hotspot. The hotspot is in a built-up area, with soilName TRIGGS, drainage class very poorly drained, SPPT parent material, meanSlopeDeg 2.622, meanElevationM 4.77, and nearestFaultKm 7.926."
-    },
-    {
-      "featureId": "hs-018",
-      "rank": 18,
-      "riskBand": "Extreme",
-      "riskScore": 25,
-      "evidenceIds": [
-        "E56"
-      ],
-      "summary": "Catalogued as an Extreme hotspot. The hotspot is in a built-up area, with soilName ALBION, drainage class very poorly drained, glaciomarine parent material, meanSlopeDeg 2.625, meanElevationM 55.29, and nearestFaultKm 4.96."
-    },
-    {
-      "featureId": "hs-019",
-      "rank": 19,
-      "riskBand": "Extreme",
-      "riskScore": 25,
-      "evidenceIds": [
-        "E57"
-      ],
-      "summary": "Catalogued as an Extreme hotspot. The hotspot is in a built-up area, with soilName ALBION, drainage class very poorly drained, glaciomarine parent material, meanSlopeDeg 2.721, meanElevationM 48.7, and nearestFaultKm 5.55."
-    },
-    {
-      "featureId": "hs-020",
-      "rank": 20,
-      "riskBand": "Extreme",
-      "riskScore": 25,
-      "evidenceIds": [
-        "E58"
-      ],
-      "summary": "Catalogued as an Extreme hotspot. The hotspot is in a built-up area, with soilName ALBION, drainage class poorly drained, glaciomarine parent material, meanSlopeDeg 6.281, meanElevationM 13.31, and nearestFaultKm 6.713."
-    },
-    {
-      "featureId": "hs-021",
-      "rank": 21,
-      "riskBand": "Extreme",
-      "riskScore": 25,
-      "evidenceIds": [
-        "E59"
-      ],
-      "summary": "Catalogued as an Extreme hotspot. The hotspot is in a built-up area, with soilName CLOVERDALE, drainage class poorly drained, marine parent material, meanSlopeDeg 1.596, meanElevationM 6.79, and nearestFaultKm 5.467."
-    },
-    {
-      "featureId": "hs-022",
-      "rank": 22,
-      "riskBand": "Extreme",
-      "riskScore": 25,
-      "evidenceIds": [
-        "E60"
-      ],
-      "summary": "Catalogued as an Extreme hotspot. The hotspot is in a built-up area, with soilName ALBION, drainage class poorly drained, glaciomarine parent material, meanSlopeDeg 4.136, meanElevationM 9.95, and nearestFaultKm 6.785."
-    },
-    {
-      "featureId": "hs-023",
-      "rank": 23,
-      "riskBand": "Extreme",
-      "riskScore": 25,
-      "evidenceIds": [
-        "E61"
-      ],
-      "summary": "Catalogued as an Extreme hotspot. The hotspot is in a built-up area, with soilName ALBION, drainage class very poorly drained, glaciomarine parent material, meanSlopeDeg 2.911, meanElevationM 47.52, and nearestFaultKm 5.281."
-    },
-    {
-      "featureId": "hs-024",
-      "rank": 24,
-      "riskBand": "Extreme",
-      "riskScore": 25,
-      "evidenceIds": [
-        "E62"
-      ],
-      "summary": "Catalogued as an Extreme hotspot. The hotspot is in a built-up area, with soilName GRAVEL PIT, drainage class -, parent material -, meanSlopeDeg 4.082, meanElevationM 25.05, and nearestFaultKm 2.43."
-    },
-    {
-      "featureId": "hs-025",
-      "rank": 25,
-      "riskBand": "Extreme",
-      "riskScore": 25,
-      "evidenceIds": [
+      "id": "hotspots",
+      "heading": "Hotspots",
+      "body": "The listed hotspots are all ranked in the Extreme band with riskScore 25. hs-001 is ALBION, poorly drained, glaciomarine, Built-up, with mean slope 3.056 degrees, mean elevation 52.56 m, and nearest mapped fault 5.262 km. hs-002 is ALBION, very poorly drained, glaciomarine, Built-up, with mean slope 3.163 degrees, mean elevation 46.48 m, and nearest mapped fault 5.742 km. hs-003 is ALBION, very poorly drained, glaciomarine, Built-up, with mean slope 2.694 degrees, mean elevation 44.12 m, and nearest mapped fault 4.98 km. hs-004 is ALBION, very poorly drained, glaciomarine, Built-up, with mean slope 3.078 degrees, mean elevation 41.26 m, and nearest mapped fault 4.938 km. hs-005 is ALBION, very poorly drained, glaciomarine, Built-up, with mean slope 2.902 degrees, mean elevation 51.53 m, and nearest mapped fault 5.23 km. hs-006 is CARVOLTH, poorly drained, fluvial, Built-up, with mean slope 3.352 degrees, mean elevation 6.98 m, and nearest mapped fault 6.927 km. hs-007 is ALBION, very poorly drained, glaciomarine, Built-up, with mean slope 2.911 degrees, mean elevation 39.41 m, and nearest mapped fault 4.762 km. hs-008 is CARVOLTH, poorly drained, fluvial, Built-up, with mean slope 4.034 degrees, mean elevation 9.96 m, and nearest mapped fault 6.879 km. hs-009 is ALBION, very poorly drained, glaciomarine, Built-up, with mean slope 3.347 degrees, mean elevation 46.4 m, and nearest mapped fault 6.074 km. hs-010 is ALBION, poorly drained, glaciomarine, Built-up, with mean slope 1.857 degrees, mean elevation 47.6 m, and nearest mapped fault 6.122 km. hs-011 is HAZELWOOD, poorly drained, fluvial, Built-up, with mean slope 5.329 degrees, mean elevation 6.64 m, and nearest mapped fault 8.051 km. hs-012 is SCAT, poorly drained, eolian, Built-up, with mean slope 2.539 degrees, mean elevation 45.02 m, and nearest mapped fault 6.34 km. hs-013 is PAGE, poorly drained, fluvial, Built-up, with mean slope 4.197 degrees, mean elevation 6.94 m, and nearest mapped fault 8.152 km. hs-014 is SCAT, poorly drained, eolian, Built-up, with mean slope 3.316 degrees, mean elevation 44.83 m, and nearest mapped fault 6.412 km. hs-015 is CLOVERDALE, poorly drained, marine, Built-up, with mean slope 1.819 degrees, mean elevation 9.55 m, and nearest mapped fault 4.773 km. hs-016 is ALBION, poorly drained, glaciomarine, Built-up, with mean slope 5.031 degrees, mean elevation 10.98 m, and nearest mapped fault 6.776 km. hs-017 is TRIGGS, very poorly drained, SPPT, Built-up, with mean slope 2.622 degrees, mean elevation 4.77 m, and nearest mapped fault 7.926 km. hs-018 is ALBION, very poorly drained, glaciomarine, Built-up, with mean slope 2.625 degrees, mean elevation 55.29 m, and nearest mapped fault 4.96 km. hs-019 is ALBION, very poorly drained, glaciomarine, Built-up, with mean slope 2.721 degrees, mean elevation 48.7 m, and nearest mapped fault 5.55 km. hs-020 is ALBION, poorly drained, glaciomarine, Built-up, with mean slope 6.281 degrees, mean elevation 13.31 m, and nearest mapped fault 6.713 km. hs-021 is CLOVERDALE, poorly drained, marine, Built-up, with mean slope 1.596 degrees, mean elevation 6.79 m, and nearest mapped fault 5.467 km. hs-022 is ALBION, poorly drained, glaciomarine, Built-up, with mean slope 4.136 degrees, mean elevation 9.95 m, and nearest mapped fault 6.785 km. hs-023 is ALBION, very poorly drained, glaciomarine, Built-up, with mean slope 2.911 degrees, mean elevation 47.52 m, and nearest mapped fault 5.281 km. hs-024 is GRAVEL PIT, with mean slope 4.082 degrees, mean elevation 25.05 m, and nearest mapped fault 2.43 km. hs-025 is GRAVEL PIT, with mean slope 5.412 degrees, mean elevation 33.51 m, and nearest mapped fault 2.409 km. Soil drainage class and soil parent material are absent for hs-024 and hs-025 and are therefore omitted.",
+      "citations": [
+        "E39",
+        "E40",
+        "E41",
+        "E42",
+        "E43",
+        "E44",
+        "E45",
+        "E46",
+        "E47",
+        "E48",
+        "E49",
+        "E50",
+        "E51",
+        "E52",
+        "E53",
+        "E54",
+        "E55",
+        "E56",
+        "E57",
+        "E58",
+        "E59",
+        "E60",
+        "E61",
+        "E62",
         "E63"
-      ],
-      "summary": "Catalogued as an Extreme hotspot. The hotspot is in a built-up area, with soilName GRAVEL PIT, drainage class -, parent material -, meanSlopeDeg 5.412, meanElevationM 33.51, and nearestFaultKm 2.409."
+      ]
     }
   ],
   "limitations": [
     {
       "text": "Screening-level output. RF-1 ratings use availability-weighted proxies over public data and are not a substitute for site investigation or engineering assessment.",
-      "evidenceIds": [
-        "E64"
+      "citations": [
+        "E1",
+        "E2"
       ]
     },
     {
       "text": "Susceptibility blends indirect remote-sensing proxies with surveyed soil polygons; only the soil survey is direct ground truth.",
-      "evidenceIds": [
+      "citations": [
+        "E8",
+        "E10",
+        "E12",
+        "E15",
+        "E16"
+      ]
+    },
+    {
+      "text": "Sentinel-1 GRD source coverage is unavailable for this run.",
+      "citations": [
+        "E14"
+      ]
+    },
+    {
+      "text": "Soil survey polygons cover 93.023% of the analysis grid; coverage is not present for the remaining 6.977%.",
+      "citations": [
         "E64"
       ]
-    },
-    {
-      "text": "The following source could not be read for this run: bronze_sentinel_1_grd.",
-      "evidenceIds": [
-        "E14"
-      ]
-    },
-    {
-      "text": "Surveyed soil polygons cover 93.023% of the analysis grid (334,883 of 360,000 pixels); elsewhere susceptibility rests on remote-sensing proxies alone.",
-      "evidenceIds": [
-        "E64",
-        "E1"
-      ]
-    },
-    {
-      "text": "The Fabric data-agent tool was unavailable, so any additional approved aggregate questions could not be answered for this run.",
-      "evidenceIds": [
-        "E1"
-      ]
     }
   ],
-  "nextReviewSteps": [
-    "Review the Extreme hotspots identified by feature IDs hs-001 through hs-025 in the web map manifest and hotspot table.",
-    "If needed, verify the unavailable Sentinel-1 GRD source gap before relying on radar-derived screening context.",
-    "Use site-specific field verification or engineering assessment for decisions beyond screening."
-  ],
-  "requiredDisclaimer": "This report is a screening-level summary only. It is based on public and surveyed data sources processed through the RF-1 workflow and is not a substitute for site-specific field investigation, geotechnical analysis, or engineering judgment.",
   "dataGaps": [
     {
-      "question": "Additional approved aggregate questions for the Fabric data-agent were not answered because the Fabric data-agent tool was unavailable.",
-      "evidenceIds": [
-        "E1"
+      "text": "Sentinel-1 GRD radar STAC items could not be read, so that source coverage question is unanswered for this run beyond the unavailable status.",
+      "citations": [
+        "E14"
       ]
     },
     {
-      "question": "Sentinel-1 GRD radar STAC items could not be read for this run.",
-      "evidenceIds": [
-        "E14"
+      "text": "The provided evidence does not include hotspot-specific soil survey polygon identifiers, geology names, or fault attributes beyond nearestFaultKm, so no additional hotspot attribution can be reported.",
+      "citations": [
+        "E39",
+        "E40",
+        "E41",
+        "E42",
+        "E43",
+        "E44",
+        "E45",
+        "E46",
+        "E47",
+        "E48",
+        "E49",
+        "E50",
+        "E51",
+        "E52",
+        "E53",
+        "E54",
+        "E55",
+        "E56",
+        "E57",
+        "E58",
+        "E59",
+        "E60",
+        "E61",
+        "E62",
+        "E63"
       ]
     }
-  ]
+  ],
+  "mapReferences": [
+    {
+      "sectionId": "hotspots",
+      "featureId": "hs-001",
+      "label": "Hotspot 1"
+    },
+    {
+      "sectionId": "hotspots",
+      "featureId": "hs-002",
+      "label": "Hotspot 2"
+    },
+    {
+      "sectionId": "hotspots",
+      "featureId": "hs-003",
+      "label": "Hotspot 3"
+    },
+    {
+      "sectionId": "hotspots",
+      "featureId": "hs-004",
+      "label": "Hotspot 4"
+    },
+    {
+      "sectionId": "hotspots",
+      "featureId": "hs-005",
+      "label": "Hotspot 5"
+    },
+    {
+      "sectionId": "hotspots",
+      "featureId": "hs-006",
+      "label": "Hotspot 6"
+    },
+    {
+      "sectionId": "hotspots",
+      "featureId": "hs-007",
+      "label": "Hotspot 7"
+    },
+    {
+      "sectionId": "hotspots",
+      "featureId": "hs-008",
+      "label": "Hotspot 8"
+    },
+    {
+      "sectionId": "hotspots",
+      "featureId": "hs-009",
+      "label": "Hotspot 9"
+    },
+    {
+      "sectionId": "hotspots",
+      "featureId": "hs-010",
+      "label": "Hotspot 10"
+    },
+    {
+      "sectionId": "hotspots",
+      "featureId": "hs-011",
+      "label": "Hotspot 11"
+    },
+    {
+      "sectionId": "hotspots",
+      "featureId": "hs-012",
+      "label": "Hotspot 12"
+    },
+    {
+      "sectionId": "hotspots",
+      "featureId": "hs-013",
+      "label": "Hotspot 13"
+    },
+    {
+      "sectionId": "hotspots",
+      "featureId": "hs-014",
+      "label": "Hotspot 14"
+    },
+    {
+      "sectionId": "hotspots",
+      "featureId": "hs-015",
+      "label": "Hotspot 15"
+    },
+    {
+      "sectionId": "hotspots",
+      "featureId": "hs-016",
+      "label": "Hotspot 16"
+    },
+    {
+      "sectionId": "hotspots",
+      "featureId": "hs-017",
+      "label": "Hotspot 17"
+    },
+    {
+      "sectionId": "hotspots",
+      "featureId": "hs-018",
+      "label": "Hotspot 18"
+    },
+    {
+      "sectionId": "hotspots",
+      "featureId": "hs-019",
+      "label": "Hotspot 19"
+    },
+    {
+      "sectionId": "hotspots",
+      "featureId": "hs-020",
+      "label": "Hotspot 20"
+    }
+  ],
+  "disclaimer": "This output is an automated screening summary for demonstration purposes. It is not a site investigation, hazard certification, engineering design, or substitute for review by qualified geotechnical and geospatial professionals using authoritative local data."
 }
