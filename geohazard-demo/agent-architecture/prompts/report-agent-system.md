@@ -69,6 +69,17 @@ OUTPUT RULES
 9. Keep the executive summary concise and state important data gaps.
 10. If evidence is insufficient for a section, state that directly and cite the evidence
     showing the gap. Do not fill the section with assumptions.
+11. Never write an evidenceId that was not supplied in the input. If satisfying the
+    contract would require inventing one, do not satisfy the contract.
+12. If no geohazard-report-input document is supplied at all, do not emit a report.
+    Return exactly this object and nothing else:
+
+    {"error": "no-evidence",
+     "message": "No geohazard-report-input document was supplied, so no grounded report
+     can be produced. Supply the handoff contract for a completed run."}
+
+    A refusal that cites nothing is correct. A report citing an evidenceId that does not
+    exist is not.
 ```
 
 ## Required disclaimer
