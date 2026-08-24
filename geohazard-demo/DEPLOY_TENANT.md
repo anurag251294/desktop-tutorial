@@ -73,16 +73,50 @@ Sentinel-1 GRD data gap.
 
 Both need a customer administrator, and both are invisible until you hit them.
 
-**1. Foundry model deployment needs an ARM write role.**
+**1. Foundry needs two separate roles, and the obvious one is wrong.**
+
+Deploying a model fails with:
 
 ```text
 AuthorizationFailed: Microsoft.CognitiveServices/accounts/deployments/write
 ```
 
-Ask for **Azure AI Developer** or **Cognitive Services Contributor** on the resource
-group. Note that the report agent additionally needs the agents data-plane role at
-**project** scope — account scope returns 401 indefinitely and reads like propagation
-delay.
+**Azure AI Developer does not fix this.** Its actions are
+`Microsoft.MachineLearningServices/workspaces/*`, `Microsoft.Authorization/*/read`, and
+`Microsoft.Resources/deployments/*` — nothing under `Microsoft.CognitiveServices` at all,
+so it can never deploy into an AIServices account. Granted and retried live to confirm.
+The built-in role carrying `accounts/deployments/write` is **Cognitive Services OpenAI
+Contributor**.
+
+Separately, the agents **data plane** returns `401 PermissionDenied` until a role carrying
+`Microsoft.CognitiveServices/*` **data actions** is assigned at **project** scope. Roles
+that qualify: **Foundry User**, Foundry Project Manager, Cognitive Services User,
+Cognitive Services Data Contributor (Preview). Neither Cognitive Services OpenAI
+Contributor nor Cognitive Services Contributor qualifies — their data actions are empty or
+scoped to `accounts/OpenAI/*`, a different surface from `accounts/AIServices/agents/*`.
+
+```bash
+az role assignment create --assignee-object-id "<oid>" --assignee-principal-type User \
+  --role "Foundry User" \
+  --scope "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.CognitiveServices/accounts/<account>/projects/<project>"
+```
+
+Assign at project scope specifically. In the first tenant an account-scope assignment
+returned 401 indefinitely and looked exactly like propagation delay.
+
+**1b. `gpt-4.1-mini` is not deployable in canadacentral — in either tenant tested.**
+
+Both the regional catalogue and the account-scoped `list-models` advertise it on
+GlobalStandard. Every attempt is rejected:
+
+```text
+InvalidResourceProperties: The specified SKU 'GlobalStandard' for model
+'gpt-4.1-mini 2025-04-14' is not supported in this region 'canadacentral'.
+```
+
+GlobalStandard, Standard, and DeveloperTier all fail. `gpt-5.4-mini` GlobalStandard
+deploys first time. Treat the model catalogue as advertising rather than availability, and
+deploy from a candidate list instead of a single name.
 
 **2. The Fabric data agent needs a tenant switch, not a bigger SKU.**
 
