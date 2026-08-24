@@ -62,7 +62,7 @@ Spatial questions, answered from `gold_rf1_risk_hotspots` and `silver_source_fea
 
 * What are the top 10 ranked hotspots for run `<run-id>`, and where are they?
 * What soil unit and drainage class underlie hotspot `<feature-id>`?
-* Which surficial-geology units appear under the Extreme risk band?
+* Which bedrock units appear under the Extreme risk band?
 * How far is the nearest mapped fault from hotspot `<feature-id>`?
 * Which soil survey polygons within `<n>` km of the AOI centre are poorly drained?
 * What is the dominant land cover across the High and Extreme hotspots?

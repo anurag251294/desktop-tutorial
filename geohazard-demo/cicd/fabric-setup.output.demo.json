@@ -58,6 +58,10 @@
     {
       "displayName": "agent_handoff_publisher",
       "id": "cce9c6d6-8577-4399-85e1-ece3e92cb04a"
+    },
+    {
+      "displayName": "configure_data_agent",
+      "id": "9675373f-595b-42af-ab61-1bdc4095a358"
     }
   ],
   "dataPipeline": {

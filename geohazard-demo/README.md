@@ -22,6 +22,13 @@ ms.topic: overview
 > truth, contributed a flat `0.4` constant. Decoding the codes moved the AOI from ~92%
 > High/Extreme to Low 41 / Moderate 22 / High 33 / Extreme 3.8%, and split two merged
 > blobs into 25 discrete attributed hotspots.
+>
+> A second one was found on 2026-08-24: hotspot geology was sourced from
+> `GEOL_QUATERNARY_POLY`, which returns a single 3,670 km² polygon carrying no unit name
+> at all — so `geologyName` was null in every hotspot of every run, while the docs claimed
+> surficial-geology attribution. Hotspots now carry the **bedrock** unit and age from
+> `GEOL_BEDROCK_UNIT_POLY_SVW`, which was already ingested. The surficial signal is
+> `soil_parent_material`, which works.
 
 ## Overview
 
@@ -217,7 +224,7 @@ things close that gap:
    through `silver_rf1_poly_lookup`).
 3. **`gold_rf1_risk_hotspots`** clusters contiguous High/Extreme pixels into ranked,
    stably-identified features (`hs-001`, `hs-002`, …) and attaches the *why*: dominant
-   soil unit and drainage class, surficial geology unit, land cover, mean slope, and the
+   soil unit and drainage class, bedrock unit and age, land cover, mean slope, and the
    exact distance to the nearest mapped fault.
 
 Together these let the agent answer questions the gold aggregates alone cannot:

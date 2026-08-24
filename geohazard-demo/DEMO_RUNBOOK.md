@@ -294,7 +294,8 @@ contract. Show `cicd/report-output.sample.json`, generated against run
   `limitations`, `dataGaps`, and `mapReferences` that tie narrative back to `hs-NNN`
   feature IDs on the web map.
 * The hotspots section names each hotspot's soil unit, drainage class, parent material,
-  land cover, slope, elevation, and distance to the nearest mapped fault.
+  bedrock unit, land cover, slope, elevation, and distance to the nearest mapped
+  fault.
 * **Every evidence citation resolves, and the document validates against
   `geohazard-report-output.schema.json`.** Both checks run automatically and the script
   exits non-zero if either fails — so a malformed report never reaches a renderer.
