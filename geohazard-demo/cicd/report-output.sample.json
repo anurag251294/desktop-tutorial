@@ -1,30 +1,55 @@
 {
   "schemaVersion": "1.0",
-  "runId": "b538ce7e-69bb-4fd1-8f00-7ba7e7fc0a0a",
+  "runId": "8f6fdee6-a162-47b1-a6d9-39f340c2a325",
   "title": "RF-1 Geohazard Screening Report",
   "executiveSummary": {
-    "text": "Screening results catalogued 360,000 analysis-grid pixels over the AOI, with 40.8961% Low, 22.2258% Moderate, 33.0344% High, and 3.8436% Extreme risk bands. The highest-ranked hotspots are all Extreme and are observed primarily in built-up areas over ALBION, CARVOLTH, HAZELWOOD, SCAT, CLOVERDALE, TRIGGS, and GRAVEL PIT soil units. A key data gap is that Sentinel-1 GRD source coverage is unavailable for this run, and soil survey coverage does not extend to 6.977% of the grid.",
+    "text": "This screening run covers a 3.0 km analysis radius around the AOI at 49.2193, -122.5984 in EPSG:32610. The risk summary shows 40.7344% Low, 22.1264% Moderate, 33.2586% High, and 3.8806% Extreme pixels across 360,000 total pixels. The top 25 hotspots are all catalogued as Extreme, and the soil survey coverage is 93.023%, leaving some pixels without surveyed soil coverage. Sentinel-1 GRD data were unavailable for this run.",
     "citations": [
       "E1",
+      "E2",
       "E17",
       "E18",
       "E19",
       "E20",
-      "E14",
-      "E64"
+      "E39",
+      "E40",
+      "E41",
+      "E42",
+      "E43",
+      "E44",
+      "E45",
+      "E46",
+      "E47",
+      "E48",
+      "E49",
+      "E50",
+      "E51",
+      "E52",
+      "E53",
+      "E54",
+      "E55",
+      "E56",
+      "E57",
+      "E58",
+      "E59",
+      "E60",
+      "E61",
+      "E62",
+      "E63",
+      "E64",
+      "E14"
     ]
   },
   "keyFindings": [
     {
-      "statement": "The analysis grid contains 360,000 pixels across 36.0 km2.",
+      "statement": "The analysis grid contains 360,000 pixels in total for the reported run.",
       "level": "information",
       "citations": [
-        "E1",
-        "E2"
+        "E1"
       ]
     },
     {
-      "statement": "Risk band extent is catalogued as 40.8961% Low, 22.2258% Moderate, 33.0344% High, and 3.8436% Extreme.",
+      "statement": "The risk summary catalogues 14.6644 km2 of Low, 7.9655 km2 of Moderate, 11.9731 km2 of High, and 1.3970 km2 of Extreme pixels.",
       "level": "information",
       "citations": [
         "E17",
@@ -34,8 +59,16 @@
       ]
     },
     {
-      "statement": "The 25 listed hotspots are all catalogued as Extreme with riskScore 25.",
-      "level": "watch",
+      "statement": "The Extreme band represents 3.8806% of the analysis grid, while High represents 33.2586%.",
+      "level": "information",
+      "citations": [
+        "E19",
+        "E20"
+      ]
+    },
+    {
+      "statement": "All 25 listed hotspots are catalogued as risk band Extreme with risk score 25.",
+      "level": "priority-review",
       "citations": [
         "E39",
         "E40",
@@ -65,17 +98,10 @@
       ]
     },
     {
-      "statement": "Sentinel-1 GRD input coverage is unavailable for this run.",
-      "level": "priority-review",
-      "citations": [
-        "E14"
-      ]
-    },
-    {
-      "statement": "Soil survey polygons mapped 93.023% of the analysis grid, leaving 6.977% without that coverage.",
+      "statement": "Sentinel-1 GRD coverage is unavailable for this run.",
       "level": "watch",
       "citations": [
-        "E64"
+        "E14"
       ]
     }
   ],
@@ -83,16 +109,15 @@
     {
       "id": "methodology",
       "heading": "Methodology",
-      "body": "This report is a screening summary for RF-1 using the supplied formula risk_score = s_rating * c_rating and the provided band definitions for Low, Moderate, High, and Extreme. The report explains only deterministic values catalogued in the run evidence and does not infer missing measurements or recalculate scores.",
+      "body": "This run uses the RF-1 formula risk_score = s_rating * c_rating, with band definitions of Low (1 to 4), Moderate (5 to 9), High (10 to 19), and Extreme (20 to 25). The AOI is centered at 49.2193, -122.5984, analysed in EPSG:32610 at 10.0 m resolution within a 3.0 km radius. This report only describes the deterministic outputs supplied for the run and does not infer values beyond the evidence provided.",
       "citations": [
-        "E1",
         "E2"
       ]
     },
     {
       "id": "source-coverage",
       "heading": "Source coverage",
-      "body": "Source coverage is catalogued as available for ALOS PALSAR mosaic STAC items, BC bedrock geology, BC geological fault lines, BC quaternary / surficial geology, BC SIFT soil project boundaries, BC soil survey polygons, Copernicus DEM GLO-30, ESA WorldCover, Harmonized global biomass, Esri 10 m land use / land cover, a single-collection parameterised demo table, Sentinel-1 RTC radar STAC items, and Sentinel-2 L2A optical STAC items. Sentinel-1 GRD radar STAC items are unavailable. Soil survey coverage includes 334,883 of 360,000 pixels, or 93.023%, so 6.977% of the analysis grid lacks that surveyed-soil coverage.",
+      "body": "Several source tables were available for this run, including ALOS PALSAR mosaic items, BC bedrock geology, BC geological faults, BC quaternary geology, BC soil project boundaries, BC soil survey polygons, Copernicus DEM GLO-30, ESA WorldCover, Harmonized global biomass, Esri land use / land cover, the single-collection satellite demo table, Sentinel-1 RTC, and Sentinel-2 L2A. Sentinel-1 GRD was unavailable. The soil survey polygons were catalogued as covering 93.023% of the analysis grid, or 334,883 of 360,000 pixels, leaving the remaining pixels without surveyed soil coverage.",
       "citations": [
         "E3",
         "E4",
@@ -114,19 +139,21 @@
     {
       "id": "risk-distribution",
       "heading": "Risk distribution",
-      "body": "The risk band distribution over the 360,000-pixel analysis grid is catalogued as Low at 147,226 pixels, Moderate at 80,013 pixels, High at 118,924 pixels, and Extreme at 13,837 pixels. In percent terms, those bands are 40.8961%, 22.2258%, 33.0344%, and 3.8436%, respectively.",
+      "body": "The band summary shows Low at 146,644 pixels (40.7344%), Moderate at 79,655 pixels (22.1264%), High at 119,731 pixels (33.2586%), and Extreme at 13,970 pixels (3.8806%). Within the matrix, the largest individual cell counts are S=2/C=2 at 92,621 pixels and S=2/C=5 at 42,656 pixels, with S=5/C=5 catalogued as Extreme at 12,029 pixels. No additional distribution details were supplied beyond these tabulated counts.",
       "citations": [
-        "E1",
         "E17",
         "E18",
         "E19",
-        "E20"
+        "E20",
+        "E23",
+        "E36",
+        "E38"
       ]
     },
     {
       "id": "hotspots",
       "heading": "Hotspots",
-      "body": "The listed hotspots are all ranked in the Extreme band with riskScore 25. hs-001 is ALBION, poorly drained, glaciomarine, Built-up, with mean slope 3.056 degrees, mean elevation 52.56 m, and nearest mapped fault 5.262 km. hs-002 is ALBION, very poorly drained, glaciomarine, Built-up, with mean slope 3.163 degrees, mean elevation 46.48 m, and nearest mapped fault 5.742 km. hs-003 is ALBION, very poorly drained, glaciomarine, Built-up, with mean slope 2.694 degrees, mean elevation 44.12 m, and nearest mapped fault 4.98 km. hs-004 is ALBION, very poorly drained, glaciomarine, Built-up, with mean slope 3.078 degrees, mean elevation 41.26 m, and nearest mapped fault 4.938 km. hs-005 is ALBION, very poorly drained, glaciomarine, Built-up, with mean slope 2.902 degrees, mean elevation 51.53 m, and nearest mapped fault 5.23 km. hs-006 is CARVOLTH, poorly drained, fluvial, Built-up, with mean slope 3.352 degrees, mean elevation 6.98 m, and nearest mapped fault 6.927 km. hs-007 is ALBION, very poorly drained, glaciomarine, Built-up, with mean slope 2.911 degrees, mean elevation 39.41 m, and nearest mapped fault 4.762 km. hs-008 is CARVOLTH, poorly drained, fluvial, Built-up, with mean slope 4.034 degrees, mean elevation 9.96 m, and nearest mapped fault 6.879 km. hs-009 is ALBION, very poorly drained, glaciomarine, Built-up, with mean slope 3.347 degrees, mean elevation 46.4 m, and nearest mapped fault 6.074 km. hs-010 is ALBION, poorly drained, glaciomarine, Built-up, with mean slope 1.857 degrees, mean elevation 47.6 m, and nearest mapped fault 6.122 km. hs-011 is HAZELWOOD, poorly drained, fluvial, Built-up, with mean slope 5.329 degrees, mean elevation 6.64 m, and nearest mapped fault 8.051 km. hs-012 is SCAT, poorly drained, eolian, Built-up, with mean slope 2.539 degrees, mean elevation 45.02 m, and nearest mapped fault 6.34 km. hs-013 is PAGE, poorly drained, fluvial, Built-up, with mean slope 4.197 degrees, mean elevation 6.94 m, and nearest mapped fault 8.152 km. hs-014 is SCAT, poorly drained, eolian, Built-up, with mean slope 3.316 degrees, mean elevation 44.83 m, and nearest mapped fault 6.412 km. hs-015 is CLOVERDALE, poorly drained, marine, Built-up, with mean slope 1.819 degrees, mean elevation 9.55 m, and nearest mapped fault 4.773 km. hs-016 is ALBION, poorly drained, glaciomarine, Built-up, with mean slope 5.031 degrees, mean elevation 10.98 m, and nearest mapped fault 6.776 km. hs-017 is TRIGGS, very poorly drained, SPPT, Built-up, with mean slope 2.622 degrees, mean elevation 4.77 m, and nearest mapped fault 7.926 km. hs-018 is ALBION, very poorly drained, glaciomarine, Built-up, with mean slope 2.625 degrees, mean elevation 55.29 m, and nearest mapped fault 4.96 km. hs-019 is ALBION, very poorly drained, glaciomarine, Built-up, with mean slope 2.721 degrees, mean elevation 48.7 m, and nearest mapped fault 5.55 km. hs-020 is ALBION, poorly drained, glaciomarine, Built-up, with mean slope 6.281 degrees, mean elevation 13.31 m, and nearest mapped fault 6.713 km. hs-021 is CLOVERDALE, poorly drained, marine, Built-up, with mean slope 1.596 degrees, mean elevation 6.79 m, and nearest mapped fault 5.467 km. hs-022 is ALBION, poorly drained, glaciomarine, Built-up, with mean slope 4.136 degrees, mean elevation 9.95 m, and nearest mapped fault 6.785 km. hs-023 is ALBION, very poorly drained, glaciomarine, Built-up, with mean slope 2.911 degrees, mean elevation 47.52 m, and nearest mapped fault 5.281 km. hs-024 is GRAVEL PIT, with mean slope 4.082 degrees, mean elevation 25.05 m, and nearest mapped fault 2.43 km. hs-025 is GRAVEL PIT, with mean slope 5.412 degrees, mean elevation 33.51 m, and nearest mapped fault 2.409 km. Soil drainage class and soil parent material are absent for hs-024 and hs-025 and are therefore omitted.",
+      "body": "All 25 listed hotspots are catalogued as Extreme with risk score 25. hs-001 is ALBION, poorly drained, glaciomarine, developed on undivided sedimentary rocks of Eocene age, with Built-up land cover, mean slope 3.06 degrees, mean elevation 52.52 m, and distance to the nearest mapped fault 5.265 km. hs-002 is ALBION, very poorly drained, glaciomarine, on undivided sedimentary rocks of Eocene age, Built-up, mean slope 3.211 degrees, mean elevation 46.45 m, and nearest fault 5.751 km. hs-003 is ALBION, very poorly drained, glaciomarine, on undivided sedimentary rocks of Eocene age, Built-up, mean slope 2.694 degrees, mean elevation 44.12 m, and nearest fault 4.98 km. hs-004 is ALBION, very poorly drained, glaciomarine, on undivided sedimentary rocks of Eocene age, Built-up, mean slope 3.078 degrees, mean elevation 41.26 m, and nearest fault 4.938 km. hs-005 is ALBION, very poorly drained, glaciomarine, on undivided sedimentary rocks of Eocene age, Built-up, mean slope 3.013 degrees, mean elevation 51.5 m, and nearest fault 5.235 km. hs-006 is CARVOLTH, poorly drained, fluvial, on undivided sedimentary rocks of Eocene age, Built-up, mean slope 3.525 degrees, mean elevation 7.15 m, and nearest fault 6.923 km. hs-007 is ALBION, very poorly drained, glaciomarine, on undivided sedimentary rocks of Eocene age, Built-up, mean slope 2.911 degrees, mean elevation 39.41 m, and nearest fault 4.762 km. hs-008 is CARVOLTH, poorly drained, fluvial, on undivided sedimentary rocks of Eocene age, Built-up, mean slope 4.448 degrees, mean elevation 10.12 m, and nearest fault 6.873 km. hs-009 is ALBION, very poorly drained, glaciomarine, on undivided sedimentary rocks of Eocene age, Built-up, mean slope 3.347 degrees, mean elevation 46.4 m, and nearest fault 6.074 km. hs-010 is ALBION, poorly drained, glaciomarine, on undivided sedimentary rocks of Eocene age, Built-up, mean slope 1.754 degrees, mean elevation 47.7 m, and nearest fault 6.115 km. hs-011 is HAZELWOOD, poorly drained, fluvial, on undivided sedimentary rocks of Eocene age, Built-up, mean slope 5.329 degrees, mean elevation 6.64 m, and nearest fault 8.051 km. hs-012 is SCAT, poorly drained, eolian, on undivided sedimentary rocks of Eocene age, Built-up, mean slope 2.455 degrees, mean elevation 44.8 m, and nearest fault 6.357 km. hs-013 is PAGE, poorly drained, fluvial, on undivided sedimentary rocks of Eocene age, Built-up, mean slope 4.301 degrees, mean elevation 7.0 m, and nearest fault 8.15 km. hs-014 is CLOVERDALE, poorly drained, marine, on quartz dioritic intrusive rocks of Late Jurassic to Early Cretaceous age, Built-up, mean slope 1.819 degrees, mean elevation 9.55 m, and nearest fault 4.773 km. hs-015 is SCAT, poorly drained, eolian, on undivided sedimentary rocks of Eocene age, Built-up, mean slope 2.746 degrees, mean elevation 44.74 m, and nearest fault 6.408 km. hs-016 is ALBION, poorly drained, glaciomarine, on undivided sedimentary rocks of Eocene age, Built-up, mean slope 5.131 degrees, mean elevation 11.38 m, and nearest fault 6.77 km. hs-017 is TRIGGS, very poorly drained, SPPT, on undivided sedimentary rocks of Eocene age, Built-up, mean slope 2.622 degrees, mean elevation 4.77 m, and nearest fault 7.926 km. hs-018 is ALBION, very poorly drained, glaciomarine, on undivided sedimentary rocks of Eocene age, Built-up, mean slope 2.625 degrees, mean elevation 55.29 m, and nearest fault 4.96 km. hs-019 is ALBION, poorly drained, glaciomarine, on undivided sedimentary rocks of Eocene age, Built-up, mean slope 6.621 degrees, mean elevation 13.67 m, and nearest fault 6.711 km. hs-020 is ALBION, very poorly drained, glaciomarine, on undivided sedimentary rocks of Eocene age, Built-up, mean slope 2.721 degrees, mean elevation 48.7 m, and nearest fault 5.55 km. hs-021 is ANNIS, poorly drained, FNPT, on undivided sedimentary rocks of Eocene age, Built-up, mean slope 4.364 degrees, mean elevation 11.91 m, and nearest fault 7.813 km. hs-022 is CLOVERDALE, poorly drained, marine, on quartz dioritic intrusive rocks of Late Jurassic to Early Cretaceous age, Built-up, mean slope 1.596 degrees, mean elevation 6.79 m, and nearest fault 5.467 km. hs-023 is ALBION, poorly drained, glaciomarine, on undivided sedimentary rocks of Eocene age, Built-up, mean slope 4.136 degrees, mean elevation 9.95 m, and nearest fault 6.785 km. hs-024 is ANNIS, poorly drained, FNPT, on undivided sedimentary rocks of Eocene age, Built-up, mean slope 6.32 degrees, mean elevation 10.54 m, and nearest fault 7.414 km. hs-025 is ALBION, very poorly drained, glaciomarine, on undivided sedimentary rocks of Eocene age, Built-up, mean slope 2.911 degrees, mean elevation 47.52 m, and nearest fault 5.281 km.",
       "citations": [
         "E39",
         "E40",
@@ -168,34 +195,32 @@
       "text": "Susceptibility blends indirect remote-sensing proxies with surveyed soil polygons; only the soil survey is direct ground truth.",
       "citations": [
         "E8",
-        "E10",
-        "E12",
-        "E15",
-        "E16"
+        "E64"
       ]
     },
     {
-      "text": "Sentinel-1 GRD source coverage is unavailable for this run.",
+      "text": "Sentinel-1 GRD data were unavailable for this run.",
       "citations": [
         "E14"
       ]
     },
     {
-      "text": "Soil survey polygons cover 93.023% of the analysis grid; coverage is not present for the remaining 6.977%.",
+      "text": "Surveyed soil polygons cover 93.023% of the analysis grid, so some pixels lack surveyed soil coverage.",
       "citations": [
-        "E64"
+        "E64",
+        "E1"
       ]
     }
   ],
   "dataGaps": [
     {
-      "text": "Sentinel-1 GRD radar STAC items could not be read, so that source coverage question is unanswered for this run beyond the unavailable status.",
+      "text": "The Fabric data-agent tool was unavailable, so no additional bounded aggregate queries could be answered beyond the supplied evidence.",
       "citations": [
-        "E14"
+        "E1"
       ]
     },
     {
-      "text": "The provided evidence does not include hotspot-specific soil survey polygon identifiers, geology names, or fault attributes beyond nearestFaultKm, so no additional hotspot attribution can be reported.",
+      "text": "No hotspot-specific attributes beyond those listed in the supplied evidence were available to report.",
       "citations": [
         "E39",
         "E40",
@@ -250,81 +275,6 @@
       "sectionId": "hotspots",
       "featureId": "hs-005",
       "label": "Hotspot 5"
-    },
-    {
-      "sectionId": "hotspots",
-      "featureId": "hs-006",
-      "label": "Hotspot 6"
-    },
-    {
-      "sectionId": "hotspots",
-      "featureId": "hs-007",
-      "label": "Hotspot 7"
-    },
-    {
-      "sectionId": "hotspots",
-      "featureId": "hs-008",
-      "label": "Hotspot 8"
-    },
-    {
-      "sectionId": "hotspots",
-      "featureId": "hs-009",
-      "label": "Hotspot 9"
-    },
-    {
-      "sectionId": "hotspots",
-      "featureId": "hs-010",
-      "label": "Hotspot 10"
-    },
-    {
-      "sectionId": "hotspots",
-      "featureId": "hs-011",
-      "label": "Hotspot 11"
-    },
-    {
-      "sectionId": "hotspots",
-      "featureId": "hs-012",
-      "label": "Hotspot 12"
-    },
-    {
-      "sectionId": "hotspots",
-      "featureId": "hs-013",
-      "label": "Hotspot 13"
-    },
-    {
-      "sectionId": "hotspots",
-      "featureId": "hs-014",
-      "label": "Hotspot 14"
-    },
-    {
-      "sectionId": "hotspots",
-      "featureId": "hs-015",
-      "label": "Hotspot 15"
-    },
-    {
-      "sectionId": "hotspots",
-      "featureId": "hs-016",
-      "label": "Hotspot 16"
-    },
-    {
-      "sectionId": "hotspots",
-      "featureId": "hs-017",
-      "label": "Hotspot 17"
-    },
-    {
-      "sectionId": "hotspots",
-      "featureId": "hs-018",
-      "label": "Hotspot 18"
-    },
-    {
-      "sectionId": "hotspots",
-      "featureId": "hs-019",
-      "label": "Hotspot 19"
-    },
-    {
-      "sectionId": "hotspots",
-      "featureId": "hs-020",
-      "label": "Hotspot 20"
     }
   ],
   "disclaimer": "This output is an automated screening summary for demonstration purposes. It is not a site investigation, hazard certification, engineering design, or substitute for review by qualified geotechnical and geospatial professionals using authoritative local data."

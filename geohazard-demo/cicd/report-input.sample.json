@@ -1,10 +1,10 @@
 {
   "schemaVersion": "1.0",
   "run": {
-    "runId": "b538ce7e-69bb-4fd1-8f00-7ba7e7fc0a0a",
+    "runId": "8f6fdee6-a162-47b1-a6d9-39f340c2a325",
     "pipelineName": "pl_bronze_ingestion",
     "status": "Completed",
-    "completedAtUtc": "2026-08-17T14:51:46.545593+00:00"
+    "completedAtUtc": "2026-08-24T18:26:00.671896+00:00"
   },
   "aoi": {
     "latitude": 49.2193,
@@ -115,7 +115,7 @@
       "sourceName": "Single-collection parameterised demo table",
       "tableName": "bronze_satellite_stac_items",
       "status": "available",
-      "recordCount": 476,
+      "recordCount": 680,
       "evidenceId": "E13"
     },
     {
@@ -147,30 +147,30 @@
     "bands": [
       {
         "band": "Low",
-        "pixelCount": 147226,
-        "areaKm2": 14.7226,
-        "pct": 40.89611111111111,
+        "pixelCount": 146644,
+        "areaKm2": 14.6644,
+        "pct": 40.73444444444444,
         "evidenceId": "E17"
       },
       {
         "band": "Moderate",
-        "pixelCount": 80013,
-        "areaKm2": 8.0013,
-        "pct": 22.225833333333334,
+        "pixelCount": 79655,
+        "areaKm2": 7.9655000000000005,
+        "pct": 22.12638888888889,
         "evidenceId": "E18"
       },
       {
         "band": "High",
-        "pixelCount": 118924,
-        "areaKm2": 11.8924,
-        "pct": 33.034444444444446,
+        "pixelCount": 119731,
+        "areaKm2": 11.9731,
+        "pct": 33.258611111111115,
         "evidenceId": "E19"
       },
       {
         "band": "Extreme",
-        "pixelCount": 13837,
-        "areaKm2": 1.3837000000000002,
-        "pct": 3.8436111111111106,
+        "pixelCount": 13970,
+        "areaKm2": 1.397,
+        "pct": 3.880555555555556,
         "evidenceId": "E20"
       }
     ]
@@ -189,7 +189,7 @@
       "cRating": 2,
       "riskScore": 2,
       "riskBand": "Low",
-      "pixelCount": 41057,
+      "pixelCount": 40226,
       "evidenceId": "E22"
     },
     {
@@ -197,7 +197,7 @@
       "cRating": 2,
       "riskScore": 4,
       "riskBand": "Low",
-      "pixelCount": 92281,
+      "pixelCount": 92621,
       "evidenceId": "E23"
     },
     {
@@ -205,7 +205,7 @@
       "cRating": 2,
       "riskScore": 6,
       "riskBand": "Moderate",
-      "pixelCount": 509,
+      "pixelCount": 501,
       "evidenceId": "E24"
     },
     {
@@ -213,7 +213,7 @@
       "cRating": 2,
       "riskScore": 8,
       "riskBand": "Moderate",
-      "pixelCount": 5,
+      "pixelCount": 4,
       "evidenceId": "E25"
     },
     {
@@ -221,7 +221,7 @@
       "cRating": 2,
       "riskScore": 10,
       "riskBand": "High",
-      "pixelCount": 36383,
+      "pixelCount": 36883,
       "evidenceId": "E26"
     },
     {
@@ -229,7 +229,7 @@
       "cRating": 3,
       "riskScore": 3,
       "riskBand": "Low",
-      "pixelCount": 13711,
+      "pixelCount": 13616,
       "evidenceId": "E27"
     },
     {
@@ -237,7 +237,7 @@
       "cRating": 3,
       "riskScore": 6,
       "riskBand": "Moderate",
-      "pixelCount": 31572,
+      "pixelCount": 31618,
       "evidenceId": "E28"
     },
     {
@@ -245,7 +245,7 @@
       "cRating": 3,
       "riskScore": 9,
       "riskBand": "Moderate",
-      "pixelCount": 3485,
+      "pixelCount": 3549,
       "evidenceId": "E29"
     },
     {
@@ -253,7 +253,7 @@
       "cRating": 3,
       "riskScore": 15,
       "riskBand": "High",
-      "pixelCount": 40016,
+      "pixelCount": 40001,
       "evidenceId": "E30"
     },
     {
@@ -261,7 +261,7 @@
       "cRating": 4,
       "riskScore": 4,
       "riskBand": "Low",
-      "pixelCount": 177,
+      "pixelCount": 181,
       "evidenceId": "E31"
     },
     {
@@ -269,7 +269,7 @@
       "cRating": 4,
       "riskScore": 8,
       "riskBand": "Moderate",
-      "pixelCount": 491,
+      "pixelCount": 486,
       "evidenceId": "E32"
     },
     {
@@ -277,7 +277,7 @@
       "cRating": 4,
       "riskScore": 12,
       "riskBand": "High",
-      "pixelCount": 136,
+      "pixelCount": 133,
       "evidenceId": "E33"
     },
     {
@@ -285,7 +285,7 @@
       "cRating": 4,
       "riskScore": 20,
       "riskBand": "Extreme",
-      "pixelCount": 1937,
+      "pixelCount": 1941,
       "evidenceId": "E34"
     },
     {
@@ -293,7 +293,7 @@
       "cRating": 5,
       "riskScore": 5,
       "riskBand": "Moderate",
-      "pixelCount": 17481,
+      "pixelCount": 17027,
       "evidenceId": "E35"
     },
     {
@@ -301,7 +301,7 @@
       "cRating": 5,
       "riskScore": 10,
       "riskBand": "High",
-      "pixelCount": 42334,
+      "pixelCount": 42656,
       "evidenceId": "E36"
     },
     {
@@ -309,7 +309,7 @@
       "cRating": 5,
       "riskScore": 15,
       "riskBand": "High",
-      "pixelCount": 55,
+      "pixelCount": 58,
       "evidenceId": "E37"
     },
     {
@@ -317,7 +317,7 @@
       "cRating": 5,
       "riskScore": 25,
       "riskBand": "Extreme",
-      "pixelCount": 11900,
+      "pixelCount": 12029,
       "evidenceId": "E38"
     }
   ],
@@ -325,8 +325,8 @@
     {
       "featureId": "hs-001",
       "rank": 1,
-      "latitude": 49.21896490700295,
-      "longitude": -122.55984658724023,
+      "latitude": 49.21893530153788,
+      "longitude": -122.55986021702277,
       "sRating": 5,
       "cRating": 5,
       "riskScore": 25,
@@ -336,8 +336,8 @@
     {
       "featureId": "hs-002",
       "rank": 2,
-      "latitude": 49.21717937227434,
-      "longitude": -122.59138741817964,
+      "latitude": 49.21709138248992,
+      "longitude": -122.59136482703713,
       "sRating": 5,
       "cRating": 5,
       "riskScore": 25,
@@ -369,8 +369,8 @@
     {
       "featureId": "hs-005",
       "rank": 5,
-      "latitude": 49.2190754994862,
-      "longitude": -122.56501379492121,
+      "latitude": 49.21902886868335,
+      "longitude": -122.56504712597642,
       "sRating": 5,
       "cRating": 5,
       "riskScore": 25,
@@ -380,8 +380,8 @@
     {
       "featureId": "hs-006",
       "rank": 6,
-      "latitude": 49.203978050377266,
-      "longitude": -122.57313211342749,
+      "latitude": 49.20401090608993,
+      "longitude": -122.57306797246811,
       "sRating": 5,
       "cRating": 5,
       "riskScore": 25,
@@ -402,8 +402,8 @@
     {
       "featureId": "hs-008",
       "rank": 8,
-      "latitude": 49.204251250420945,
-      "longitude": -122.56779427161277,
+      "latitude": 49.20429997738501,
+      "longitude": -122.56784153656146,
       "sRating": 5,
       "cRating": 5,
       "riskScore": 25,
@@ -424,8 +424,8 @@
     {
       "featureId": "hs-010",
       "rank": 10,
-      "latitude": 49.21129570700922,
-      "longitude": -122.55813779926062,
+      "latitude": 49.21135981574813,
+      "longitude": -122.558140639233,
       "sRating": 5,
       "cRating": 5,
       "riskScore": 25,
@@ -446,8 +446,8 @@
     {
       "featureId": "hs-012",
       "rank": 12,
-      "latitude": 49.20920989313982,
-      "longitude": -122.56054673148883,
+      "latitude": 49.209041480882185,
+      "longitude": -122.56076231647361,
       "sRating": 5,
       "cRating": 5,
       "riskScore": 25,
@@ -457,8 +457,8 @@
     {
       "featureId": "hs-013",
       "rank": 13,
-      "latitude": 49.19309550631768,
-      "longitude": -122.57639612778047,
+      "latitude": 49.19311631291001,
+      "longitude": -122.57639357369264,
       "sRating": 5,
       "cRating": 5,
       "riskScore": 25,
@@ -468,8 +468,8 @@
     {
       "featureId": "hs-014",
       "rank": 14,
-      "latitude": 49.2085594133147,
-      "longitude": -122.56055554686147,
+      "latitude": 49.23409953038671,
+      "longitude": -122.60984248402615,
       "sRating": 5,
       "cRating": 5,
       "riskScore": 25,
@@ -479,8 +479,8 @@
     {
       "featureId": "hs-015",
       "rank": 15,
-      "latitude": 49.23409953038671,
-      "longitude": -122.60984248402615,
+      "latitude": 49.20859476787679,
+      "longitude": -122.56059692859395,
       "sRating": 5,
       "cRating": 5,
       "riskScore": 25,
@@ -490,8 +490,8 @@
     {
       "featureId": "hs-016",
       "rank": 16,
-      "latitude": 49.20690723777557,
-      "longitude": -122.58822377835362,
+      "latitude": 49.20695131009424,
+      "longitude": -122.58818174918511,
       "sRating": 5,
       "cRating": 5,
       "riskScore": 25,
@@ -523,8 +523,8 @@
     {
       "featureId": "hs-019",
       "rank": 19,
-      "latitude": 49.21621288239609,
-      "longitude": -122.5642113084196,
+      "latitude": 49.20795681271144,
+      "longitude": -122.59086051551941,
       "sRating": 5,
       "cRating": 5,
       "riskScore": 25,
@@ -534,8 +534,8 @@
     {
       "featureId": "hs-020",
       "rank": 20,
-      "latitude": 49.20793008509827,
-      "longitude": -122.59079110684795,
+      "latitude": 49.21621288239609,
+      "longitude": -122.5642113084196,
       "sRating": 5,
       "cRating": 5,
       "riskScore": 25,
@@ -545,8 +545,8 @@
     {
       "featureId": "hs-021",
       "rank": 21,
-      "latitude": 49.235815233798924,
-      "longitude": -122.62530341017306,
+      "latitude": 49.19584540252351,
+      "longitude": -122.56497157864536,
       "sRating": 5,
       "cRating": 5,
       "riskScore": 25,
@@ -556,8 +556,8 @@
     {
       "featureId": "hs-022",
       "rank": 22,
-      "latitude": 49.20715518258879,
-      "longitude": -122.59018665112174,
+      "latitude": 49.235815233798924,
+      "longitude": -122.62530341017306,
       "sRating": 5,
       "cRating": 5,
       "riskScore": 25,
@@ -567,8 +567,8 @@
     {
       "featureId": "hs-023",
       "rank": 23,
-      "latitude": 49.21930809961789,
-      "longitude": -122.57852906788074,
+      "latitude": 49.20715518258879,
+      "longitude": -122.59018665112174,
       "sRating": 5,
       "cRating": 5,
       "riskScore": 25,
@@ -578,8 +578,8 @@
     {
       "featureId": "hs-024",
       "rank": 24,
-      "latitude": 49.24516584425,
-      "longitude": -122.57564053971923,
+      "latitude": 49.19947207061203,
+      "longitude": -122.57000121980708,
       "sRating": 5,
       "cRating": 5,
       "riskScore": 25,
@@ -589,8 +589,8 @@
     {
       "featureId": "hs-025",
       "rank": 25,
-      "latitude": 49.245150936786466,
-      "longitude": -122.57452848703284,
+      "latitude": 49.21930809961789,
+      "longitude": -122.57852906788074,
       "sRating": 5,
       "cRating": 5,
       "riskScore": 25,
@@ -610,9 +610,9 @@
       "kind": "run",
       "title": "Pipeline run identity",
       "sourceTable": "gold_rf1_risk_pixels",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
-        "runId": "b538ce7e-69bb-4fd1-8f00-7ba7e7fc0a0a",
+        "runId": "8f6fdee6-a162-47b1-a6d9-39f340c2a325",
         "pipelineName": "pl_bronze_ingestion",
         "totalPixels": 360000
       }
@@ -622,7 +622,7 @@
       "kind": "aoi",
       "title": "Area of interest and analysis grid",
       "sourceTable": "gold_rf1_risk_pixels",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "latitude": 49.2193,
         "longitude": -122.5984,
@@ -638,7 +638,7 @@
       "kind": "sourceCoverage",
       "title": "Source coverage: bronze_alos_palsar_mosaic",
       "sourceTable": "silver_source_coverage",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "tableName": "bronze_alos_palsar_mosaic",
         "status": "available",
@@ -650,7 +650,7 @@
       "kind": "sourceCoverage",
       "title": "Source coverage: bronze_bc_bedrock_geology",
       "sourceTable": "silver_source_coverage",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "tableName": "bronze_bc_bedrock_geology",
         "status": "available",
@@ -662,7 +662,7 @@
       "kind": "sourceCoverage",
       "title": "Source coverage: bronze_bc_geological_faults",
       "sourceTable": "silver_source_coverage",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "tableName": "bronze_bc_geological_faults",
         "status": "available",
@@ -674,7 +674,7 @@
       "kind": "sourceCoverage",
       "title": "Source coverage: bronze_bc_quaternary_geology",
       "sourceTable": "silver_source_coverage",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "tableName": "bronze_bc_quaternary_geology",
         "status": "available",
@@ -686,7 +686,7 @@
       "kind": "sourceCoverage",
       "title": "Source coverage: bronze_bc_soil_project_boundaries",
       "sourceTable": "silver_source_coverage",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "tableName": "bronze_bc_soil_project_boundaries",
         "status": "available",
@@ -698,7 +698,7 @@
       "kind": "sourceCoverage",
       "title": "Source coverage: bronze_bc_soil_survey_polygons",
       "sourceTable": "silver_source_coverage",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "tableName": "bronze_bc_soil_survey_polygons",
         "status": "available",
@@ -710,7 +710,7 @@
       "kind": "sourceCoverage",
       "title": "Source coverage: bronze_cop_dem_glo_30",
       "sourceTable": "silver_source_coverage",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "tableName": "bronze_cop_dem_glo_30",
         "status": "available",
@@ -722,7 +722,7 @@
       "kind": "sourceCoverage",
       "title": "Source coverage: bronze_esa_worldcover",
       "sourceTable": "silver_source_coverage",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "tableName": "bronze_esa_worldcover",
         "status": "available",
@@ -734,7 +734,7 @@
       "kind": "sourceCoverage",
       "title": "Source coverage: bronze_hgb",
       "sourceTable": "silver_source_coverage",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "tableName": "bronze_hgb",
         "status": "available",
@@ -746,7 +746,7 @@
       "kind": "sourceCoverage",
       "title": "Source coverage: bronze_io_lulc_9_class",
       "sourceTable": "silver_source_coverage",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "tableName": "bronze_io_lulc_9_class",
         "status": "available",
@@ -758,11 +758,11 @@
       "kind": "sourceCoverage",
       "title": "Source coverage: bronze_satellite_stac_items",
       "sourceTable": "silver_source_coverage",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "tableName": "bronze_satellite_stac_items",
         "status": "available",
-        "recordCount": 476
+        "recordCount": 680
       }
     },
     {
@@ -770,7 +770,7 @@
       "kind": "sourceCoverage",
       "title": "Source coverage: bronze_sentinel_1_grd",
       "sourceTable": "silver_source_coverage",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "tableName": "bronze_sentinel_1_grd",
         "status": "unavailable",
@@ -782,7 +782,7 @@
       "kind": "sourceCoverage",
       "title": "Source coverage: bronze_sentinel_1_rtc",
       "sourceTable": "silver_source_coverage",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "tableName": "bronze_sentinel_1_rtc",
         "status": "available",
@@ -794,7 +794,7 @@
       "kind": "sourceCoverage",
       "title": "Source coverage: bronze_sentinel_2_l2a",
       "sourceTable": "silver_source_coverage",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "tableName": "bronze_sentinel_2_l2a",
         "status": "available",
@@ -806,12 +806,12 @@
       "kind": "bandSummary",
       "title": "Risk band Low extent",
       "sourceTable": "gold_rf1_band_summary",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "band": "Low",
-        "pixelCount": 147226,
-        "areaKm2": 14.7226,
-        "pct": 40.89611111111111
+        "pixelCount": 146644,
+        "areaKm2": 14.6644,
+        "pct": 40.73444444444444
       }
     },
     {
@@ -819,12 +819,12 @@
       "kind": "bandSummary",
       "title": "Risk band Moderate extent",
       "sourceTable": "gold_rf1_band_summary",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "band": "Moderate",
-        "pixelCount": 80013,
-        "areaKm2": 8.0013,
-        "pct": 22.225833333333334
+        "pixelCount": 79655,
+        "areaKm2": 7.9655000000000005,
+        "pct": 22.12638888888889
       }
     },
     {
@@ -832,12 +832,12 @@
       "kind": "bandSummary",
       "title": "Risk band High extent",
       "sourceTable": "gold_rf1_band_summary",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "band": "High",
-        "pixelCount": 118924,
-        "areaKm2": 11.8924,
-        "pct": 33.034444444444446
+        "pixelCount": 119731,
+        "areaKm2": 11.9731,
+        "pct": 33.258611111111115
       }
     },
     {
@@ -845,12 +845,12 @@
       "kind": "bandSummary",
       "title": "Risk band Extreme extent",
       "sourceTable": "gold_rf1_band_summary",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "band": "Extreme",
-        "pixelCount": 13837,
-        "areaKm2": 1.3837000000000002,
-        "pct": 3.8436111111111106
+        "pixelCount": 13970,
+        "areaKm2": 1.397,
+        "pct": 3.880555555555556
       }
     },
     {
@@ -858,7 +858,7 @@
       "kind": "riskMatrix",
       "title": "Matrix cell S=5 C=1",
       "sourceTable": "gold_rf1_risk_matrix",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "sRating": 5,
         "cRating": 1,
@@ -872,13 +872,13 @@
       "kind": "riskMatrix",
       "title": "Matrix cell S=1 C=2",
       "sourceTable": "gold_rf1_risk_matrix",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "sRating": 1,
         "cRating": 2,
         "riskScore": 2,
         "riskBand": "Low",
-        "pixelCount": 41057
+        "pixelCount": 40226
       }
     },
     {
@@ -886,13 +886,13 @@
       "kind": "riskMatrix",
       "title": "Matrix cell S=2 C=2",
       "sourceTable": "gold_rf1_risk_matrix",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "sRating": 2,
         "cRating": 2,
         "riskScore": 4,
         "riskBand": "Low",
-        "pixelCount": 92281
+        "pixelCount": 92621
       }
     },
     {
@@ -900,13 +900,13 @@
       "kind": "riskMatrix",
       "title": "Matrix cell S=3 C=2",
       "sourceTable": "gold_rf1_risk_matrix",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "sRating": 3,
         "cRating": 2,
         "riskScore": 6,
         "riskBand": "Moderate",
-        "pixelCount": 509
+        "pixelCount": 501
       }
     },
     {
@@ -914,13 +914,13 @@
       "kind": "riskMatrix",
       "title": "Matrix cell S=4 C=2",
       "sourceTable": "gold_rf1_risk_matrix",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "sRating": 4,
         "cRating": 2,
         "riskScore": 8,
         "riskBand": "Moderate",
-        "pixelCount": 5
+        "pixelCount": 4
       }
     },
     {
@@ -928,13 +928,13 @@
       "kind": "riskMatrix",
       "title": "Matrix cell S=5 C=2",
       "sourceTable": "gold_rf1_risk_matrix",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "sRating": 5,
         "cRating": 2,
         "riskScore": 10,
         "riskBand": "High",
-        "pixelCount": 36383
+        "pixelCount": 36883
       }
     },
     {
@@ -942,13 +942,13 @@
       "kind": "riskMatrix",
       "title": "Matrix cell S=1 C=3",
       "sourceTable": "gold_rf1_risk_matrix",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "sRating": 1,
         "cRating": 3,
         "riskScore": 3,
         "riskBand": "Low",
-        "pixelCount": 13711
+        "pixelCount": 13616
       }
     },
     {
@@ -956,13 +956,13 @@
       "kind": "riskMatrix",
       "title": "Matrix cell S=2 C=3",
       "sourceTable": "gold_rf1_risk_matrix",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "sRating": 2,
         "cRating": 3,
         "riskScore": 6,
         "riskBand": "Moderate",
-        "pixelCount": 31572
+        "pixelCount": 31618
       }
     },
     {
@@ -970,13 +970,13 @@
       "kind": "riskMatrix",
       "title": "Matrix cell S=3 C=3",
       "sourceTable": "gold_rf1_risk_matrix",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "sRating": 3,
         "cRating": 3,
         "riskScore": 9,
         "riskBand": "Moderate",
-        "pixelCount": 3485
+        "pixelCount": 3549
       }
     },
     {
@@ -984,13 +984,13 @@
       "kind": "riskMatrix",
       "title": "Matrix cell S=5 C=3",
       "sourceTable": "gold_rf1_risk_matrix",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "sRating": 5,
         "cRating": 3,
         "riskScore": 15,
         "riskBand": "High",
-        "pixelCount": 40016
+        "pixelCount": 40001
       }
     },
     {
@@ -998,13 +998,13 @@
       "kind": "riskMatrix",
       "title": "Matrix cell S=1 C=4",
       "sourceTable": "gold_rf1_risk_matrix",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "sRating": 1,
         "cRating": 4,
         "riskScore": 4,
         "riskBand": "Low",
-        "pixelCount": 177
+        "pixelCount": 181
       }
     },
     {
@@ -1012,13 +1012,13 @@
       "kind": "riskMatrix",
       "title": "Matrix cell S=2 C=4",
       "sourceTable": "gold_rf1_risk_matrix",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "sRating": 2,
         "cRating": 4,
         "riskScore": 8,
         "riskBand": "Moderate",
-        "pixelCount": 491
+        "pixelCount": 486
       }
     },
     {
@@ -1026,13 +1026,13 @@
       "kind": "riskMatrix",
       "title": "Matrix cell S=3 C=4",
       "sourceTable": "gold_rf1_risk_matrix",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "sRating": 3,
         "cRating": 4,
         "riskScore": 12,
         "riskBand": "High",
-        "pixelCount": 136
+        "pixelCount": 133
       }
     },
     {
@@ -1040,13 +1040,13 @@
       "kind": "riskMatrix",
       "title": "Matrix cell S=5 C=4",
       "sourceTable": "gold_rf1_risk_matrix",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "sRating": 5,
         "cRating": 4,
         "riskScore": 20,
         "riskBand": "Extreme",
-        "pixelCount": 1937
+        "pixelCount": 1941
       }
     },
     {
@@ -1054,13 +1054,13 @@
       "kind": "riskMatrix",
       "title": "Matrix cell S=1 C=5",
       "sourceTable": "gold_rf1_risk_matrix",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "sRating": 1,
         "cRating": 5,
         "riskScore": 5,
         "riskBand": "Moderate",
-        "pixelCount": 17481
+        "pixelCount": 17027
       }
     },
     {
@@ -1068,13 +1068,13 @@
       "kind": "riskMatrix",
       "title": "Matrix cell S=2 C=5",
       "sourceTable": "gold_rf1_risk_matrix",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "sRating": 2,
         "cRating": 5,
         "riskScore": 10,
         "riskBand": "High",
-        "pixelCount": 42334
+        "pixelCount": 42656
       }
     },
     {
@@ -1082,13 +1082,13 @@
       "kind": "riskMatrix",
       "title": "Matrix cell S=3 C=5",
       "sourceTable": "gold_rf1_risk_matrix",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "sRating": 3,
         "cRating": 5,
         "riskScore": 15,
         "riskBand": "High",
-        "pixelCount": 55
+        "pixelCount": 58
       }
     },
     {
@@ -1096,13 +1096,13 @@
       "kind": "riskMatrix",
       "title": "Matrix cell S=5 C=5",
       "sourceTable": "gold_rf1_risk_matrix",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "sRating": 5,
         "cRating": 5,
         "riskScore": 25,
         "riskBand": "Extreme",
-        "pixelCount": 11900
+        "pixelCount": 12029
       }
     },
     {
@@ -1110,26 +1110,27 @@
       "kind": "hotspot",
       "title": "Hotspot hs-001 (rank 1)",
       "sourceTable": "gold_rf1_risk_hotspots",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "featureId": "hs-001",
         "rank": 1,
-        "latitude": 49.21896490700295,
-        "longitude": -122.55984658724023,
+        "latitude": 49.21893530153788,
+        "longitude": -122.55986021702277,
         "sRating": 5,
         "cRating": 5,
         "riskScore": 25,
         "riskBand": "Extreme",
-        "areaKm2": 0.2512,
-        "pixelCount": 2512,
-        "meanSlopeDeg": 3.056,
-        "meanElevationM": 52.56,
+        "areaKm2": 0.2525,
+        "pixelCount": 2525,
+        "meanSlopeDeg": 3.06,
+        "meanElevationM": 52.52,
         "soilName": "ALBION",
         "soilDrainageClass": "poorly drained",
         "soilParentMaterial": "glaciomarine",
-        "geologyName": null,
+        "bedrockUnit": "undivided sedimentary rocks",
+        "bedrockAge": "Eocene",
         "landCover": "Built-up",
-        "nearestFaultKm": 5.262
+        "nearestFaultKm": 5.265
       }
     },
     {
@@ -1137,26 +1138,27 @@
       "kind": "hotspot",
       "title": "Hotspot hs-002 (rank 2)",
       "sourceTable": "gold_rf1_risk_hotspots",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "featureId": "hs-002",
         "rank": 2,
-        "latitude": 49.21717937227434,
-        "longitude": -122.59138741817964,
+        "latitude": 49.21709138248992,
+        "longitude": -122.59136482703713,
         "sRating": 5,
         "cRating": 5,
         "riskScore": 25,
         "riskBand": "Extreme",
-        "areaKm2": 0.199,
-        "pixelCount": 1990,
-        "meanSlopeDeg": 3.163,
-        "meanElevationM": 46.48,
+        "areaKm2": 0.1944,
+        "pixelCount": 1944,
+        "meanSlopeDeg": 3.211,
+        "meanElevationM": 46.45,
         "soilName": "ALBION",
         "soilDrainageClass": "very poorly drained",
         "soilParentMaterial": "glaciomarine",
-        "geologyName": null,
+        "bedrockUnit": "undivided sedimentary rocks",
+        "bedrockAge": "Eocene",
         "landCover": "Built-up",
-        "nearestFaultKm": 5.742
+        "nearestFaultKm": 5.751
       }
     },
     {
@@ -1164,7 +1166,7 @@
       "kind": "hotspot",
       "title": "Hotspot hs-003 (rank 3)",
       "sourceTable": "gold_rf1_risk_hotspots",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "featureId": "hs-003",
         "rank": 3,
@@ -1181,7 +1183,8 @@
         "soilName": "ALBION",
         "soilDrainageClass": "very poorly drained",
         "soilParentMaterial": "glaciomarine",
-        "geologyName": null,
+        "bedrockUnit": "undivided sedimentary rocks",
+        "bedrockAge": "Eocene",
         "landCover": "Built-up",
         "nearestFaultKm": 4.98
       }
@@ -1191,7 +1194,7 @@
       "kind": "hotspot",
       "title": "Hotspot hs-004 (rank 4)",
       "sourceTable": "gold_rf1_risk_hotspots",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "featureId": "hs-004",
         "rank": 4,
@@ -1208,7 +1211,8 @@
         "soilName": "ALBION",
         "soilDrainageClass": "very poorly drained",
         "soilParentMaterial": "glaciomarine",
-        "geologyName": null,
+        "bedrockUnit": "undivided sedimentary rocks",
+        "bedrockAge": "Eocene",
         "landCover": "Built-up",
         "nearestFaultKm": 4.938
       }
@@ -1218,26 +1222,27 @@
       "kind": "hotspot",
       "title": "Hotspot hs-005 (rank 5)",
       "sourceTable": "gold_rf1_risk_hotspots",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "featureId": "hs-005",
         "rank": 5,
-        "latitude": 49.2190754994862,
-        "longitude": -122.56501379492121,
+        "latitude": 49.21902886868335,
+        "longitude": -122.56504712597642,
         "sRating": 5,
         "cRating": 5,
         "riskScore": 25,
         "riskBand": "Extreme",
-        "areaKm2": 0.0495,
-        "pixelCount": 495,
-        "meanSlopeDeg": 2.902,
-        "meanElevationM": 51.53,
+        "areaKm2": 0.0514,
+        "pixelCount": 514,
+        "meanSlopeDeg": 3.013,
+        "meanElevationM": 51.5,
         "soilName": "ALBION",
         "soilDrainageClass": "very poorly drained",
         "soilParentMaterial": "glaciomarine",
-        "geologyName": null,
+        "bedrockUnit": "undivided sedimentary rocks",
+        "bedrockAge": "Eocene",
         "landCover": "Built-up",
-        "nearestFaultKm": 5.23
+        "nearestFaultKm": 5.235
       }
     },
     {
@@ -1245,26 +1250,27 @@
       "kind": "hotspot",
       "title": "Hotspot hs-006 (rank 6)",
       "sourceTable": "gold_rf1_risk_hotspots",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "featureId": "hs-006",
         "rank": 6,
-        "latitude": 49.203978050377266,
-        "longitude": -122.57313211342749,
+        "latitude": 49.20401090608993,
+        "longitude": -122.57306797246811,
         "sRating": 5,
         "cRating": 5,
         "riskScore": 25,
         "riskBand": "Extreme",
-        "areaKm2": 0.0386,
-        "pixelCount": 386,
-        "meanSlopeDeg": 3.352,
-        "meanElevationM": 6.98,
+        "areaKm2": 0.0409,
+        "pixelCount": 409,
+        "meanSlopeDeg": 3.525,
+        "meanElevationM": 7.15,
         "soilName": "CARVOLTH",
         "soilDrainageClass": "poorly drained",
         "soilParentMaterial": "fluvial",
-        "geologyName": null,
+        "bedrockUnit": "undivided sedimentary rocks",
+        "bedrockAge": "Eocene",
         "landCover": "Built-up",
-        "nearestFaultKm": 6.927
+        "nearestFaultKm": 6.923
       }
     },
     {
@@ -1272,7 +1278,7 @@
       "kind": "hotspot",
       "title": "Hotspot hs-007 (rank 7)",
       "sourceTable": "gold_rf1_risk_hotspots",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "featureId": "hs-007",
         "rank": 7,
@@ -1289,7 +1295,8 @@
         "soilName": "ALBION",
         "soilDrainageClass": "very poorly drained",
         "soilParentMaterial": "glaciomarine",
-        "geologyName": null,
+        "bedrockUnit": "undivided sedimentary rocks",
+        "bedrockAge": "Eocene",
         "landCover": "Built-up",
         "nearestFaultKm": 4.762
       }
@@ -1299,26 +1306,27 @@
       "kind": "hotspot",
       "title": "Hotspot hs-008 (rank 8)",
       "sourceTable": "gold_rf1_risk_hotspots",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "featureId": "hs-008",
         "rank": 8,
-        "latitude": 49.204251250420945,
-        "longitude": -122.56779427161277,
+        "latitude": 49.20429997738501,
+        "longitude": -122.56784153656146,
         "sRating": 5,
         "cRating": 5,
         "riskScore": 25,
         "riskBand": "Extreme",
-        "areaKm2": 0.0354,
-        "pixelCount": 354,
-        "meanSlopeDeg": 4.034,
-        "meanElevationM": 9.96,
+        "areaKm2": 0.0382,
+        "pixelCount": 382,
+        "meanSlopeDeg": 4.448,
+        "meanElevationM": 10.12,
         "soilName": "CARVOLTH",
         "soilDrainageClass": "poorly drained",
         "soilParentMaterial": "fluvial",
-        "geologyName": null,
+        "bedrockUnit": "undivided sedimentary rocks",
+        "bedrockAge": "Eocene",
         "landCover": "Built-up",
-        "nearestFaultKm": 6.879
+        "nearestFaultKm": 6.873
       }
     },
     {
@@ -1326,7 +1334,7 @@
       "kind": "hotspot",
       "title": "Hotspot hs-009 (rank 9)",
       "sourceTable": "gold_rf1_risk_hotspots",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "featureId": "hs-009",
         "rank": 9,
@@ -1343,7 +1351,8 @@
         "soilName": "ALBION",
         "soilDrainageClass": "very poorly drained",
         "soilParentMaterial": "glaciomarine",
-        "geologyName": null,
+        "bedrockUnit": "undivided sedimentary rocks",
+        "bedrockAge": "Eocene",
         "landCover": "Built-up",
         "nearestFaultKm": 6.074
       }
@@ -1353,26 +1362,27 @@
       "kind": "hotspot",
       "title": "Hotspot hs-010 (rank 10)",
       "sourceTable": "gold_rf1_risk_hotspots",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "featureId": "hs-010",
         "rank": 10,
-        "latitude": 49.21129570700922,
-        "longitude": -122.55813779926062,
+        "latitude": 49.21135981574813,
+        "longitude": -122.558140639233,
         "sRating": 5,
         "cRating": 5,
         "riskScore": 25,
         "riskBand": "Extreme",
-        "areaKm2": 0.0307,
-        "pixelCount": 307,
-        "meanSlopeDeg": 1.857,
-        "meanElevationM": 47.6,
+        "areaKm2": 0.029,
+        "pixelCount": 290,
+        "meanSlopeDeg": 1.754,
+        "meanElevationM": 47.7,
         "soilName": "ALBION",
         "soilDrainageClass": "poorly drained",
         "soilParentMaterial": "glaciomarine",
-        "geologyName": null,
+        "bedrockUnit": "undivided sedimentary rocks",
+        "bedrockAge": "Eocene",
         "landCover": "Built-up",
-        "nearestFaultKm": 6.122
+        "nearestFaultKm": 6.115
       }
     },
     {
@@ -1380,7 +1390,7 @@
       "kind": "hotspot",
       "title": "Hotspot hs-011 (rank 11)",
       "sourceTable": "gold_rf1_risk_hotspots",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "featureId": "hs-011",
         "rank": 11,
@@ -1397,7 +1407,8 @@
         "soilName": "HAZELWOOD",
         "soilDrainageClass": "poorly drained",
         "soilParentMaterial": "fluvial",
-        "geologyName": null,
+        "bedrockUnit": "undivided sedimentary rocks",
+        "bedrockAge": "Eocene",
         "landCover": "Built-up",
         "nearestFaultKm": 8.051
       }
@@ -1407,26 +1418,27 @@
       "kind": "hotspot",
       "title": "Hotspot hs-012 (rank 12)",
       "sourceTable": "gold_rf1_risk_hotspots",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "featureId": "hs-012",
         "rank": 12,
-        "latitude": 49.20920989313982,
-        "longitude": -122.56054673148883,
+        "latitude": 49.209041480882185,
+        "longitude": -122.56076231647361,
         "sRating": 5,
         "cRating": 5,
         "riskScore": 25,
         "riskBand": "Extreme",
-        "areaKm2": 0.0208,
-        "pixelCount": 208,
-        "meanSlopeDeg": 2.539,
-        "meanElevationM": 45.02,
+        "areaKm2": 0.0214,
+        "pixelCount": 214,
+        "meanSlopeDeg": 2.455,
+        "meanElevationM": 44.8,
         "soilName": "SCAT",
         "soilDrainageClass": "poorly drained",
         "soilParentMaterial": "eolian",
-        "geologyName": null,
+        "bedrockUnit": "undivided sedimentary rocks",
+        "bedrockAge": "Eocene",
         "landCover": "Built-up",
-        "nearestFaultKm": 6.34
+        "nearestFaultKm": 6.357
       }
     },
     {
@@ -1434,26 +1446,27 @@
       "kind": "hotspot",
       "title": "Hotspot hs-013 (rank 13)",
       "sourceTable": "gold_rf1_risk_hotspots",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "featureId": "hs-013",
         "rank": 13,
-        "latitude": 49.19309550631768,
-        "longitude": -122.57639612778047,
+        "latitude": 49.19311631291001,
+        "longitude": -122.57639357369264,
         "sRating": 5,
         "cRating": 5,
         "riskScore": 25,
         "riskBand": "Extreme",
-        "areaKm2": 0.0176,
-        "pixelCount": 176,
-        "meanSlopeDeg": 4.197,
-        "meanElevationM": 6.94,
+        "areaKm2": 0.0169,
+        "pixelCount": 169,
+        "meanSlopeDeg": 4.301,
+        "meanElevationM": 7.0,
         "soilName": "PAGE",
         "soilDrainageClass": "poorly drained",
         "soilParentMaterial": "fluvial",
-        "geologyName": null,
+        "bedrockUnit": "undivided sedimentary rocks",
+        "bedrockAge": "Eocene",
         "landCover": "Built-up",
-        "nearestFaultKm": 8.152
+        "nearestFaultKm": 8.15
       }
     },
     {
@@ -1461,37 +1474,10 @@
       "kind": "hotspot",
       "title": "Hotspot hs-014 (rank 14)",
       "sourceTable": "gold_rf1_risk_hotspots",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "featureId": "hs-014",
         "rank": 14,
-        "latitude": 49.2085594133147,
-        "longitude": -122.56055554686147,
-        "sRating": 5,
-        "cRating": 5,
-        "riskScore": 25,
-        "riskBand": "Extreme",
-        "areaKm2": 0.0153,
-        "pixelCount": 153,
-        "meanSlopeDeg": 3.316,
-        "meanElevationM": 44.83,
-        "soilName": "SCAT",
-        "soilDrainageClass": "poorly drained",
-        "soilParentMaterial": "eolian",
-        "geologyName": null,
-        "landCover": "Built-up",
-        "nearestFaultKm": 6.412
-      }
-    },
-    {
-      "id": "E53",
-      "kind": "hotspot",
-      "title": "Hotspot hs-015 (rank 15)",
-      "sourceTable": "gold_rf1_risk_hotspots",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
-      "values": {
-        "featureId": "hs-015",
-        "rank": 15,
         "latitude": 49.23409953038671,
         "longitude": -122.60984248402615,
         "sRating": 5,
@@ -1505,9 +1491,38 @@
         "soilName": "CLOVERDALE",
         "soilDrainageClass": "poorly drained",
         "soilParentMaterial": "marine",
-        "geologyName": null,
+        "bedrockUnit": "quartz dioritic intrusive rocks",
+        "bedrockAge": "Late Jurassic to Early Cretaceous",
         "landCover": "Built-up",
         "nearestFaultKm": 4.773
+      }
+    },
+    {
+      "id": "E53",
+      "kind": "hotspot",
+      "title": "Hotspot hs-015 (rank 15)",
+      "sourceTable": "gold_rf1_risk_hotspots",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
+      "values": {
+        "featureId": "hs-015",
+        "rank": 15,
+        "latitude": 49.20859476787679,
+        "longitude": -122.56059692859395,
+        "sRating": 5,
+        "cRating": 5,
+        "riskScore": 25,
+        "riskBand": "Extreme",
+        "areaKm2": 0.0142,
+        "pixelCount": 142,
+        "meanSlopeDeg": 2.746,
+        "meanElevationM": 44.74,
+        "soilName": "SCAT",
+        "soilDrainageClass": "poorly drained",
+        "soilParentMaterial": "eolian",
+        "bedrockUnit": "undivided sedimentary rocks",
+        "bedrockAge": "Eocene",
+        "landCover": "Built-up",
+        "nearestFaultKm": 6.408
       }
     },
     {
@@ -1515,26 +1530,27 @@
       "kind": "hotspot",
       "title": "Hotspot hs-016 (rank 16)",
       "sourceTable": "gold_rf1_risk_hotspots",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "featureId": "hs-016",
         "rank": 16,
-        "latitude": 49.20690723777557,
-        "longitude": -122.58822377835362,
+        "latitude": 49.20695131009424,
+        "longitude": -122.58818174918511,
         "sRating": 5,
         "cRating": 5,
         "riskScore": 25,
         "riskBand": "Extreme",
-        "areaKm2": 0.0122,
-        "pixelCount": 122,
-        "meanSlopeDeg": 5.031,
-        "meanElevationM": 10.98,
+        "areaKm2": 0.0129,
+        "pixelCount": 129,
+        "meanSlopeDeg": 5.131,
+        "meanElevationM": 11.38,
         "soilName": "ALBION",
         "soilDrainageClass": "poorly drained",
         "soilParentMaterial": "glaciomarine",
-        "geologyName": null,
+        "bedrockUnit": "undivided sedimentary rocks",
+        "bedrockAge": "Eocene",
         "landCover": "Built-up",
-        "nearestFaultKm": 6.776
+        "nearestFaultKm": 6.77
       }
     },
     {
@@ -1542,7 +1558,7 @@
       "kind": "hotspot",
       "title": "Hotspot hs-017 (rank 17)",
       "sourceTable": "gold_rf1_risk_hotspots",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "featureId": "hs-017",
         "rank": 17,
@@ -1559,7 +1575,8 @@
         "soilName": "TRIGGS",
         "soilDrainageClass": "very poorly drained",
         "soilParentMaterial": "SPPT",
-        "geologyName": null,
+        "bedrockUnit": "undivided sedimentary rocks",
+        "bedrockAge": "Eocene",
         "landCover": "Built-up",
         "nearestFaultKm": 7.926
       }
@@ -1569,7 +1586,7 @@
       "kind": "hotspot",
       "title": "Hotspot hs-018 (rank 18)",
       "sourceTable": "gold_rf1_risk_hotspots",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "featureId": "hs-018",
         "rank": 18,
@@ -1586,7 +1603,8 @@
         "soilName": "ALBION",
         "soilDrainageClass": "very poorly drained",
         "soilParentMaterial": "glaciomarine",
-        "geologyName": null,
+        "bedrockUnit": "undivided sedimentary rocks",
+        "bedrockAge": "Eocene",
         "landCover": "Built-up",
         "nearestFaultKm": 4.96
       }
@@ -1596,10 +1614,38 @@
       "kind": "hotspot",
       "title": "Hotspot hs-019 (rank 19)",
       "sourceTable": "gold_rf1_risk_hotspots",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "featureId": "hs-019",
         "rank": 19,
+        "latitude": 49.20795681271144,
+        "longitude": -122.59086051551941,
+        "sRating": 5,
+        "cRating": 5,
+        "riskScore": 25,
+        "riskBand": "Extreme",
+        "areaKm2": 0.0104,
+        "pixelCount": 104,
+        "meanSlopeDeg": 6.621,
+        "meanElevationM": 13.67,
+        "soilName": "ALBION",
+        "soilDrainageClass": "poorly drained",
+        "soilParentMaterial": "glaciomarine",
+        "bedrockUnit": "undivided sedimentary rocks",
+        "bedrockAge": "Eocene",
+        "landCover": "Built-up",
+        "nearestFaultKm": 6.711
+      }
+    },
+    {
+      "id": "E58",
+      "kind": "hotspot",
+      "title": "Hotspot hs-020 (rank 20)",
+      "sourceTable": "gold_rf1_risk_hotspots",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
+      "values": {
+        "featureId": "hs-020",
+        "rank": 20,
         "latitude": 49.21621288239609,
         "longitude": -122.5642113084196,
         "sRating": 5,
@@ -1613,36 +1659,10 @@
         "soilName": "ALBION",
         "soilDrainageClass": "very poorly drained",
         "soilParentMaterial": "glaciomarine",
-        "geologyName": null,
+        "bedrockUnit": "undivided sedimentary rocks",
+        "bedrockAge": "Eocene",
         "landCover": "Built-up",
         "nearestFaultKm": 5.55
-      }
-    },
-    {
-      "id": "E58",
-      "kind": "hotspot",
-      "title": "Hotspot hs-020 (rank 20)",
-      "sourceTable": "gold_rf1_risk_hotspots",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
-      "values": {
-        "featureId": "hs-020",
-        "rank": 20,
-        "latitude": 49.20793008509827,
-        "longitude": -122.59079110684795,
-        "sRating": 5,
-        "cRating": 5,
-        "riskScore": 25,
-        "riskBand": "Extreme",
-        "areaKm2": 0.0094,
-        "pixelCount": 94,
-        "meanSlopeDeg": 6.281,
-        "meanElevationM": 13.31,
-        "soilName": "ALBION",
-        "soilDrainageClass": "poorly drained",
-        "soilParentMaterial": "glaciomarine",
-        "geologyName": null,
-        "landCover": "Built-up",
-        "nearestFaultKm": 6.713
       }
     },
     {
@@ -1650,10 +1670,38 @@
       "kind": "hotspot",
       "title": "Hotspot hs-021 (rank 21)",
       "sourceTable": "gold_rf1_risk_hotspots",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "featureId": "hs-021",
         "rank": 21,
+        "latitude": 49.19584540252351,
+        "longitude": -122.56497157864536,
+        "sRating": 5,
+        "cRating": 5,
+        "riskScore": 25,
+        "riskBand": "Extreme",
+        "areaKm2": 0.0099,
+        "pixelCount": 99,
+        "meanSlopeDeg": 4.364,
+        "meanElevationM": 11.91,
+        "soilName": "ANNIS",
+        "soilDrainageClass": "poorly drained",
+        "soilParentMaterial": "FNPT",
+        "bedrockUnit": "undivided sedimentary rocks",
+        "bedrockAge": "Eocene",
+        "landCover": "Built-up",
+        "nearestFaultKm": 7.813
+      }
+    },
+    {
+      "id": "E60",
+      "kind": "hotspot",
+      "title": "Hotspot hs-022 (rank 22)",
+      "sourceTable": "gold_rf1_risk_hotspots",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
+      "values": {
+        "featureId": "hs-022",
+        "rank": 22,
         "latitude": 49.235815233798924,
         "longitude": -122.62530341017306,
         "sRating": 5,
@@ -1667,20 +1715,21 @@
         "soilName": "CLOVERDALE",
         "soilDrainageClass": "poorly drained",
         "soilParentMaterial": "marine",
-        "geologyName": null,
+        "bedrockUnit": "quartz dioritic intrusive rocks",
+        "bedrockAge": "Late Jurassic to Early Cretaceous",
         "landCover": "Built-up",
         "nearestFaultKm": 5.467
       }
     },
     {
-      "id": "E60",
+      "id": "E61",
       "kind": "hotspot",
-      "title": "Hotspot hs-022 (rank 22)",
+      "title": "Hotspot hs-023 (rank 23)",
       "sourceTable": "gold_rf1_risk_hotspots",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
-        "featureId": "hs-022",
-        "rank": 22,
+        "featureId": "hs-023",
+        "rank": 23,
         "latitude": 49.20715518258879,
         "longitude": -122.59018665112174,
         "sRating": 5,
@@ -1694,20 +1743,49 @@
         "soilName": "ALBION",
         "soilDrainageClass": "poorly drained",
         "soilParentMaterial": "glaciomarine",
-        "geologyName": null,
+        "bedrockUnit": "undivided sedimentary rocks",
+        "bedrockAge": "Eocene",
         "landCover": "Built-up",
         "nearestFaultKm": 6.785
       }
     },
     {
-      "id": "E61",
+      "id": "E62",
       "kind": "hotspot",
-      "title": "Hotspot hs-023 (rank 23)",
+      "title": "Hotspot hs-024 (rank 24)",
       "sourceTable": "gold_rf1_risk_hotspots",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
-        "featureId": "hs-023",
-        "rank": 23,
+        "featureId": "hs-024",
+        "rank": 24,
+        "latitude": 49.19947207061203,
+        "longitude": -122.57000121980708,
+        "sRating": 5,
+        "cRating": 5,
+        "riskScore": 25,
+        "riskBand": "Extreme",
+        "areaKm2": 0.0082,
+        "pixelCount": 82,
+        "meanSlopeDeg": 6.32,
+        "meanElevationM": 10.54,
+        "soilName": "ANNIS",
+        "soilDrainageClass": "poorly drained",
+        "soilParentMaterial": "FNPT",
+        "bedrockUnit": "undivided sedimentary rocks",
+        "bedrockAge": "Eocene",
+        "landCover": "Built-up",
+        "nearestFaultKm": 7.414
+      }
+    },
+    {
+      "id": "E63",
+      "kind": "hotspot",
+      "title": "Hotspot hs-025 (rank 25)",
+      "sourceTable": "gold_rf1_risk_hotspots",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
+      "values": {
+        "featureId": "hs-025",
+        "rank": 25,
         "latitude": 49.21930809961789,
         "longitude": -122.57852906788074,
         "sRating": 5,
@@ -1721,63 +1799,10 @@
         "soilName": "ALBION",
         "soilDrainageClass": "very poorly drained",
         "soilParentMaterial": "glaciomarine",
-        "geologyName": null,
+        "bedrockUnit": "undivided sedimentary rocks",
+        "bedrockAge": "Eocene",
         "landCover": "Built-up",
         "nearestFaultKm": 5.281
-      }
-    },
-    {
-      "id": "E62",
-      "kind": "hotspot",
-      "title": "Hotspot hs-024 (rank 24)",
-      "sourceTable": "gold_rf1_risk_hotspots",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
-      "values": {
-        "featureId": "hs-024",
-        "rank": 24,
-        "latitude": 49.24516584425,
-        "longitude": -122.57564053971923,
-        "sRating": 5,
-        "cRating": 5,
-        "riskScore": 25,
-        "riskBand": "Extreme",
-        "areaKm2": 0.0057,
-        "pixelCount": 57,
-        "meanSlopeDeg": 4.082,
-        "meanElevationM": 25.05,
-        "soilName": "GRAVEL PIT",
-        "soilDrainageClass": "-",
-        "soilParentMaterial": "-",
-        "geologyName": null,
-        "landCover": "Built-up",
-        "nearestFaultKm": 2.43
-      }
-    },
-    {
-      "id": "E63",
-      "kind": "hotspot",
-      "title": "Hotspot hs-025 (rank 25)",
-      "sourceTable": "gold_rf1_risk_hotspots",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
-      "values": {
-        "featureId": "hs-025",
-        "rank": 25,
-        "latitude": 49.245150936786466,
-        "longitude": -122.57452848703284,
-        "sRating": 5,
-        "cRating": 5,
-        "riskScore": 25,
-        "riskBand": "Extreme",
-        "areaKm2": 0.0055,
-        "pixelCount": 55,
-        "meanSlopeDeg": 5.412,
-        "meanElevationM": 33.51,
-        "soilName": "GRAVEL PIT",
-        "soilDrainageClass": "-",
-        "soilParentMaterial": "-",
-        "geologyName": null,
-        "landCover": "Built-up",
-        "nearestFaultKm": 2.409
       }
     },
     {
@@ -1785,7 +1810,7 @@
       "kind": "limitation",
       "title": "Soil survey coverage of the analysis grid",
       "sourceTable": "gold_rf1_risk_pixels",
-      "retrievedAtUtc": "2026-08-17T14:51:46.545593+00:00",
+      "retrievedAtUtc": "2026-08-24T18:26:00.671896+00:00",
       "values": {
         "mappedPixels": 334883,
         "totalPixels": 360000,
@@ -1793,5 +1818,5 @@
       }
     }
   ],
-  "webmapManifestUri": "Files/gold_rf1_webmap/runs/b538ce7e-69bb-4fd1-8f00-7ba7e7fc0a0a/gold_rf1_webmap_manifest.json"
+  "webmapManifestUri": "Files/gold_rf1_webmap/runs/8f6fdee6-a162-47b1-a6d9-39f340c2a325/gold_rf1_webmap_manifest.json"
 }
