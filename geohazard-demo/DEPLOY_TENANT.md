@@ -118,15 +118,78 @@ GlobalStandard, Standard, and DeveloperTier all fail. `gpt-5.4-mini` GlobalStand
 deploys first time. Treat the model catalogue as advertising rather than availability, and
 deploy from a candidate list instead of a single name.
 
-**2. The Fabric data agent needs a tenant switch, not a bigger SKU.**
+**2. The Fabric data agent needs two tenant switches, not a bigger SKU.**
+
+Creating a data agent fails with:
 
 ```text
 TenantSwitchDisabled: Tenant setting not enabled for Azure OpenAI usage: Disallowed
 ```
 
-This is the Fabric admin portal, **Tenant settings → Copilot and Azure AI**, and it is
-off by default in many enterprises. It has nothing to do with capacity size — an F2 is
-not the obstacle.
+Fabric admin portal, **Tenant settings → Copilot and Azure AI**. Enabling the first
+toggle changes the error rather than clearing it:
+
+```text
+TenantSwitchDisabled: ... DisallowedForStoreDataCrossGeo
+```
+
+A second toggle sits directly beneath it — *"Data sent to Azure OpenAI can be processed
+outside your capacity's geographic region, compliance boundary, or national cloud
+instance"* — and if the settings are scoped to a security group, that group must be on
+both. Neither has anything to do with capacity size: an F2 hosts a data agent fine.
+
+Raise the second one as a data-residency decision rather than a checkbox. For a customer
+on a Canada Central capacity it means prompts leaving the country, and their compliance
+owner should see that sentence.
+
+**3. The Fabric tool inside Foundry: creatable, but not usable on this project type.**
+
+Two earlier conclusions here were wrong, both now retested end to end in a second tenant.
+
+*Wrong: "the ARM connections API rejects every Fabric category, so it is portal-only."*
+It does not. The rejection came from using preview API versions. At **`2025-06-01`** ARM
+creates it happily:
+
+```bash
+az account get-access-token --resource https://management.azure.com
+PUT .../accounts/<account>/projects/<project>/connections/fabric_geohazard?api-version=2025-06-01
+{"properties": {"category": "MicrosoftFabric", "authType": "AAD",
+                "target": "https://api.fabric.microsoft.com/v1/workspaces/<ws>/aiskills/<agent>",
+                "metadata": {"ResourceId": "<agent>", "workspace_id": "<ws>"}}}
+```
+
+Read an existing working connection and clone its shape rather than inventing a payload.
+Creating one needs `accounts/projects/connections/write` — **Foundry Project Manager** is
+the narrowest built-in role that grants it.
+
+*Still true, and now confirmed twice:* the connection attaches to an agent (`200`), and
+every **run** then fails:
+
+```text
+missing_required_parameter: AML connections are required for Fabric tool.
+```
+
+The runtime resolves Fabric tool connections through an Azure ML workspace connection
+store, which a `Microsoft.CognitiveServices/accounts/projects` project does not have. A
+**hub-based** project is required. Tested in two tenants, with the connection created
+correctly and four roles held. This is a platform limitation, not configuration.
+
+It costs nothing architecturally: the pipeline hands the agent a bounded evidence
+contract, so what crosses the boundary is fixed and auditable before the model sees it.
+Live questioning is served by the Fabric data agent in the workspace itself.
+
+**Role summary.** These are different jobs and no single role covers them:
+
+| Need | Role | Scope |
+| --- | --- | --- |
+| Deploy a model | Cognitive Services OpenAI Contributor | resource group |
+| Use the agents data plane | Foundry User | **project** |
+| Create a connection | Foundry Project Manager | **project** |
+| Create Fabric items | workspace **Member** | Fabric workspace |
+
+Azure AI Developer grants none of these — its actions are
+`Microsoft.MachineLearningServices/*` only. Query role definitions for the exact action
+rather than matching on role names; the names are misleading.
 
 ## Check the data sources reach the customer's geography
 
