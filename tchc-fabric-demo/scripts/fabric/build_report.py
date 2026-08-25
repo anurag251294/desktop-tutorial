@@ -646,8 +646,10 @@ def main():
             item = json.loads(br)
             STACK["report_id"] = item["id"]
             STACK["report_name"] = REPORT_NAME
-            (ROOT / "stack_finance.json").write_text(json.dumps(STACK, indent=2))
             print(f"\nReport id: {item['id']}")
+        STACK["report"] = {"id": STACK.get("report_id") or existing,
+                           "name": REPORT_NAME}
+        Path(_args.output).write_text(json.dumps(STACK, indent=2), encoding="utf-8")
         print(f"Open: https://app.fabric.microsoft.com/groups/{WS}/reports/{existing or STACK.get('report_id')}")
     elif s in (200, 201):
         print("  OK (sync)")

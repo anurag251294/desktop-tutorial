@@ -135,6 +135,20 @@ Then say what the easy version gets wrong:
   reporting load on the source system.
 * Direct Lake is the reason the medallion and the semantic layer are not two projects.
 
+**Before the report, one modelling point worth ninety seconds.**
+
+Arrears is a **balance**, and a balance is semi-additive: it adds up across buildings and
+wards, and it does not add up across time. The arrears position for a quarter is the last
+month's balance, not the sum of three months.
+
+The first version of this model summed the snapshot and reported **$119M of arrears at a
+75% arrears rate**. Both were nonsense, and neither looked obviously wrong until someone
+widened the date filter. The measures now take the last snapshot in whatever date range
+is selected.
+
+Rent charged, rent collected and revenue forgone are **flows**, so they stay additive.
+Getting that distinction wrong is the most common defect in a first semantic model.
+
 **Then open the report — `TCHC_Arrears_and_Vacancy`.**
 
 | Page | Shows |
@@ -201,9 +215,34 @@ than by omission, because it constrains how the first sprint is staffed and wher
 | Symptom | Cause | Do |
 | --- | --- | --- |
 | Fabric item editors will not open | Capacity resumed under ~25 minutes ago | Wait. Show the repo and the architecture meanwhile |
-| Report shows blank visuals | Semantic model has not reframed since the last write | `POST datasets/{id}/refreshes` with `{"type":"full"}` |
+| Report shows blank visuals | Model has not reframed since the last write | `POST datasets/{id}/refreshes` with `{"type":"full"}` |
 | Model cannot see a new table | SQL endpoint has not synced | `POST /sqlEndpoints/{id}/refreshMetadata?preview=true` |
+| **Lakehouse is right, report is wrong** | A gold table was *replaced*, not appended | Recreate the model. See below |
 | A slicer renders empty | Known PBIR quirk below ~48px height | Already sized correctly here |
+
+### The one that will catch you
+
+A schema-changing overwrite **replaces** a Delta table rather than versioning it. The
+model's Direct Lake binding then points at a table identity that no longer exists, and
+both remedies report success while changing nothing:
+
+* SQL endpoint `refreshMetadata` → `Success`, zero tables reporting an issue
+* Direct Lake reframe → `Completed`
+
+Meanwhile the lakehouse demonstrably holds the corrected values and the report
+demonstrably shows the old ones. This cost about forty minutes to find during the build.
+
+**The fix is to recreate the semantic model**, which rebinds it. The report references
+the model by id, so it must be rebuilt too — both are scripted, and it takes about three
+minutes:
+
+```bash
+python scripts/fabric/create_semantic_model.py --output cicd/fabric-setup.output.json
+python scripts/fabric/build_report.py --output cicd/fabric-setup.output.json
+```
+
+Worth saying out loud in item 6 if someone asks what Direct Lake costs you. It is a real
+operational edge, not a reason to avoid it — but a team needs to know it exists.
 
 ## Reset
 

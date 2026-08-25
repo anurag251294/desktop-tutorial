@@ -61,7 +61,7 @@ def table(name, entity, columns, measures=None):
     }
 
 
-def build_model(sql_endpoint, lakehouse_id):
+def build_model(sql_endpoint, endpoint_database_id):
     """TMSL for the arrears and vacancy model."""
     return {
         "compatibilityLevel": 1604,
@@ -74,7 +74,7 @@ def build_model(sql_endpoint, lakehouse_id):
                 "kind": "m",
                 "expression": [
                     "let",
-                    f'    database = Sql.Database("{sql_endpoint}", "{lakehouse_id}")',
+                    f'    database = Sql.Database("{sql_endpoint}", "{endpoint_database_id}")',
                     "in",
                     "    database",
                 ],
@@ -140,15 +140,17 @@ def build_model(sql_endpoint, lakehouse_id):
                     column("is_in_arrears", "boolean"),
                 ], measures=[
                     {"name": "Total Arrears",
-                     "expression": "SUM(Arrears[closing_balance])",
+                     "expression": "CALCULATE(SUM(Arrears[closing_balance]), LASTNONBLANK(Arrears[period_start], CALCULATE(COUNTROWS(Arrears))))",
                      "formatString": "\\$#,##0",
-                     "description": "Closing balance owed at the selected period end."},
+                     "description": "Closing balance owed at the selected period end. Semi-additive: a balance is not summed across time, so this takes the last snapshot in the current date filter."},
                     {"name": "Households in Arrears",
                      "expression": "CALCULATE(DISTINCTCOUNT(Arrears[household_key]), "
-                                   "Arrears[is_in_arrears] = TRUE())",
+                                   "Arrears[is_in_arrears] = TRUE(), "
+                                   "LASTNONBLANK(Arrears[period_start], CALCULATE(COUNTROWS(Arrears))))",
                      "formatString": "#,##0"},
                     {"name": "Households Charged",
-                     "expression": "DISTINCTCOUNT(Arrears[household_key])",
+                     "expression": "CALCULATE(DISTINCTCOUNT(Arrears[household_key]), "
+                                   "LASTNONBLANK(Arrears[period_start], CALCULATE(COUNTROWS(Arrears))))",
                      "formatString": "#,##0"},
                     {"name": "Arrears Rate",
                      "expression": "DIVIDE([Households in Arrears], [Households Charged])",
@@ -174,7 +176,7 @@ def build_model(sql_endpoint, lakehouse_id):
                     {"name": "Collection Rate",
                      "expression": "DIVIDE([Rent Collected], [Rent Charged])",
                      "formatString": "0.0%",
-                     "description": "Receipts applied against charges raised in period."},
+                     "description": "Receipts applied against charges raised in period. A flow, so unlike the balance measures this one is additive across time."},
                     {"name": "Arrears MoM Change",
                      "expression": "VAR Prior = CALCULATE([Total Arrears], "
                                    "DATEADD('Date'[date], -1, MONTH)) "
@@ -195,13 +197,14 @@ def build_model(sql_endpoint, lakehouse_id):
                     column("revenue_forgone", "decimal", summarize="sum",
                            fmt="\\$#,##0"),
                 ], measures=[
-                    {"name": "Units", "expression": "DISTINCTCOUNT(UnitMonth[unit_id])",
+                    {"name": "Units", "expression": "CALCULATE(DISTINCTCOUNT(UnitMonth[unit_id]), "
+                                   "LASTNONBLANK(UnitMonth[period_start], CALCULATE(COUNTROWS(UnitMonth))))",
                      "formatString": "#,##0"},
                     {"name": "Units Vacant",
-                     "expression": "SUM(UnitMonth[vacant_flag])",
+                     "expression": "CALCULATE(SUM(UnitMonth[vacant_flag]), LASTNONBLANK(UnitMonth[period_start], CALCULATE(COUNTROWS(UnitMonth))))",
                      "formatString": "#,##0"},
                     {"name": "Units Occupied",
-                     "expression": "SUM(UnitMonth[occupied_flag])",
+                     "expression": "CALCULATE(SUM(UnitMonth[occupied_flag]), LASTNONBLANK(UnitMonth[period_start], CALCULATE(COUNTROWS(UnitMonth))))",
                      "formatString": "#,##0"},
                     {"name": "Vacancy Rate",
                      "expression": "DIVIDE([Units Vacant], "
@@ -321,7 +324,11 @@ def main():
     print("\nsyncing SQL endpoint metadata so Direct Lake can see the Delta tables")
     refresh_sql_endpoint(workspace_id, endpoint_item["id"], headers)
 
-    model = build_model(sql_endpoint, gold["id"])
+    # The database argument is the SQL endpoint id. Passing the lakehouse item id
+    # creates a model that queries with DM_InvalidRequest_DatamartNotFound.
+    endpoint_database_id = properties.get("id") or endpoint_item["id"]
+    print(f"endpoint db id : {endpoint_database_id}")
+    model = build_model(sql_endpoint, endpoint_database_id)
     parts = [
         {"path": "model.bim",
          "payload": base64.b64encode(json.dumps(model).encode()).decode(),

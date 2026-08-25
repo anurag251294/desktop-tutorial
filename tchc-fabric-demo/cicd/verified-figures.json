@@ -1,0 +1,10 @@
+{
+  "run": "8ad86134-8f61-4116-b74c-64944d838da2",
+  "units": 10568,
+  "households_charged": 11027,
+  "total_arrears": 9042395.27,
+  "arrears_rate": 0.3333,
+  "over_90_days": 5518176.68,
+  "collection_rate": 0.9601,
+  "vacancy_rate": 0.0085
+}
