@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/genomics/contracts/consultation-output.schema.json",
+  "title": "Genetic Consultation Draft",
+  "description": "Structured draft returned by the Foundry consultation agent. Every clinical statement carries citations resolving to the supplied case-evidence document.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "runId",
+    "caseId",
+    "title",
+    "summary",
+    "findings",
+    "coverageStatement",
+    "limitations",
+    "referenceRelease",
+    "reviewRequired",
+    "disclaimer"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "runId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "caseId": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "title": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "summary": { "$ref": "#/$defs/citedText" },
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/finding" }
+    },
+    "coverageStatement": { "$ref": "#/$defs/citedText" },
+    "limitations": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/citedText" }
+    },
+    "referenceRelease": { "$ref": "#/$defs/citedText" },
+    "reviewRequired": {
+      "const": true,
+      "description": "Always true. An unreviewed draft must never present as a reviewed one."
+    },
+    "disclaimer": {
+      "const": "Automated draft generated from pipeline evidence for review by a qualified clinical genetics professional. It is not a diagnosis, not a clinical interpretation, and not a substitute for review of the primary data. All case data in this demonstration is synthetic."
+    }
+  },
+  "$defs": {
+    "evidenceId": {
+      "type": "string",
+      "pattern": "^EV-[0-9]{3,}$"
+    },
+    "citations": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/evidenceId" }
+    },
+    "citedText": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "citations"],
+      "properties": {
+        "text": { "type": "string", "minLength": 1 },
+        "citations": { "$ref": "#/$defs/citations" }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["accession", "assessmentState", "statement", "citations"],
+      "properties": {
+        "accession": { "type": "string", "minLength": 1 },
+        "gene": { "type": ["string", "null"] },
+        "clinicalSignificance": {
+          "description": "Copied verbatim from the evidence, or null when the variant is unclassified. The agent may not coin its own value.",
+          "type": ["string", "null"],
+          "enum": [
+            "Pathogenic",
+            "Likely pathogenic",
+            "Uncertain significance",
+            "Conflicting",
+            "Likely benign",
+            "Benign",
+            null
+          ]
+        },
+        "assessmentState": {
+          "type": "string",
+          "enum": ["classified", "no_reference_entry", "gene_not_covered"]
+        },
+        "statement": { "type": "string", "minLength": 1 },
+        "citations": { "$ref": "#/$defs/citations" }
+      }
+    }
+  }
+}

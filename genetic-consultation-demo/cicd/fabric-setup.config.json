@@ -1,0 +1,46 @@
+{
+  "workspaceName": "Genomics_Demo",
+  "capacityId": "",
+  "workspaceDescription": "Genetic consultation agent demo: public ClinVar reference, typed variant tables, synthetic case assessment, evidence contract for a grounded Foundry agent. No patient data.",
+  "lakehouses": [
+    {
+      "displayName": "bronze_lakehouse",
+      "description": "Verbatim public reference records (ClinVar) plus the release stamp"
+    },
+    {
+      "displayName": "silver_lakehouse",
+      "description": "Typed variant reference and field-quality assertions"
+    },
+    {
+      "displayName": "gold_lakehouse",
+      "description": "Synthetic case assessment, coverage statements, agent evidence contracts"
+    }
+  ],
+  "notebooks": [
+    {
+      "displayName": "bronze_clinvar_reference",
+      "localPath": "fabric/notebooks/bronze_clinvar_reference.ipynb",
+      "lakehouse": "bronze_lakehouse"
+    },
+    {
+      "displayName": "silver_variant_reference",
+      "localPath": "fabric/notebooks/silver_variant_reference.ipynb",
+      "lakehouse": "silver_lakehouse"
+    },
+    {
+      "displayName": "gold_case_assessment",
+      "localPath": "fabric/notebooks/gold_case_assessment.ipynb",
+      "lakehouse": "gold_lakehouse"
+    },
+    {
+      "displayName": "agent_handoff_publisher",
+      "localPath": "fabric/notebooks/agent_handoff_publisher.ipynb",
+      "lakehouse": "gold_lakehouse"
+    }
+  ],
+  "dataPipeline": {
+    "displayName": "pl_genetic_consultation",
+    "localPath": "fabric/pipelines/pl_genetic_consultation.json",
+    "description": "ClinVar reference to validated evidence contract"
+  }
+}

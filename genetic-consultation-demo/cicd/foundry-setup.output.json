@@ -1,0 +1,10 @@
+{
+  "resourceGroup": "rg-fabric-demo",
+  "location": "canadacentral",
+  "account": "geohazard-foundry-mcap",
+  "accountEndpoint": "https://geohazard-foundry-mcap.cognitiveservices.azure.com/",
+  "project": "geohazard-project",
+  "projectEndpoint": "https://geohazard-foundry-mcap.services.ai.azure.com/api/projects/geohazard-project",
+  "modelDeploymentName": "gpt-5-4-mini",
+  "modelNote": "gpt-4.1-mini from agent-architecture is NOT deployable in canadacentral on this subscription (no quota for any SKU). gpt-5.4-mini keeps the cost-conscious mini intent."
+}
