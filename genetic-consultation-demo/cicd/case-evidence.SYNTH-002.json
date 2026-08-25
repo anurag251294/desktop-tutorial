@@ -1,0 +1,105 @@
+{
+ "schemaVersion": "1.0",
+ "run": {
+  "runId": "ff857590-904f-42d8-9618-7a45bdea33fc",
+  "generatedAtUtc": "2026-08-25T19:00:57.584798+00:00",
+  "referenceReleaseEvidenceId": "EV-001"
+ },
+ "case": {
+  "caseId": "SYNTH-002",
+  "referralIndication": "Early-onset epileptic encephalopathy",
+  "phenotypeTerms": "HP:0200134 Epileptic encephalopathy",
+  "panelApplied": "childhood_epilepsy_v1",
+  "highestTier": "Uncertain significance",
+  "hasCoverageGap": false,
+  "synthetic": true
+ },
+ "coverage": {
+  "evidenceId": "EV-002",
+  "state": "panel_complete",
+  "geneNotCovered": null
+ },
+ "variants": [
+  {
+   "accession": "VCV004131740",
+   "gene": "PCDH19",
+   "clinicalSignificance": "Uncertain significance",
+   "assessmentState": "classified",
+   "reportable": true,
+   "evidenceId": "EV-003"
+  }
+ ],
+ "fieldQuality": {
+  "evidenceId": "EV-004",
+  "emptyFields": []
+ },
+ "constraints": [
+  "This envelope is the only permitted source of fact.",
+  "A variant with assessmentState no_reference_entry is unclassified, not benign.",
+  "A coverageState of gene_not_covered means no conclusion may be drawn about that gene.",
+  "A variant of uncertain significance is not a negative result and must not be described as reassuring.",
+  "No management, treatment or diagnostic recommendation may be made."
+ ],
+ "evidence": [
+  {
+   "id": "EV-001",
+   "kind": "referenceRelease",
+   "title": "Reference release read for this run",
+   "sourceTable": "bronze_reference_release",
+   "referenceRelease": "2026-08-25T18:55:47.530048+00:00",
+   "values": {
+    "source": "ClinVar (NCBI)",
+    "readAtUtc": "2026-08-25T18:55:47.530048+00:00",
+    "panel": "childhood_epilepsy_v1",
+    "genesReturned": 8,
+    "variantRecords": 960
+   }
+  },
+  {
+   "id": "EV-002",
+   "kind": "coverage",
+   "title": "Panel coverage for SYNTH-002",
+   "sourceTable": "gold_case_coverage",
+   "referenceRelease": "2026-08-25T18:55:47.530048+00:00",
+   "values": {
+    "panelApplied": "childhood_epilepsy_v1",
+    "genesCovered": 8,
+    "coverageState": "panel_complete",
+    "geneNotCovered": null,
+    "note": "All 8 genes on childhood_epilepsy_v1 returned reference data."
+   }
+  },
+  {
+   "id": "EV-003",
+   "kind": "variantAssessment",
+   "title": "VCV004131740 (classified)",
+   "sourceTable": "gold_case_variant_assessment",
+   "referenceRelease": "2026-08-25T18:55:47.530048+00:00",
+   "values": {
+    "accession": "VCV004131740",
+    "gene": "PCDH19",
+    "variantTitle": "NM_001184880.2(PCDH19):c.928C>T (p.His310Tyr)",
+    "proteinChange": "H310Y",
+    "clinicalSignificance": "Uncertain significance",
+    "reviewStatus": "criteria provided, multiple submitters, no conflicts",
+    "reviewConfidence": 2,
+    "conditions": "Inborn genetic diseases; Developmental and epileptic encephalopathy, 9",
+    "conditionIdentifiers": "MedGen:C0950123; MeSH:D030342; Orphanet:101039; Orphanet:2076; MedGen:C1848137; MONDO:MONDO:0010246; OMIM:300088",
+    "assessmentState": "classified",
+    "reportable": true,
+    "note": "Variant of uncertain significance. Under ACMG/AMP guidance a VUS should not be used to direct clinical management in either direction, and is not a negative result."
+   }
+  },
+  {
+   "id": "EV-004",
+   "kind": "fieldQuality",
+   "title": "Citable fields empty in this run",
+   "sourceTable": "silver_field_quality",
+   "referenceRelease": "2026-08-25T18:55:47.530048+00:00",
+   "values": {
+    "emptyFields": [],
+    "count": 0
+   }
+  }
+ ]
+}

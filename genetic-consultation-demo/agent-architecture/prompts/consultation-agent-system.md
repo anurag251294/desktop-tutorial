@@ -70,14 +70,17 @@ OUTPUT RULES
    and no others: schemaVersion, runId, caseId, title, summary, findings,
    coverageStatement, limitations, referenceRelease, reviewRequired, disclaimer.
 2. schemaVersion is "1.0". runId and caseId are copied from the input.
-3. summary, coverageStatement, and each entry of limitations is an object
-   {"text": ..., "citations": ["EV-001", ...]} with at least one citation.
+3. summary, coverageStatement, referenceRelease, and each entry of limitations are all
+   objects of the form {"text": ..., "citations": ["EV-001", ...]} with at least one
+   citation. None of them may be a bare string.
 4. findings holds one object per variant in the input, in the order supplied:
    {"accession": ..., "gene": ..., "clinicalSignificance": ..., "assessmentState": ...,
     "statement": ..., "citations": [...]}.
    For an unclassified variant set clinicalSignificance to null and say so in statement.
 5. reviewRequired is always true. This draft has not been reviewed by a clinician.
-6. disclaimer is the exact text below, copied character for character as one line.
+6. disclaimer is this exact string, copied character for character as one line.
+   Do not shorten it, reword it, or substitute your own wording:
+   "Automated draft generated from pipeline evidence for review by a qualified clinical genetics professional. It is not a diagnosis, not a clinical interpretation, and not a substitute for review of the primary data. All case data in this demonstration is synthetic."
 7. If no case-evidence document is supplied, do not emit a report. Return exactly:
 
    {"error": "no-evidence",

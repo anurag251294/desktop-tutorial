@@ -1,0 +1,75 @@
+{
+ "schemaVersion": "1.0",
+ "run": {
+  "runId": "ff857590-904f-42d8-9618-7a45bdea33fc",
+  "generatedAtUtc": "2026-08-25T19:00:57.584798+00:00",
+  "referenceReleaseEvidenceId": "EV-001"
+ },
+ "case": {
+  "caseId": "SYNTH-004",
+  "referralIndication": "Seizures with tuberous sclerosis features",
+  "phenotypeTerms": "HP:0001250 Seizure; HP:0009721 Tuberous sclerosis",
+  "panelApplied": "childhood_epilepsy_v1",
+  "highestTier": null,
+  "hasCoverageGap": true,
+  "synthetic": true
+ },
+ "coverage": {
+  "evidenceId": "EV-002",
+  "state": "gene_not_covered",
+  "geneNotCovered": "TSC1"
+ },
+ "variants": [],
+ "fieldQuality": {
+  "evidenceId": "EV-003",
+  "emptyFields": []
+ },
+ "constraints": [
+  "This envelope is the only permitted source of fact.",
+  "A variant with assessmentState no_reference_entry is unclassified, not benign.",
+  "A coverageState of gene_not_covered means no conclusion may be drawn about that gene.",
+  "A variant of uncertain significance is not a negative result and must not be described as reassuring.",
+  "No management, treatment or diagnostic recommendation may be made."
+ ],
+ "evidence": [
+  {
+   "id": "EV-001",
+   "kind": "referenceRelease",
+   "title": "Reference release read for this run",
+   "sourceTable": "bronze_reference_release",
+   "referenceRelease": "2026-08-25T18:55:47.530048+00:00",
+   "values": {
+    "source": "ClinVar (NCBI)",
+    "readAtUtc": "2026-08-25T18:55:47.530048+00:00",
+    "panel": "childhood_epilepsy_v1",
+    "genesReturned": 8,
+    "variantRecords": 960
+   }
+  },
+  {
+   "id": "EV-002",
+   "kind": "coverage",
+   "title": "Panel coverage for SYNTH-004",
+   "sourceTable": "gold_case_coverage",
+   "referenceRelease": "2026-08-25T18:55:47.530048+00:00",
+   "values": {
+    "panelApplied": "childhood_epilepsy_v1",
+    "genesCovered": 8,
+    "coverageState": "gene_not_covered",
+    "geneNotCovered": "TSC1",
+    "note": "TSC1 is implicated by the referral indication but is not on childhood_epilepsy_v1. No conclusion about TSC1 can be drawn from this result."
+   }
+  },
+  {
+   "id": "EV-003",
+   "kind": "fieldQuality",
+   "title": "Citable fields empty in this run",
+   "sourceTable": "silver_field_quality",
+   "referenceRelease": "2026-08-25T18:55:47.530048+00:00",
+   "values": {
+    "emptyFields": [],
+    "count": 0
+   }
+  }
+ ]
+}

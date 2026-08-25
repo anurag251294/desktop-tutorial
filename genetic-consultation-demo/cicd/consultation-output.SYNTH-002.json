@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "1.0",
+  "runId": "ff857590-904f-42d8-9618-7a45bdea33fc",
+  "caseId": "SYNTH-002",
+  "title": "Genetic consultation draft for SYNTH-002",
+  "summary": {
+    "text": "This draft summarizes a childhood_epilepsy_v1 panel result for SYNTH-002, with panel coverage reported as panel_complete and 8 genes covered in the reference data read from ClinVar (NCBI) at the stated release time. [EV-001, EV-002]",
+    "citations": [
+      "EV-001",
+      "EV-002"
+    ]
+  },
+  "findings": [
+    {
+      "accession": "VCV004131740",
+      "gene": "PCDH19",
+      "clinicalSignificance": "Uncertain significance",
+      "assessmentState": "classified",
+      "statement": "PCDH19 VCV004131740 (NM_001184880.2(PCDH19):c.928C>T, p.His310Tyr) is reported as Uncertain significance; the review status is criteria provided, multiple submitters, no conflicts at the stated reference release. [EV-003, EV-001]",
+      "citations": [
+        "EV-003",
+        "EV-001"
+      ]
+    }
+  ],
+  "coverageStatement": {
+    "text": "The childhood_epilepsy_v1 panel was applied, and the coverage record states panel_complete with 8 genes covered and no gene listed as not covered in this run. [EV-002]",
+    "citations": [
+      "EV-002"
+    ]
+  },
+  "limitations": [
+    {
+      "text": "The reference release read for this run is 2026-08-25T18:55:47.530048+00:00 from ClinVar (NCBI); assertions are tied to that release only. [EV-001]",
+      "citations": [
+        "EV-001"
+      ]
+    },
+    {
+      "text": "The reported PCDH19 finding is Uncertain significance; the evidence note states this is not a negative result and should not be used to direct clinical management in either direction. [EV-003]",
+      "citations": [
+        "EV-003"
+      ]
+    }
+  ],
+  "referenceRelease": {
+    "text": "ClinVar (NCBI), reference release 2026-08-25T18:55:47.530048+00:00, read at 2026-08-25T18:55:47.530048+00:00. [EV-001, EV-003]",
+    "citations": [
+      "EV-001",
+      "EV-003"
+    ]
+  },
+  "reviewRequired": true,
+  "disclaimer": "Automated draft generated from pipeline evidence for review by a qualified clinical genetics professional. It is not a diagnosis, not a clinical interpretation, and not a substitute for review of the primary data. All case data in this demonstration is synthetic."
+}

@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "1.0",
+  "runId": "ff857590-904f-42d8-9618-7a45bdea33fc",
+  "caseId": "SYNTH-003",
+  "title": "Genetic consultation draft for SYNTH-003",
+  "summary": {
+    "text": "This draft concerns case SYNTH-003, referred for febrile seizures and family history, with phenotype term HP:0002373 Febrile seizure, using the childhood_epilepsy_v1 panel. The reference release read for this run was 2026-08-25T18:55:47.530048+00:00 from ClinVar (NCBI).",
+    "citations": [
+      "EV-001"
+    ]
+  },
+  "findings": [
+    {
+      "accession": "VCV_NOT_SUBMITTED_0001",
+      "gene": null,
+      "clinicalSignificance": null,
+      "assessmentState": "no_reference_entry",
+      "statement": "This variant is unclassified: no submitted assertion was found in the release that was read for VCV_NOT_SUBMITTED_0001.",
+      "citations": [
+        "EV-003",
+        "EV-001"
+      ]
+    }
+  ],
+  "coverageStatement": {
+    "text": "Coverage for SYNTH-003 was panel_complete on childhood_epilepsy_v1, with 8 genes covered and 8 genes returned reference data. The tested panel was childhood_epilepsy_v1.",
+    "citations": [
+      "EV-002",
+      "EV-001"
+    ]
+  },
+  "limitations": [
+    {
+      "text": "There was no submitted assertion for VCV_NOT_SUBMITTED_0001 in the release read for this run, so no classification could be reported from that release.",
+      "citations": [
+        "EV-003",
+        "EV-001"
+      ]
+    }
+  ],
+  "referenceRelease": {
+    "text": "2026-08-25T18:55:47.530048+00:00; source ClinVar (NCBI); panel childhood_epilepsy_v1; 8 genes returned and 960 variant records were read.",
+    "citations": [
+      "EV-001"
+    ]
+  },
+  "reviewRequired": true,
+  "disclaimer": "Automated draft generated from pipeline evidence for review by a qualified clinical genetics professional. It is not a diagnosis, not a clinical interpretation, and not a substitute for review of the primary data. All case data in this demonstration is synthetic."
+}
