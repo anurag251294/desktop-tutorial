@@ -2,12 +2,12 @@
   "schemaVersion": "1.0",
   "runId": "ff857590-904f-42d8-9618-7a45bdea33fc",
   "caseId": "SYNTH-002",
-  "title": "Genetic consultation draft for SYNTH-002",
+  "title": "Genetic consultation draft summary",
   "summary": {
-    "text": "This draft summarizes a childhood_epilepsy_v1 panel result for SYNTH-002, with panel coverage reported as panel_complete and 8 genes covered in the reference data read from ClinVar (NCBI) at the stated release time. [EV-001, EV-002]",
+    "text": "This case used the childhood_epilepsy_v1 panel for a case referred with early-onset epileptic encephalopathy / HP:0200134 Epileptic encephalopathy [EV-002]. One reportable variant was identified in PCDH19: VCV004131740 (NM_001184880.2(PCDH19):c.928C>T, p.His310Tyr / H310Y), with clinicalSignificance reported as Uncertain significance and assessmentState classified [EV-003].",
     "citations": [
-      "EV-001",
-      "EV-002"
+      "EV-002",
+      "EV-003"
     ]
   },
   "findings": [
@@ -16,38 +16,36 @@
       "gene": "PCDH19",
       "clinicalSignificance": "Uncertain significance",
       "assessmentState": "classified",
-      "statement": "PCDH19 VCV004131740 (NM_001184880.2(PCDH19):c.928C>T, p.His310Tyr) is reported as Uncertain significance; the review status is criteria provided, multiple submitters, no conflicts at the stated reference release. [EV-003, EV-001]",
+      "statement": "PCDH19 VCV004131740 (NM_001184880.2(PCDH19):c.928C>T, p.His310Tyr; H310Y) is reported as Uncertain significance with assessmentState classified; the submitted reviewStatus was criteria provided, multiple submitters, no conflicts [EV-003].",
       "citations": [
-        "EV-003",
-        "EV-001"
+        "EV-003"
       ]
     }
   ],
   "coverageStatement": {
-    "text": "The childhood_epilepsy_v1 panel was applied, and the coverage record states panel_complete with 8 genes covered and no gene listed as not covered in this run. [EV-002]",
+    "text": "The childhood_epilepsy_v1 panel was applied and panel coverage was reported as panel_complete, with 8 genes covered and all 8 genes on the panel returning reference data [EV-002].",
     "citations": [
       "EV-002"
     ]
   },
   "limitations": [
     {
-      "text": "The reference release read for this run is 2026-08-25T18:55:47.530048+00:00 from ClinVar (NCBI); assertions are tied to that release only. [EV-001]",
+      "text": "The classification was read against the reference release recorded as 2026-08-25T18:55:47.530048+00:00 for ClinVar (NCBI) [EV-001].",
       "citations": [
         "EV-001"
       ]
     },
     {
-      "text": "The reported PCDH19 finding is Uncertain significance; the evidence note states this is not a negative result and should not be used to direct clinical management in either direction. [EV-003]",
+      "text": "The input envelope states that it is the only permitted source of fact, and the case record is synthetic [EV-001].",
       "citations": [
-        "EV-003"
+        "EV-001"
       ]
     }
   ],
   "referenceRelease": {
-    "text": "ClinVar (NCBI), reference release 2026-08-25T18:55:47.530048+00:00, read at 2026-08-25T18:55:47.530048+00:00. [EV-001, EV-003]",
+    "text": "ClinVar (NCBI), reference release read at 2026-08-25T18:55:47.530048+00:00 [EV-001].",
     "citations": [
-      "EV-001",
-      "EV-003"
+      "EV-001"
     ]
   },
   "reviewRequired": true,

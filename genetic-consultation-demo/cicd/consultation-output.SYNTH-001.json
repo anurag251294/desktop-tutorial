@@ -2,9 +2,9 @@
   "schemaVersion": "1.0",
   "runId": "ff857590-904f-42d8-9618-7a45bdea33fc",
   "caseId": "SYNTH-001",
-  "title": "Genetic consultation draft for clinical review",
+  "title": "Genetic consultation draft for SYNTH-001",
   "summary": {
-    "text": "This draft summarizes panel-based variant assessments for the childhood_epilepsy_v1 panel in a case referred for infantile-onset seizures and developmental delay, using the ClinVar (NCBI) release read at 2026-08-25T18:55:47.530048+00:00. [EV-001][EV-002]",
+    "text": "This draft summarizes panel testing using the childhood_epilepsy_v1 panel and the reference release read at 2026-08-25T18:55:47.530048+00:00 from ClinVar (NCBI). The case evidence lists infantile-onset seizures and developmental delay as the referral indication / phenotype terms. [EV-001, EV-002]",
     "citations": [
       "EV-001",
       "EV-002"
@@ -16,8 +16,9 @@
       "gene": "STXBP1",
       "clinicalSignificance": "Benign",
       "assessmentState": "classified",
-      "statement": "The STXBP1 variant VCV003705313 was assessed as Benign in the release read, with review status 'criteria provided, single submitter'. [EV-003]",
+      "statement": "VCV003705313 in STXBP1 was read in the reference release 2026-08-25T18:55:47.530048+00:00 and is reported as Benign. The review status is criteria provided, single submitter. [EV-001, EV-003]",
       "citations": [
+        "EV-001",
         "EV-003"
       ]
     },
@@ -26,37 +27,35 @@
       "gene": "SCN2A",
       "clinicalSignificance": "Pathogenic",
       "assessmentState": "classified",
-      "statement": "The SCN2A variant VCV004850844 was assessed as Pathogenic in the release read, with review status 'criteria provided, multiple submitters, no conflicts'. [EV-004]",
+      "statement": "VCV004850844 in SCN2A was read in the reference release 2026-08-25T18:55:47.530048+00:00 and is reported as Pathogenic. The review status is criteria provided, multiple submitters, no conflicts. [EV-001, EV-004]",
       "citations": [
+        "EV-001",
         "EV-004"
       ]
     }
   ],
   "coverageStatement": {
-    "text": "The childhood_epilepsy_v1 panel was applied and returned reference data for 8 genes; coverageState was panel_complete. [EV-002]",
+    "text": "Testing was performed on the childhood_epilepsy_v1 panel, and the coverage record states panel_complete with 8 genes covered and all 8 genes on the panel returning reference data. [EV-002]",
     "citations": [
       "EV-002"
     ]
   },
   "limitations": [
     {
-      "text": "This draft is limited to the case evidence supplied here, which includes panel coverage and the variant assessments from the ClinVar (NCBI) release read at 2026-08-25T18:55:47.530048+00:00. [EV-001][EV-002][EV-003][EV-004]",
+      "text": "Interpretation is based on the pipeline evidence for the reference release 2026-08-25T18:55:47.530048+00:00; variant assertions are tied to that release. [EV-001]",
       "citations": [
-        "EV-001",
-        "EV-002",
-        "EV-003",
-        "EV-004"
+        "EV-001"
       ]
     },
     {
-      "text": "The field-quality record lists no empty citable fields in this run. [EV-005]",
+      "text": "The case evidence supplied here does not report any coverage gap, and the coverage record states panel_complete. [EV-002]",
       "citations": [
-        "EV-005"
+        "EV-002"
       ]
     }
   ],
   "referenceRelease": {
-    "text": "ClinVar (NCBI) release read at 2026-08-25T18:55:47.530048+00:00 for panel childhood_epilepsy_v1. [EV-001]",
+    "text": "Reference release: ClinVar (NCBI), read at 2026-08-25T18:55:47.530048+00:00. [EV-001]",
     "citations": [
       "EV-001"
     ]

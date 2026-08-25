@@ -4,7 +4,7 @@
   "caseId": "SYNTH-004",
   "title": "Genetic consultation draft summary",
   "summary": {
-    "text": "The childhood_epilepsy_v1 panel was read against the ClinVar (NCBI) reference release and returned 8 genes and 960 variant records in the referenced release [EV-001]. No variants are listed for this case, and the coverage record states that TSC1 was not covered on this panel [EV-002].",
+    "text": "Testing was performed on the childhood_epilepsy_v1 panel, which returned 8 genes and 960 variant records in the referenced release. The case indication was seizures with tuberous sclerosis features, and the coverage record states that TSC1 was not covered on this panel, so no conclusion about TSC1 can be drawn from this result.",
     "citations": [
       "EV-001",
       "EV-002"
@@ -12,27 +12,27 @@
   },
   "findings": [],
   "coverageStatement": {
-    "text": "The childhood_epilepsy_v1 panel was the test applied for this case [EV-002]. TSC1 was not examined on this panel, and no conclusion about TSC1 can be drawn from this result [EV-002].",
+    "text": "The childhood_epilepsy_v1 panel was used for this case. TSC1 was not examined because it is not on the panel, and no conclusion about TSC1 can be drawn from this result.",
     "citations": [
       "EV-002"
     ]
   },
   "limitations": [
     {
-      "text": "The report is limited to the genes returned on the childhood_epilepsy_v1 panel in the referenced ClinVar (NCBI) release [EV-001].",
+      "text": "No variant findings were supplied for this case.",
       "citations": [
-        "EV-001"
+        "EV-003"
       ]
     },
     {
-      "text": "The coverage record states that TSC1 was not covered, so this result does not provide a conclusion about that gene [EV-002].",
+      "text": "The coverage record states gene_not_covered for TSC1 on childhood_epilepsy_v1.",
       "citations": [
         "EV-002"
       ]
     }
   ],
   "referenceRelease": {
-    "text": "ClinVar (NCBI), read at 2026-08-25T18:55:47.530048+00:00 [EV-001].",
+    "text": "ClinVar (NCBI), read at 2026-08-25T18:55:47.530048+00:00 for panel childhood_epilepsy_v1.",
     "citations": [
       "EV-001"
     ]

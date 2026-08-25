@@ -56,6 +56,46 @@ def token(resource="https://ai.azure.com"):
     return result.stdout.strip()
 
 
+
+def wait_ready(endpoint, headers, model, attempts=20):
+    """Wait until the project accepts a WRITE, and return the host that does.
+
+    A newly created project 404s on the data plane after ARM reports Succeeded, reads and
+    writes become available at different moments, and the two published host names
+    propagate independently. A GET-based probe will happily pick a host that then rejects
+    the create, so probe by creating and deleting a throwaway agent.
+    """
+    candidates = [endpoint]
+    if ".services.ai.azure.com" in endpoint:
+        candidates.append(endpoint.replace(".services.ai.azure.com",
+                                           ".cognitiveservices.azure.com"))
+    elif ".cognitiveservices.azure.com" in endpoint:
+        candidates.append(endpoint.replace(".cognitiveservices.azure.com",
+                                           ".services.ai.azure.com"))
+
+    probe = {"model": model, "name": "_readiness_probe", "instructions": "probe",
+             "tools": []}
+    for attempt in range(attempts):
+        for candidate in candidates:
+            try:
+                response = requests.post(
+                    f"{candidate}/assistants?api-version={API_VERSION}",
+                    headers=headers, data=json.dumps(probe), timeout=90)
+            except Exception:
+                continue
+            if response.ok:
+                requests.delete(
+                    f"{candidate}/assistants/{response.json()['id']}"
+                    f"?api-version={API_VERSION}", headers=headers, timeout=90)
+                if candidate != endpoint:
+                    print(f"using alternate host: {candidate}")
+                return candidate
+        if attempt == 0:
+            print("project not writable on the data plane yet, waiting ...")
+        time.sleep(20)
+    raise SystemExit(f"project never became writable: {endpoint}")
+
+
 def extract_system_message(markdown_path):
     text = Path(markdown_path).read_text(encoding="utf-8")
     match = re.search(r"```text\n(.*?)```", text, re.DOTALL)
@@ -154,6 +194,7 @@ def main():
     endpoint = config["projectEndpoint"].rstrip("/")
     model = config["modelDeploymentName"]
     headers = {"Authorization": f"Bearer {token()}", "Content-Type": "application/json"}
+    endpoint = wait_ready(endpoint, headers, model)
 
     instructions = extract_system_message(args.prompt)
     envelope = json.loads(Path(args.evidence).read_text(encoding="utf-8"))
