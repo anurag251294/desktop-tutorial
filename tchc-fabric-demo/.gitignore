@@ -1,0 +1,3 @@
+cicd/fabric-setup.output.json
+__pycache__/
+*.pyc

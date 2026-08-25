@@ -1,0 +1,92 @@
+{
+  "properties": {
+    "description": "TCHC medallion: source extracts to conformed silver to the arrears and vacancy star schema.",
+    "activities": [
+      {
+        "name": "Bronze_Source_Extracts",
+        "type": "TridentNotebook",
+        "description": "Land synthetic property-management and finance extracts verbatim.",
+        "dependsOn": [],
+        "policy": {
+          "timeout": "0.02:00:00",
+          "retry": 1,
+          "retryIntervalInSeconds": 60,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "notebookId": "{{NOTEBOOK_ID:bronze_source_extracts}}",
+          "workspaceId": "{{WORKSPACE_ID}}",
+          "parameters": {
+            "BUILDING_COUNT": {
+              "value": { "value": "@pipeline().parameters.BUILDING_COUNT", "type": "Expression" },
+              "type": "int"
+            },
+            "MONTHS_OF_HISTORY": {
+              "value": { "value": "@pipeline().parameters.MONTHS_OF_HISTORY", "type": "Expression" },
+              "type": "int"
+            },
+            "PIPELINE_RUN_ID": {
+              "value": { "value": "@pipeline().RunId", "type": "Expression" },
+              "type": "string"
+            }
+          }
+        }
+      },
+      {
+        "name": "Silver_Conformed",
+        "type": "TridentNotebook",
+        "description": "Conform two systems, deduplicate, quarantine orphans, and record data quality.",
+        "dependsOn": [
+          { "activity": "Bronze_Source_Extracts", "dependencyConditions": ["Succeeded"] }
+        ],
+        "policy": {
+          "timeout": "0.02:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 60,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "notebookId": "{{NOTEBOOK_ID:silver_conformed}}",
+          "workspaceId": "{{WORKSPACE_ID}}",
+          "parameters": {
+            "PIPELINE_RUN_ID": {
+              "value": { "value": "@pipeline().RunId", "type": "Expression" },
+              "type": "string"
+            }
+          }
+        }
+      },
+      {
+        "name": "Gold_Star_Schema",
+        "type": "TridentNotebook",
+        "description": "Allocate receipts oldest-charge-first, age the balance, and build the star schema.",
+        "dependsOn": [
+          { "activity": "Silver_Conformed", "dependencyConditions": ["Succeeded"] }
+        ],
+        "policy": {
+          "timeout": "0.03:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 60,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "notebookId": "{{NOTEBOOK_ID:gold_star_schema}}",
+          "workspaceId": "{{WORKSPACE_ID}}",
+          "parameters": {
+            "PIPELINE_RUN_ID": {
+              "value": { "value": "@pipeline().RunId", "type": "Expression" },
+              "type": "string"
+            }
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "BUILDING_COUNT": { "type": "Int", "defaultValue": 120 },
+      "MONTHS_OF_HISTORY": { "type": "Int", "defaultValue": 24 }
+    }
+  }
+}
