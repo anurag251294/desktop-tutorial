@@ -409,6 +409,82 @@ text(s, 1.25, 6.7, 10.9, 0.45,
             "and concurrency, and none of those are known yet.", "size": 14,
        "color": INK, "face": "Georgia"}])
 
+# ---------------------------------------------------------------- 13b. where AI fits
+s = slide()
+header(s, "Beyond this engagement", "Where the AI piece fits")
+text(s, 0.95, 2.15, 11.4, 0.4,
+     [{"t": "Out of scope for the MVP, and worth deciding deliberately rather than "
+            "drifting into.", "size": 14, "color": GRAY, "face": "Georgia"}])
+
+tiers = [
+    ("ASK THE DATA", TEAL,
+     "A Fabric data agent over the Gold layer.\n\n"
+     "“Which buildings carry the most\nbalance over ninety days?” in plain\n"
+     "language, against the same measures\nthe report uses.",
+     "Closest to ready"),
+    ("EXPLAIN THE DATA", TEAL,
+     "A monthly arrears briefing, written\nfrom the pipeline's own numbers.\n\n"
+     "The model never calculates. It renders\nwhat Gold produced, and every figure\n"
+     "cites the row it came from.",
+     "Built twice, elsewhere"),
+    ("DECIDE WITH THE DATA", AMBER,
+     "Ranking households for contact.\n\n"
+     "This stops being a technology question.\nArrears touches somebody's housing,\n"
+     "and that needs governance before it\nneeds a model.",
+     "Not without a policy owner"),
+]
+x = 0.95
+for label, colour, body, tag in tiers:
+    panel(s, x, 2.65, 3.66, 3.0)
+    rule(s, x, 2.65, 3.66, colour, 4)
+    text(s, x + 0.25, 2.9, 3.2, 0.35,
+         [{"t": label, "size": 11, "bold": True, "color": colour, "face": "Consolas"}])
+    text(s, x + 0.25, 3.35, 3.2, 2.0, [{"t": body, "size": 12, "color": INK}])
+    text(s, x + 0.25, 5.28, 3.2, 0.3,
+         [{"t": tag, "size": 10, "bold": True, "color": GRAY, "face": "Consolas"}])
+    x += 3.84
+
+panel(s, 0.95, 5.9, 11.4, 1.35, RGBColor(0xF7, 0xEE, 0xED))
+text(s, 1.25, 6.1, 10.9, 1.0,
+     [{"t": "The guardrail that matters here.  ", "size": 15, "bold": True,
+       "color": RED, "face": "Georgia"},
+      {"t": "A household with a balance, a household we hold no data for, and a "
+            "household outside the extract are three different things. Only the first "
+            "is a finding. Any layer that lets them collapse into one list will "
+            "eventually put the wrong name on it.", "size": 15, "color": INK,
+       "face": "Georgia"}])
+
+# ---------------------------------------------------------------- 13c. what it costs
+s = slide()
+header(s, "Beyond this engagement", "What the AI piece actually costs you")
+notes = [
+    ("Two tenant switches, not one",
+     "A Fabric data agent needs Copilot and Azure AI enabled, and separately needs data "
+     "permitted to leave the capacity's geography for processing. For an Ontario housing "
+     "provider the second is a residency decision, not a checkbox."),
+    ("Grounding is engineering, not prompting",
+     "The pipeline decides what the model may see, and hands it a bounded evidence "
+     "envelope. That work sits in the Gold layer and the contract between them — "
+     "which is why it comes after the MVP, not instead of it."),
+    ("Validate the contract, not just the values",
+     "In an earlier build, an agent given no evidence returned a perfectly valid "
+     "document citing a source that did not exist. Schema validation passed it. Only a "
+     "second, independent check caught it."),
+    ("A refusal has to be expressible",
+     "If the only valid answer shape is an answer, a model will invent one. It needs a "
+     "lawful way to return nothing."),
+]
+y = 2.3
+for title, body in notes:
+    text(s, 0.95, y, 3.6, 0.5, [{"t": title, "size": 15, "bold": True, "color": INK}])
+    text(s, 4.7, y, 7.7, 0.95, [{"t": body, "size": 13, "color": GRAY}])
+    y += 1.13
+panel(s, 0.95, 6.65, 11.4, 0.72, RGBColor(0xEC, 0xF0, 0xF0))
+text(s, 1.25, 6.8, 10.9, 0.45,
+     [{"t": "None of this is a reason not to do it. It is the reason to do the "
+            "medallion and the semantic model first.", "size": 14, "color": INK,
+       "face": "Georgia"}])
+
 # ---------------------------------------------------------------- 14. checklist
 s = slide()
 header(s, "Item 10", "Pre-kickoff checklist")
