@@ -37,9 +37,12 @@ def token(resource="https://api.fabric.microsoft.com"):
     return result.stdout.strip()
 
 
-def column(name, data_type, summarize="none", source=None, fmt=None, hidden=False):
+def column(name, data_type, summarize="none", source=None, fmt=None, hidden=False,
+           sort_by=None):
     entry = {"name": name, "dataType": data_type,
              "sourceColumn": source or name, "summarizeBy": summarize}
+    if sort_by:
+        entry["sortByColumn"] = sort_by
     if fmt:
         entry["formatString"] = fmt
     if hidden:
@@ -86,7 +89,8 @@ def build_model(sql_endpoint, endpoint_database_id):
                     column("year", "int64"),
                     column("quarter", "int64"),
                     column("month_number", "int64", hidden=True),
-                    column("month_name", "string"),
+                    column("month_name", "string", sort_by="year_month"),
+                    column("year_month", "int64", hidden=True),
                     column("period_start", "dateTime", fmt="Short Date"),
                     column("fiscal_year", "string"),
                 ]),

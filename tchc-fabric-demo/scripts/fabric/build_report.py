@@ -49,6 +49,10 @@ NAVY = "#1F3243"            # primary text and structure
 GRAY = "#64748B"
 TEAL = "#2F6F6B"
 
+# ThemeDataColor ColorId does not index dataColors predictably, so charts take an
+# explicit colour. Keys stay as the existing color_id arguments.
+PALETTE = {1: TEAL, 2: NAVY, 3: "#4E7A9B", 4: "#C08A2E", 5: ROGERS_RED}
+
 
 def tok():
     return subprocess.check_output(
@@ -274,7 +278,7 @@ def bar_chart(name, x, y, w, h, cat_entity, cat_prop, meas_entity, meas_prop, me
             "objects": {
                 "labels": [{"properties": {"show": {"expr": {"Literal": {"Value": "true"}}}}}],
                 "dataPoint": [{"properties": {"fill": {"solid": {"color": {
-                    "expr": {"ThemeDataColor": {"ColorId": color_id, "Percent": 0}}}}}}}],
+                    "expr": {"Literal": {"Value": f"'{PALETTE.get(color_id, TEAL)}'"}}}}}}}],
             },
             "visualContainerObjects": visual_header_off(),
         },
@@ -309,7 +313,7 @@ def line_chart(name, x, y, w, h, cat_entity, cat_prop, meas_entity, meas_prop, l
             "objects": {
                 "labels": [{"properties": {"show": {"expr": {"Literal": {"Value": "false"}}}}}],
                 "dataPoint": [{"properties": {"fill": {"solid": {"color": {
-                    "expr": {"ThemeDataColor": {"ColorId": color_id, "Percent": 0}}}}}}}],
+                    "expr": {"Literal": {"Value": f"'{PALETTE.get(color_id, TEAL)}'"}}}}}}}],
             },
             "visualContainerObjects": visual_header_off(),
         },
@@ -344,10 +348,17 @@ def table_visual(name, x, y, w, h, fields):
     }
 
 
-def slicer(name, x, y, w, h, entity, prop):
+def slicer(name, x, y, w, h, entity, prop, title=None):
+    """Dropdown slicer.
+
+    A vertical-list slicer in a short strip shows only its first item, and a dropdown
+    below roughly 48px renders blank. 47.78 is the height the portal auto-sizes to, so
+    the height argument is floored at that.
+    """
     return {
         "$schema": VISUAL_SCHEMA, "name": name,
-        "position": {"x": x, "y": y, "z": 500, "height": h, "width": w, "tabOrder": 500},
+        "position": {"x": x, "y": y, "z": 500, "height": max(h, 47.78), "width": w,
+                     "tabOrder": 500},
         "visual": {
             "visualType": "slicer", "drillFilterOtherVisuals": True,
             "query": {"queryState": {"Values": {"projections": [{
@@ -356,6 +367,15 @@ def slicer(name, x, y, w, h, entity, prop):
                     "Property": prop}},
                 "queryRef": f"{entity}.{prop}",
                 "nativeQueryRef": prop, "active": True}]}}},
+            "objects": {
+                "data": [{"properties": {
+                    "mode": {"expr": {"Literal": {"Value": "'Dropdown'"}}}}}],
+                "header": [{"properties": {
+                    "show": {"expr": {"Literal": {"Value": "true"}}},
+                    "text": {"expr": {"Literal": {
+                        "Value": f"'{title or prop.replace('_', ' ').title()}'"}}},
+                }}],
+            },
             "visualContainerObjects": visual_header_off(),
         },
     }
@@ -486,11 +506,11 @@ def page2_visuals():
                  "Where the balance concentrates, and which accounts carry it.")
 
     items.append(("v2_slicer_region", slicer(
-        "v2_slicer_region", 20, 88, 240, 48, "Arrears", "region")))
+        "v2_slicer_region", 20, 88, 240, 48, "Arrears", "region", "Region")))
     items.append(("v2_slicer_tenure", slicer(
-        "v2_slicer_tenure", 272, 88, 240, 48, "Arrears", "tenure_type")))
+        "v2_slicer_tenure", 272, 88, 240, 48, "Arrears", "tenure_type", "Tenure")))
     items.append(("v2_slicer_size", slicer(
-        "v2_slicer_size", 524, 88, 240, 48, "Arrears", "unit_size")))
+        "v2_slicer_size", 524, 88, 240, 48, "Arrears", "unit_size", "Unit size")))
 
     items.append(("v2_kpi_total", card_visual(
         "v2_kpi_total", 788, 88, 224, 96, "Arrears", "Total Arrears", "Total arrears")))
