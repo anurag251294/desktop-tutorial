@@ -18,6 +18,15 @@ Two constraints shape every decision below, both from the Fabric graph limitatio
    Dates are deliberately left out rather than guessed at: the example schema writes
    DATETIME while the limitations page says Zoned DateTime, and no traversal here needs
    a date. Getting it wrong costs a full rebuild; omitting it costs nothing.
+
+And one behaviour that is not in the documentation at all: **an edge whose two endpoint
+tables and own source table are not all in the same lakehouse is silently dropped at
+load.** The refresh still reports Completed with a null failureReason, and the stored
+definition still lists the edge type, so the only symptom is a query failing with "does
+not match any edge type in the graph" -- which reads like a query problem rather than a
+load one. Four of five edge types were lost to this before every source was moved into
+gold. That is also the right architecture: gold is the serving layer, and a serving
+artefact reaching back into silver is the medallion leaking.
 """
 import argparse
 import base64
@@ -44,7 +53,7 @@ NODE_TYPES = [
         ("interpreterRequired", "interpreter_required", "BOOLEAN"),
         ("criteriaFired", "criteria_fired", "INT"),
     ]),
-    ("featureNode", "Feature", "silver", "silver_hpo_terms", "hpo_id", [
+    ("featureNode", "Feature", "gold", "gold_hpo_terms", "hpo_id", [
         ("hpoId", "hpo_id", "STRING"),
         ("hpoLabel", "hpo_label", "STRING"),
     ]),
@@ -57,7 +66,7 @@ NODE_TYPES = [
         ("tier", "tier", "STRING"),
         ("description", "description", "STRING"),
     ]),
-    ("encounterNode", "Encounter", "silver", "silver_encounters", "encounter_id", [
+    ("encounterNode", "Encounter", "gold", "gold_encounters", "encounter_id", [
         ("encounterId", "encounter_id", "STRING"),
         ("specialty", "specialty", "STRING"),
         ("admitted", "admitted", "BOOLEAN"),
@@ -76,19 +85,19 @@ NODE_TYPES = [
 # node-type pairs.
 EDGE_TYPES = [
     ("hasFeatureEdge", "hasFeature", "patientNode", "featureNode",
-     "silver", "silver_observations", ["patient_id"], ["hpo_id"], [
+     "gold", "gold_observations", ["patient_id"], ["hpo_id"], [
          ("recordedBy", "recorded_by", "STRING"),
      ]),
     ("inBodySystemEdge", "inBodySystem", "featureNode", "bodySystemNode",
-     "silver", "silver_hpo_terms", ["hpo_id"], ["body_system"], []),
+     "gold", "gold_hpo_terms", ["hpo_id"], ["body_system"], []),
     ("surfacedByEdge", "surfacedBy", "patientNode", "criterionNode",
      "gold", "gold_criteria_hits", ["patient_id"], ["criterion"], [
          ("tier", "tier", "STRING"),
      ]),
     ("attendedEncounterEdge", "attendedEncounter", "patientNode", "encounterNode",
-     "silver", "silver_encounters", ["patient_id"], ["encounter_id"], []),
+     "gold", "gold_encounters", ["patient_id"], ["encounter_id"], []),
     ("encounterSpecialtyEdge", "encounterWithSpecialty", "encounterNode",
-     "specialtyNode", "silver", "silver_encounters", ["encounter_id"],
+     "specialtyNode", "gold", "gold_encounters", ["encounter_id"],
      ["specialty"], []),
 ]
 
@@ -122,26 +131,40 @@ def poll(response, headers, want_result=True):
 
 
 def build_definition(workspace_id, lakehouse_ids):
-    """Assemble the four definition parts."""
-    def path_for(lakehouse, table):
-        return (f"abfss://{workspace_id}@onelake.dfs.fabric.microsoft.com/"
-                f"{lakehouse_ids[lakehouse]}/Tables/{table}")
+    """Assemble the five definition parts.
 
-    # One data source per distinct table, named after the table. Several node and edge
-    # types share a table -- silver_encounters backs a node type and two edge types --
-    # and declaring it more than once is not allowed.
+    dataSources 1.1.0 binds tables through named *item references* rather than raw
+    ABFSS URLs: each lakehouse is declared once under `itemReferences`, and every table
+    names it via `properties.referenceName` with a path relative to that item. The
+    published example in the REST docs shows the older 1.0.0 shape with a full abfss://
+    path and no referenceName, which the service rejects.
+    """
+    # One data source per distinct table. Several node and edge types share a table --
+    # silver_encounters backs a node type and two edge types -- and a table may only be
+    # declared once.
     seen = {}
     for node in NODE_TYPES:
         seen.setdefault(node[3], node[2])
     for edge in EDGE_TYPES:
         seen.setdefault(edge[5], edge[4])
 
+    item_references = [
+        {"name": f"{short}Lakehouse",
+         "item": {"workspaceId": workspace_id, "itemId": item_id}}
+        for short, item_id in sorted(lakehouse_ids.items())
+        if short in {lh for lh in seen.values()}
+    ]
+
     sources = []
     for table, lakehouse in sorted(seen.items()):
-        sources.append({"name": f"{table}_source", "type": "DeltaTable",
-                        "properties": {"path": path_for(lakehouse, table)}})
+        sources.append({
+            "name": f"{table}_source",
+            "type": "DeltaTable",
+            "properties": {"referenceName": f"{lakehouse}Lakehouse",
+                           "path": f"Tables/{table}"}})
 
     data_sources = {"$schema": SCHEMA.format(part="dataSources", version="1.1.0"),
+                    "itemReferences": item_references,
                     "dataSources": sources}
 
     node_types, node_tables = [], []
@@ -191,13 +214,20 @@ def build_definition(workspace_id, lakehouse_ids):
     styles.update({alias: {"size": 30} for alias, *_ in EDGE_TYPES})
     styling = {"$schema": SCHEMA.format(part="stylingConfiguration", version="1.0.0"),
                "modelLayout": {"positions": positions, "styles": styles,
-                               "pan": {"x": 0, "y": 0}, "zoomLevel": 1}}
+                               "pan": {"x": 0, "y": 0}, "zoomLevel": 1},
+               "visualFormat": None}
+
+    # A fifth part the definition docs do not list. An empty graph model carries it, so
+    # it is sent back even though it holds nothing but its schema reference.
+    graph_settings = {"$schema": SCHEMA.format(part="graphSettings",
+                                               version="1.0.0")}
 
     parts = []
     for name, payload in [("dataSources", data_sources),
                           ("graphDefinition", graph_definition),
                           ("graphType", graph_type),
-                          ("stylingConfiguration", styling)]:
+                          ("stylingConfiguration", styling),
+                          ("graphSettings", graph_settings)]:
         parts.append({
             "path": f"{name}.json",
             "payload": base64.b64encode(
@@ -226,7 +256,7 @@ def main():
     print(f"graph model: {args.name}")
     print(f"  data sources : {len(sources['dataSources'])}")
     for source in sources["dataSources"]:
-        print(f"      {source['name']:34} {source['properties']['path'].split('/')[-1]}")
+        print(f"      {source['name']:36} {source['properties']['referenceName']:18} {source['properties']['path']}")
     print(f"  node types   : {len(graph_type['nodeTypes'])}")
     for node in graph_type["nodeTypes"]:
         print(f"      {node['labels'][0]:14} key={node['primaryKeyProperties'][0]:14}"
