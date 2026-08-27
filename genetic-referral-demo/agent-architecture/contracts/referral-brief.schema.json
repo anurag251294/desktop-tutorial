@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sickkids.demo/contracts/referral-brief.schema.json",
+  "title": "Referral brief",
+  "description": "What the agent is permitted to emit for one patient. Every field is either copied from the evidence contract or is prose grounded in it. The agent computes nothing and decides nothing.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "patient_id",
+    "referral_state",
+    "summary",
+    "reasons",
+    "limitations",
+    "recommended_action"
+  ],
+  "properties": {
+    "patient_id": {
+      "type": "string",
+      "pattern": "^SYN-[0-9]{5}$",
+      "description": "Synthetic identifier. Copied from the evidence contract, never constructed."
+    },
+    "referral_state": {
+      "type": "string",
+      "enum": ["indicators_present", "no_indicators_recorded", "not_screened"],
+      "description": "Copied verbatim from gold_referral_state. The agent may not infer or change it."
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 40,
+      "maxLength": 900,
+      "description": "Two to four sentences for a clinician deciding whether to look at this record. States what was found and what remains unknown."
+    },
+    "reasons": {
+      "type": "array",
+      "minItems": 1,
+      "description": "One entry per criterion that fired. Must not contain a criterion absent from the evidence contract.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["criterion", "tier", "statement", "evidence_ids"],
+        "properties": {
+          "criterion": {
+            "type": "string",
+            "enum": [
+              "MULTI_SYSTEM",
+              "REGRESSION",
+              "NEURODEV_PLUS",
+              "DIAGNOSTIC_ODYSSEY",
+              "REPEAT_UNDIAGNOSED_ADMISSION",
+              "FAMILY_HISTORY"
+            ]
+          },
+          "tier": {
+            "type": "string",
+            "enum": ["sufficient", "contributory"]
+          },
+          "statement": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 400,
+            "description": "Why this criterion fired for this patient, in the clinician's language."
+          },
+          "evidence_ids": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Identifiers from the supplied evidence. Every one must appear in the contract; inventing an ID is the failure this field exists to make detectable.",
+            "items": {
+              "type": "string",
+              "pattern": "^(OBS|ENC|FHX):[A-Za-z0-9-]+$"
+            }
+          }
+        }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 2,
+      "description": "What this brief does not establish. The clinical gate requires the record-silence limitation on every brief.",
+      "items": {
+        "type": "string",
+        "minLength": 20,
+        "maxLength": 400
+      }
+    },
+    "recommended_action": {
+      "type": "string",
+      "enum": ["clinician_review"],
+      "description": "The only permitted value. The agent may not recommend referral, testing, or discharge; those are clinical decisions and this field exists to make that structural rather than a matter of tone."
+    },
+    "family_history_status": {
+      "type": "string",
+      "enum": ["taken", "never_taken"],
+      "description": "Whether anyone recorded a family history. never_taken means the question was not asked, which is not a negative answer."
+    }
+  }
+}

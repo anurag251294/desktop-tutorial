@@ -1,0 +1,46 @@
+{
+  "workspaceName": "Genetic_Referral_Demo",
+  "capacityId": "",
+  "workspaceDescription": "Case-finding for early genetic consultation referral. Public HPO phenotype vocabulary, synthetic paediatric records, named criteria with three states, an equity check, and an evidence contract for a grounded agent. No genomic data. No patient data.",
+  "lakehouses": [
+    {
+      "displayName": "bronze_lakehouse",
+      "description": "Verbatim HPO reference terms, the release stamp, and the synthetic clinical record as generated"
+    },
+    {
+      "displayName": "silver_lakehouse",
+      "description": "Conformed record: typed dates, resolved specialties, HPO labels and body systems, family history with history_taken kept distinct from a negative answer"
+    },
+    {
+      "displayName": "gold_lakehouse",
+      "description": "Referral criteria, the three states, the equity check, and the agent evidence contracts"
+    }
+  ],
+  "notebooks": [
+    {
+      "displayName": "bronze_clinical_record",
+      "localPath": "fabric/notebooks/bronze_clinical_record.ipynb",
+      "lakehouse": "bronze_lakehouse"
+    },
+    {
+      "displayName": "silver_conformed_record",
+      "localPath": "fabric/notebooks/silver_conformed_record.ipynb",
+      "lakehouse": "silver_lakehouse"
+    },
+    {
+      "displayName": "gold_referral_signals",
+      "localPath": "fabric/notebooks/gold_referral_signals.ipynb",
+      "lakehouse": "gold_lakehouse"
+    },
+    {
+      "displayName": "validation_sensitivity",
+      "localPath": "fabric/notebooks/validation_sensitivity.ipynb",
+      "lakehouse": "gold_lakehouse"
+    }
+  ],
+  "dataPipeline": {
+    "displayName": "pl_genetic_referral",
+    "localPath": "fabric/pipelines/pl_genetic_referral.json",
+    "description": "HPO reference and synthetic record through to a validated evidence contract"
+  }
+}
