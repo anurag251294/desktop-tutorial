@@ -10,8 +10,9 @@ Three things about this API that cost time:
   beginning 00/01/02/03 are success; anything else is an error.
 * `label`, `edges` and friends are **reserved keywords** and cannot be used as bare
   aliases. Backtick them or, as here, pick another name.
-* Aggregations need an explicit `GROUP BY`; returning a non-aggregated column alongside
-  a COUNT without one is rejected.
+* Aggregations need an explicit `GROUP BY`, and it must name the **alias**, not the
+  dotted property path: `RETURN b.bodySystem AS system ... GROUP BY system`.
+  `GROUP BY b.bodySystem` is a syntax error.
 """
 import argparse
 import json
@@ -29,13 +30,13 @@ QUERIES = [
     ("node counts by label",
      "Sanity: did every node type load, and at the volumes the pipeline reported?",
      "MATCH (n) RETURN labels(n) AS nodeLabel, COUNT(*) AS n "
-     "GROUP BY labels(n) ORDER BY n DESC"),
+     "GROUP BY nodeLabel ORDER BY n DESC"),
 
     ("edge counts by label",
      "Same for relationships. An edge type at zero means a key mismatch, not an "
      "empty relationship.",
      "MATCH ()-[e]->() RETURN labels(e) AS edgeLabel, COUNT(*) AS n "
-     "GROUP BY labels(e) ORDER BY n DESC"),
+     "GROUP BY edgeLabel ORDER BY n DESC"),
 
     ("the MULTI_SYSTEM traversal",
      "THE demo query. Why a specific child surfaced, walked rather than asserted: "
@@ -51,14 +52,14 @@ QUERIES = [
      """MATCH (p:Patient)-[:hasFeature]->(:Feature)-[:inBodySystem]->(b:BodySystem)
         WHERE p.referralState = 'indicators_present'
         RETURN b.bodySystem AS system, COUNT(DISTINCT p) AS children
-        GROUP BY b.bodySystem ORDER BY children DESC"""),
+        GROUP BY system ORDER BY children DESC"""),
 
     ("which criteria surfaced the most children",
      "The criteria are nodes, so the flag itself is inspectable rather than a column "
      "of strings.",
      """MATCH (p:Patient)-[s:surfacedBy]->(c:Criterion)
         RETURN c.criterion AS criterion, c.tier AS tier, COUNT(p) AS children
-        GROUP BY c.criterion, c.tier ORDER BY children DESC"""),
+        GROUP BY criterion, tier ORDER BY children DESC"""),
 
     ("specialties seeing children who were NOT surfaced",
      "The equity question as a traversal: where do the children the screen never "
@@ -67,7 +68,7 @@ QUERIES = [
               -[:encounterWithSpecialty]->(s:Specialty)
         WHERE p.referralState = 'no_indicators_recorded'
         RETURN s.specialty AS specialty, COUNT(DISTINCT p) AS children
-        GROUP BY s.specialty ORDER BY children DESC LIMIT 10"""),
+        GROUP BY specialty ORDER BY children DESC LIMIT 10"""),
 
     ("features recorded, by interpreter need",
      "The documentation gap, straight from the graph. Same underlying prevalence, "
@@ -75,7 +76,7 @@ QUERIES = [
      """MATCH (p:Patient)-[:hasFeature]->(f:Feature)
         RETURN p.interpreterRequired AS interpreterRequired,
                COUNT(DISTINCT p) AS children, COUNT(f) AS featuresRecorded
-        GROUP BY p.interpreterRequired ORDER BY interpreterRequired"""),
+        GROUP BY interpreterRequired ORDER BY interpreterRequired"""),
 ]
 
 

@@ -1,7 +1,8 @@
 # Runbook — genetic referral case-finding
 
-For the recording. Roughly 12 minutes of material; the equity section is the part worth
-protecting if you run short.
+For the recording. Roughly 15 minutes of material. If you run short, the equity
+section is the part worth protecting and the graph section is the part to cut —
+it is the most impressive and the least load-bearing.
 
 ## Say this first, before anything is on screen
 
@@ -117,6 +118,44 @@ how many affected children were never flagged.
 Be equally plain that the **absolute** figure is close to circular — it is measured
 against a pattern this repository planted. The **gap between groups** is not, because
 both groups were planted identically.
+
+### 5. The graph — the criterion, walked instead of asserted (3 min)
+
+Open `referral_graph`. Six node types, five edge types, over the gold tables.
+
+Run the traversal for `SYN-00017`:
+
+```gql
+MATCH (p:Patient)-[:hasFeature]->(f:Feature)-[:inBodySystem]->(b:BodySystem)
+WHERE p.patientId = 'SYN-00017'
+RETURN f.hpoLabel AS feature, b.bodySystem AS system
+ORDER BY system, feature
+```
+
+> "The criterion says features span three or more body systems. Here are the systems,
+> and here are the features underneath each one. Nobody has to take the number on
+> trust — you can walk it."
+
+Then the question that is genuinely awkward in SQL and one pattern here:
+
+```gql
+MATCH (p:Patient)-[:attendedEncounter]->(:Encounter)
+      -[:encounterWithSpecialty]->(s:Specialty)
+WHERE p.referralState = 'no_indicators_recorded'
+RETURN s.specialty AS specialty, COUNT(DISTINCT p) AS children
+GROUP BY s.specialty ORDER BY children DESC LIMIT 10
+```
+
+> "These are the children the screen did *not* surface, and where they actually turn
+> up. If the screen is missing people, this is the clinic they are sitting in."
+
+**Say what this is, and what it is not.** It is a Fabric graph — a labeled property
+graph over OneLake, queried with standard GQL, documented under Fabric IQ. It is **not**
+a Fabric IQ ontology: that feature returns `FeatureNotAvailable` in this tenant and
+region, so nothing here should be described as one.
+
+If asked about the agent and the graph together: Fabric Data Agent supports graph as a
+data source with natural-language-to-GQL, in preview. Not wired up here.
 
 ### 5. The agent — it renders, it does not reason (2 min)
 

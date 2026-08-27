@@ -301,10 +301,24 @@ def main():
                              "definition": definition}), timeout=600), headers)
         graph_id = created.get("id")
         if not graph_id:
-            items = requests.get(f"{BASE}/workspaces/{workspace_id}/items",
-                                 headers=headers, timeout=120).json()["value"]
-            graph_id = next(i["id"] for i in items
-                            if i["displayName"] == args.name)
+            # The create LRO does not always return the item in its result, and the
+            # item list is briefly eventually-consistent. Poll rather than assume, and
+            # say so plainly if it never appears -- the previous version raised a bare
+            # StopIteration here, which hid the actual failure.
+            for attempt in range(12):
+                items = requests.get(f"{BASE}/workspaces/{workspace_id}/items",
+                                     headers=headers, timeout=120).json()["value"]
+                match = next((i for i in items
+                              if i["displayName"] == args.name
+                              and i["type"] == "GraphModel"), None)
+                if match:
+                    graph_id = match["id"]
+                    break
+                time.sleep(10)
+            else:
+                raise SystemExit(
+                    f"create returned {json.dumps(created)[:300]} and no GraphModel "
+                    f"named {args.name!r} appeared within two minutes")
     print(f"graph model id: {graph_id}")
     print(f"https://app.fabric.microsoft.com/groups/{workspace_id}")
 
