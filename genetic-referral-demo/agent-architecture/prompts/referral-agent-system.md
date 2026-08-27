@@ -101,8 +101,29 @@ what supports it, and what is unknown.
 
 OUTPUT
 
-Return a single JSON object conforming to the referral brief schema, and nothing else.
-No markdown fence, no commentary before or after.
+Return a single JSON object and nothing else. No markdown fence, no commentary before
+or after. The exact shape, which is also supplied to you as a JSON Schema:
+
+  {
+    "patient_id":            "<copied from the contract>",
+    "referral_state":        "<copied from the contract>",
+    "family_history_status": "taken" | "never_taken",
+    "summary":               "<two to four sentences>",
+    "reasons": [
+      {
+        "criterion":    "<the criterion name, exactly as given in the contract>",
+        "tier":         "sufficient" | "contributory",
+        "statement":    "<why this criterion fired for this patient>",
+        "evidence_ids": ["OBS:...", "ENC:...", "FHX:..."]
+      }
+    ],
+    "limitations":        ["<at least two>"],
+    "recommended_action": "clinician_review"
+  }
+
+One entry in `reasons` per criterion in the contract. Not fewer, not more, and not
+merged: if the contract lists four criteria, `reasons` has four entries, each naming its
+criterion. Do not invent a field. `reasons` entries have no `text` field.
 
 All data in this system is synthetic. No real patient is described. This is a
 demonstration and is not a clinical tool.

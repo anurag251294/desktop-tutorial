@@ -1,0 +1,147 @@
+{
+  "patient": {
+    "patient_id": "SYN-00195",
+    "referral_state": "indicators_present",
+    "age_years": 4,
+    "family_history_status": "never_taken"
+  },
+  "criteria": [
+    {
+      "criterion": "MULTI_SYSTEM",
+      "tier": "sufficient",
+      "description": "Features recorded in 3 or more body systems"
+    },
+    {
+      "criterion": "REGRESSION",
+      "tier": "sufficient",
+      "description": "Developmental regression recorded (HP:0002376)"
+    },
+    {
+      "criterion": "NEURODEV_PLUS",
+      "tier": "contributory",
+      "description": "A neurodevelopmental feature alongside a feature in another system"
+    },
+    {
+      "criterion": "REPEAT_UNDIAGNOSED_ADMISSION",
+      "tier": "contributory",
+      "description": "2+ admissions with no diagnosis recorded"
+    }
+  ],
+  "evidence": [
+    {
+      "evidence_id": "OBS:OBS-0000164",
+      "evidence_type": "observation",
+      "evidence_date": "2025-10-01",
+      "evidence_text": "Small for gestational age (HP:0001518) - system: growth"
+    },
+    {
+      "evidence_id": "ENC:ENC-0001398",
+      "evidence_type": "encounter",
+      "evidence_date": "2025-10-06",
+      "evidence_text": "Cardiology (outpatient) - diagnosis recorded"
+    },
+    {
+      "evidence_id": "ENC:ENC-0001401",
+      "evidence_type": "encounter",
+      "evidence_date": "2025-10-06",
+      "evidence_text": "Developmental Paediatrics (outpatient) - diagnosis recorded"
+    },
+    {
+      "evidence_id": "OBS:OBS-0000165",
+      "evidence_type": "observation",
+      "evidence_date": "2025-10-28",
+      "evidence_text": "Microcephaly (HP:0000252) - system: craniofacial"
+    },
+    {
+      "evidence_id": "ENC:ENC-0001397",
+      "evidence_type": "encounter",
+      "evidence_date": "2025-11-08",
+      "evidence_text": "Gastroenterology (outpatient) - no diagnosis recorded"
+    },
+    {
+      "evidence_id": "ENC:ENC-0001402",
+      "evidence_type": "encounter",
+      "evidence_date": "2025-12-15",
+      "evidence_text": "General Paediatrics (outpatient) - diagnosis recorded"
+    },
+    {
+      "evidence_id": "ENC:ENC-0001400",
+      "evidence_type": "encounter",
+      "evidence_date": "2025-12-23",
+      "evidence_text": "Orthopaedics (admitted) - no diagnosis recorded"
+    },
+    {
+      "evidence_id": "OBS:OBS-0000166",
+      "evidence_type": "observation",
+      "evidence_date": "2026-01-20",
+      "evidence_text": "Hearing impairment (HP:0000365) - system: sensory"
+    },
+    {
+      "evidence_id": "OBS:OBS-0000169",
+      "evidence_type": "observation",
+      "evidence_date": "2026-01-24",
+      "evidence_text": "Delayed speech and language development (HP:0000750) - system: neurodevelopment"
+    },
+    {
+      "evidence_id": "ENC:ENC-0001395",
+      "evidence_type": "encounter",
+      "evidence_date": "2026-02-21",
+      "evidence_text": "Ent (admitted) - diagnosis recorded"
+    },
+    {
+      "evidence_id": "OBS:OBS-0000167",
+      "evidence_type": "observation",
+      "evidence_date": "2026-03-01",
+      "evidence_text": "Developmental regression (HP:0002376) - system: neurodevelopment"
+    },
+    {
+      "evidence_id": "ENC:ENC-0001403",
+      "evidence_type": "encounter",
+      "evidence_date": "2026-04-05",
+      "evidence_text": "Respirology (outpatient) - diagnosis recorded"
+    },
+    {
+      "evidence_id": "ENC:ENC-0001394",
+      "evidence_type": "encounter",
+      "evidence_date": "2026-05-05",
+      "evidence_text": "General Paediatrics (admitted) - no diagnosis recorded"
+    },
+    {
+      "evidence_id": "OBS:OBS-0000168",
+      "evidence_type": "observation",
+      "evidence_date": "2026-05-14",
+      "evidence_text": "Scoliosis (HP:0002650) - system: skeletal"
+    },
+    {
+      "evidence_id": "ENC:ENC-0001393",
+      "evidence_type": "encounter",
+      "evidence_date": "2026-05-19",
+      "evidence_text": "Immunology (outpatient) - no diagnosis recorded"
+    },
+    {
+      "evidence_id": "ENC:ENC-0001399",
+      "evidence_type": "encounter",
+      "evidence_date": "2026-06-08",
+      "evidence_text": "Developmental Paediatrics (admitted) - diagnosis recorded"
+    },
+    {
+      "evidence_id": "ENC:ENC-0001392",
+      "evidence_type": "encounter",
+      "evidence_date": "2026-07-21",
+      "evidence_text": "Endocrinology (admitted) - diagnosis recorded"
+    },
+    {
+      "evidence_id": "ENC:ENC-0001396",
+      "evidence_type": "encounter",
+      "evidence_date": "2026-08-21",
+      "evidence_text": "Immunology (outpatient) - diagnosis recorded"
+    }
+  ],
+  "provenance": {
+    "run_id": "dfdf55fd-2627-47f9-b7aa-5a97669165f8",
+    "reference_source": "Human Phenotype Ontology",
+    "reference_read_on": "2026-08-27",
+    "evidence_truncated": false,
+    "note": "All data is synthetic. No genomic data is involved. This is a case-finding output for clinician review, not a referral decision."
+  }
+}

@@ -1,0 +1,189 @@
+{
+  "patient": {
+    "patient_id": "SYN-00017",
+    "referral_state": "indicators_present",
+    "age_years": 16,
+    "family_history_status": "taken"
+  },
+  "criteria": [
+    {
+      "criterion": "MULTI_SYSTEM",
+      "tier": "sufficient",
+      "description": "Features recorded in 3 or more body systems"
+    },
+    {
+      "criterion": "REGRESSION",
+      "tier": "sufficient",
+      "description": "Developmental regression recorded (HP:0002376)"
+    },
+    {
+      "criterion": "FAMILY_HISTORY",
+      "tier": "contributory",
+      "description": "Affected first-degree relative, consanguinity, or recurrent pregnancy loss"
+    },
+    {
+      "criterion": "NEURODEV_PLUS",
+      "tier": "contributory",
+      "description": "A neurodevelopmental feature alongside a feature in another system"
+    }
+  ],
+  "evidence": [
+    {
+      "evidence_id": "ENC:ENC-0000109",
+      "evidence_type": "encounter",
+      "evidence_date": "2024-01-28",
+      "evidence_text": "Metabolics (outpatient) - no diagnosis recorded"
+    },
+    {
+      "evidence_id": "ENC:ENC-0000123",
+      "evidence_type": "encounter",
+      "evidence_date": "2024-02-24",
+      "evidence_text": "Cardiology (admitted) - diagnosis recorded"
+    },
+    {
+      "evidence_id": "OBS:OBS-0000010",
+      "evidence_type": "observation",
+      "evidence_date": "2024-03-06",
+      "evidence_text": "Developmental regression (HP:0002376) - system: neurodevelopment"
+    },
+    {
+      "evidence_id": "ENC:ENC-0000124",
+      "evidence_type": "encounter",
+      "evidence_date": "2024-03-26",
+      "evidence_text": "Developmental Paediatrics (outpatient) - no diagnosis recorded"
+    },
+    {
+      "evidence_id": "ENC:ENC-0000107",
+      "evidence_type": "encounter",
+      "evidence_date": "2024-06-27",
+      "evidence_text": "Metabolics (admitted) - no diagnosis recorded"
+    },
+    {
+      "evidence_id": "FHX:SYN-00017",
+      "evidence_type": "family_history",
+      "evidence_date": "2024-07-15",
+      "evidence_text": "affected first-degree relative"
+    },
+    {
+      "evidence_id": "OBS:OBS-0000008",
+      "evidence_type": "observation",
+      "evidence_date": "2024-08-31",
+      "evidence_text": "Global developmental delay (HP:0001263) - system: neurodevelopment"
+    },
+    {
+      "evidence_id": "ENC:ENC-0000125",
+      "evidence_type": "encounter",
+      "evidence_date": "2024-09-09",
+      "evidence_text": "Cardiology (outpatient) - no diagnosis recorded"
+    },
+    {
+      "evidence_id": "ENC:ENC-0000116",
+      "evidence_type": "encounter",
+      "evidence_date": "2024-10-03",
+      "evidence_text": "Ophthalmology (outpatient) - diagnosis recorded"
+    },
+    {
+      "evidence_id": "ENC:ENC-0000110",
+      "evidence_type": "encounter",
+      "evidence_date": "2024-11-13",
+      "evidence_text": "General Paediatrics (admitted) - diagnosis recorded"
+    },
+    {
+      "evidence_id": "ENC:ENC-0000111",
+      "evidence_type": "encounter",
+      "evidence_date": "2024-11-18",
+      "evidence_text": "Nephrology (outpatient) - no diagnosis recorded"
+    },
+    {
+      "evidence_id": "OBS:OBS-0000007",
+      "evidence_type": "observation",
+      "evidence_date": "2024-11-28",
+      "evidence_text": "Abnormal heart morphology (HP:0001627) - system: cardiac"
+    },
+    {
+      "evidence_id": "ENC:ENC-0000117",
+      "evidence_type": "encounter",
+      "evidence_date": "2025-04-18",
+      "evidence_text": "Orthopaedics (outpatient) - no diagnosis recorded"
+    },
+    {
+      "evidence_id": "OBS:OBS-0000009",
+      "evidence_type": "observation",
+      "evidence_date": "2025-06-27",
+      "evidence_text": "Hypotonia (HP:0001252) - system: neurology"
+    },
+    {
+      "evidence_id": "ENC:ENC-0000121",
+      "evidence_type": "encounter",
+      "evidence_date": "2025-07-01",
+      "evidence_text": "Gastroenterology (outpatient) - diagnosis recorded"
+    },
+    {
+      "evidence_id": "ENC:ENC-0000120",
+      "evidence_type": "encounter",
+      "evidence_date": "2025-07-16",
+      "evidence_text": "Neurology (outpatient) - no diagnosis recorded"
+    },
+    {
+      "evidence_id": "ENC:ENC-0000114",
+      "evidence_type": "encounter",
+      "evidence_date": "2025-09-10",
+      "evidence_text": "Cardiology (outpatient) - diagnosis recorded"
+    },
+    {
+      "evidence_id": "ENC:ENC-0000112",
+      "evidence_type": "encounter",
+      "evidence_date": "2025-11-17",
+      "evidence_text": "Nephrology (outpatient) - diagnosis recorded"
+    },
+    {
+      "evidence_id": "ENC:ENC-0000115",
+      "evidence_type": "encounter",
+      "evidence_date": "2025-12-17",
+      "evidence_text": "Gastroenterology (outpatient) - diagnosis recorded"
+    },
+    {
+      "evidence_id": "ENC:ENC-0000113",
+      "evidence_type": "encounter",
+      "evidence_date": "2026-01-13",
+      "evidence_text": "Respirology (outpatient) - diagnosis recorded"
+    },
+    {
+      "evidence_id": "OBS:OBS-0000006",
+      "evidence_type": "observation",
+      "evidence_date": "2026-01-31",
+      "evidence_text": "Scoliosis (HP:0002650) - system: skeletal"
+    },
+    {
+      "evidence_id": "ENC:ENC-0000122",
+      "evidence_type": "encounter",
+      "evidence_date": "2026-02-04",
+      "evidence_text": "Ent (outpatient) - diagnosis recorded"
+    },
+    {
+      "evidence_id": "ENC:ENC-0000119",
+      "evidence_type": "encounter",
+      "evidence_date": "2026-06-22",
+      "evidence_text": "Endocrinology (admitted) - diagnosis recorded"
+    },
+    {
+      "evidence_id": "ENC:ENC-0000118",
+      "evidence_type": "encounter",
+      "evidence_date": "2026-08-05",
+      "evidence_text": "Cardiology (outpatient) - diagnosis recorded"
+    },
+    {
+      "evidence_id": "ENC:ENC-0000108",
+      "evidence_type": "encounter",
+      "evidence_date": "2026-08-17",
+      "evidence_text": "Orthopaedics (outpatient) - diagnosis recorded"
+    }
+  ],
+  "provenance": {
+    "run_id": "dfdf55fd-2627-47f9-b7aa-5a97669165f8",
+    "reference_source": "Human Phenotype Ontology",
+    "reference_read_on": "2026-08-27",
+    "evidence_truncated": false,
+    "note": "All data is synthetic. No genomic data is involved. This is a case-finding output for clinician review, not a referral decision."
+  }
+}

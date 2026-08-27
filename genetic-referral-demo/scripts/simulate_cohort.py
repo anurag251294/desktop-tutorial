@@ -1,7 +1,14 @@
-"""Reproduce the generator and criteria in plain Python to predict the cohort split.
+"""Approximate the generator and criteria in plain Python to predict the cohort split.
 
 Cheaper than a Spark run and catches the two failure modes that would kill the demo:
 a flag that fires on almost nobody, and one that fires on almost everybody.
+
+APPROXIMATE, not identical. It mirrors the notebook's RNG draw for draw, which is
+enough to land within a point of the real split -- the live 2026-08-27 run surfaced
+9.2% against 9.0% here -- but small differences remain, and months_in_service is
+calendar-accurate in Spark and a 30.44-day approximation here. Use it to decide whether
+the thresholds are sane before spending capacity. Do not quote its numbers as results;
+quote the run.
 """
 import random
 from collections import Counter
@@ -112,6 +119,10 @@ for index in range(COHORT_SIZE):
         affected = (RNG.random() < 0.35) if latent else (RNG.random() < 0.06)
         consang = (RNG.random() < 0.16) if latent else (RNG.random() < 0.03)
         loss = (RNG.random() < 0.18) if latent else (RNG.random() < 0.05)
+        # The notebook also stamps asked_on. It costs a draw, and omitting it here
+        # slides the two RNG streams apart for every patient with a history taken --
+        # which is most of them, so the whole cohort diverges from that point on.
+        RNG.randint(0, 200)
     else:
         affected = consang = loss = None
 

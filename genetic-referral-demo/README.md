@@ -22,6 +22,9 @@ observations and encounters that put them on the list.
 
 **It does not decide anything.** It surfaces records. A clinician decides.
 
+Of a 2,400-child cohort the live run surfaces **220 (9.2%)**, reports 1,766 (73.6%) with
+no indicators recorded, and 414 (17.2%) as not screened at all.
+
 ```text
 HPO public API   →  bronze  →  silver  →  gold  →  evidence contract  →  agent  →  brief
 synthetic chart     verbatim   conformed  criteria   bounded JSON,        cites,   4 gates
@@ -79,11 +82,14 @@ Run `validation_sensitivity.ipynb` and the screen reports:
 
 | Group | Affected | Surfaced | Sensitivity |
 | --- | --- | --- | --- |
-| No interpreter needed | 107 | 95 | **88.8%** |
-| Interpreter needed | 124 | 84 | **67.7%** |
+| No interpreter needed | 98 | 86 | **87.8%** |
+| Interpreter needed | 109 | 82 | **75.2%** |
 
-Same planted prevalence. The screen finds nine in ten affected children in one group and
-two in three in the other — entirely because of what was written down.
+Same planted prevalence, a **12.6 point** gap in who gets found. Flag rate follows it:
+12.1% against 10.2%.
+
+These are figures from the live run of `2026-08-27`, not estimates. Re-running with a
+different `COHORT_SEED` moves them by a point or two; the direction does not move.
 
 Nothing in the criteria reads language or interpreter need; the gold notebook asserts
 that and fails the build if it ever becomes untrue. Excluding the attribute does not

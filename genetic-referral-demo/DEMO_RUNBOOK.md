@@ -88,16 +88,16 @@ Run or show `validation_sensitivity`.
 
 | Group | Affected | Surfaced | Sensitivity |
 | --- | --- | --- | --- |
-| No interpreter needed | 107 | 95 | **88.8%** |
-| Interpreter needed | 124 | 84 | **67.7%** |
+| No interpreter needed | 98 | 86 | **87.8%** |
+| Interpreter needed | 109 | 82 | **75.2%** |
 
 > "Both groups were generated with the same underlying rate. The only difference is how
 > much of it reached the record — consultations run shorter through an interpreter,
 > history-taking is harder, description is less likely to land in a coded field.
 >
-> The screen finds nine in ten affected children in one group and two in three in the
-> other. Nothing in the criteria reads language or interpreter need — the notebook
-> asserts that and fails the build if it stops being true.
+> The screen finds seven and a half in ten affected children in one group and nearly
+> nine in ten in the other. Nothing in the criteria reads language or interpreter need —
+> the notebook asserts that and fails the build if it stops being true.
 >
 > **A flag can be blind to a protected attribute and still reproduce the inequity
 > attached to it.** Excluding the column proves nothing. Measuring the outcome is the
@@ -120,7 +120,9 @@ both groups were planted identically.
 
 ### 5. The agent — it renders, it does not reason (2 min)
 
-Open a contract from `Files/contracts/`. Point out that it is a fixed envelope, not a
+Open a contract from `Files/contracts/`, or the two committed samples:
+`SYN-00017` (family history taken, four criteria) and `SYN-00195` (family
+history **never taken** — the case that matters). Point out that it is a fixed envelope, not a
 query: the agent cannot reach a patient it was not handed, and every value it can state
 already carries an `evidence_id`.
 
@@ -133,6 +135,10 @@ Show a brief, then the four gates.
 
 If you have time, run `scripts/foundry/test_gates.py` live. Thirteen cases, each built
 to break exactly one rule. It needs no Azure, no capacity, and takes about a second.
+
+For `SYN-00195` the agent writes *"Family history was not recorded, so nothing is
+known about it."* Read that line out. A summariser with no clinical gate writes
+"no significant family history", which is a different claim about a real child.
 
 ## Questions you should expect
 
@@ -163,5 +169,5 @@ Say these before someone finds them.
   clinician.
 * **No real data has ever touched this**, and no integration to a real EHR exists.
 * **The agent has been tested against the gates, not against clinical judgement.**
-* **`not_screened` is 16% of the cohort** — a real deployment would need to decide what
+* **`not_screened` is 17% of the cohort** — a real deployment would need to decide what
   happens to those children, and that is a service design question, not a data one.

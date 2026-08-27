@@ -220,6 +220,7 @@ def main():
     endpoint = wait_ready(endpoint, headers, model)
 
     instructions = extract_system_message(args.prompt)
+    schema = json.loads(Path(args.schema).read_text(encoding="utf-8"))
     envelope = json.loads(Path(args.evidence).read_text(encoding="utf-8"))
     patient = envelope["patient"]
     print(f"model={model}  patient={patient['patient_id']}  "
@@ -252,11 +253,20 @@ def main():
     thread = requests.post(f"{endpoint}/threads?api-version={API_VERSION}",
                            headers=headers, data="{}", timeout=120).json()
     thread_id = thread["id"]
-    message = ("Write the referral brief for this patient. Return ONLY JSON matching "
-               "the referral brief contract. Every reason must cite an evidence_id "
-               "from the input. Copy patient_id and referral_state exactly. Do not "
-               "diagnose, do not name a condition, and do not recommend referral or "
-               "against it.\n\npatient-evidence:\n" + json.dumps(envelope))
+    # Send the schema, not just its name. The first version told the model to return
+    # JSON "matching the referral brief contract" without ever supplying the contract,
+    # and it invented a reasonable-looking shape -- reasons[].text in place of
+    # criterion/tier/statement. The content was accurate and well cited; it failed the
+    # schema gate on a field it had never been shown.
+    names = [c["criterion"] for c in envelope["criteria"]]
+    message = ("Write the referral brief for this patient. Return ONLY JSON valid "
+               "against the schema below. Every reason must cite an evidence_id from "
+               "the input. Copy patient_id and referral_state exactly. Produce exactly "
+               f"one entry in `reasons` for each of these {len(names)} criteria, naming "
+               f"each one: {', '.join(names)}. Do not diagnose, do not name a "
+               "condition, and do not recommend referral or against it."
+               "\n\nschema:\n" + json.dumps(schema)
+               + "\n\npatient-evidence:\n" + json.dumps(envelope))
     requests.post(f"{endpoint}/threads/{thread_id}/messages?api-version={API_VERSION}",
                   headers=headers,
                   data=json.dumps({"role": "user", "content": message}), timeout=180)
@@ -312,7 +322,6 @@ def main():
     # ------------------------------------------------------------- four gates
     failures = []
 
-    schema = json.loads(Path(args.schema).read_text(encoding="utf-8"))
     errors = sorted(jsonschema.Draft202012Validator(schema).iter_errors(document),
                     key=lambda e: list(e.absolute_path))
     print(f"\n[1] schema:     {'PASS' if not errors else f'{len(errors)} violation(s)'}")
