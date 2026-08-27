@@ -1,5 +1,6 @@
 # Resolved workspace and item identifiers are environment detail, not source.
 cicd/fabric-setup.output.json
+cicd/foundry-setup.output.json
 cicd/*.customer.json
 __pycache__/
 *.pyc
