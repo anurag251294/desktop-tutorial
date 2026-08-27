@@ -168,6 +168,46 @@
             }
           }
         }
+      },
+      {
+        "name": "Agent_Handoff_Publisher",
+        "type": "TridentNotebook",
+        "description": "Publish one bounded evidence contract per surfaced patient. Depends on Gold only -- it does not need the validation notebook, and making it wait would serialise two independent steps for no reason.",
+        "dependsOn": [
+          {
+            "activity": "Gold_Referral_Signals",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.02:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 60,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "typeProperties": {
+          "notebookId": "{{NOTEBOOK_ID:agent_handoff_publisher}}",
+          "workspaceId": "{{WORKSPACE_ID}}",
+          "parameters": {
+            "PIPELINE_RUN_ID": {
+              "value": {
+                "value": "@pipeline().RunId",
+                "type": "Expression"
+              },
+              "type": "string"
+            },
+            "MAX_CONTRACTS": {
+              "value": {
+                "value": "@pipeline().parameters.MAX_CONTRACTS",
+                "type": "Expression"
+              },
+              "type": "int"
+            }
+          }
+        }
       }
     ],
     "parameters": {
@@ -194,6 +234,10 @@
       "MIN_CONTRIBUTORY": {
         "type": "int",
         "defaultValue": 2
+      },
+      "MAX_CONTRACTS": {
+        "type": "int",
+        "defaultValue": 40
       }
     }
   }

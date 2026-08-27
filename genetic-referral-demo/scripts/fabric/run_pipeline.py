@@ -1,14 +1,16 @@
-"""Start pl_bronze_ingestion and poll it to completion, reporting per-activity status.
+"""Run pl_genetic_referral and report what each activity did.
 
-    python scripts/fabric/run_pipeline.py --output cicd/fabric-setup.output.demo.json \
-        [--latitude 49.2193 --longitude -122.5984 --radius-km 20 --analysis-radius-km 3]
+    python scripts/fabric/run_pipeline.py --output cicd/fabric-setup.output.json
+
+Reports per-activity status rather than only the overall verdict. A pipeline that
+reports Succeeded can still contain an activity that wrote nothing, and the per-activity
+view is where a silent no-op shows up.
 """
 import argparse
 import json
 import subprocess
 import sys
 import time
-from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
@@ -16,91 +18,75 @@ import requests
 BASE = "https://api.fabric.microsoft.com/v1"
 
 
-def get_token():
+def token(resource="https://api.fabric.microsoft.com"):
     result = subprocess.run(
-        ["az", "account", "get-access-token", "--resource",
-         "https://api.fabric.microsoft.com", "--query", "accessToken", "-o", "tsv"],
-        capture_output=True, text=True, shell=(sys.platform == "win32"),
-    )
+        ["az", "account", "get-access-token", "--resource", resource,
+         "--query", "accessToken", "-o", "tsv"],
+        capture_output=True, text=True, shell=(sys.platform == "win32"))
     if result.returncode != 0:
-        raise SystemExit(f"az account get-access-token failed:\n{result.stderr}")
+        raise SystemExit(f"token acquisition failed:\n{result.stderr}")
     return result.stdout.strip()
-
-
-def stamp():
-    return datetime.now(timezone.utc).strftime("%H:%M:%S")
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output", required=True)
-    parser.add_argument("--latitude", type=float)
-    parser.add_argument("--longitude", type=float)
-    parser.add_argument("--radius-km", type=float)
-    parser.add_argument("--analysis-radius-km", type=float)
+    parser.add_argument("--output", required=True,
+                        help="cicd/fabric-setup.output.json from provisioning")
+    parser.add_argument("--cohort-size", type=int)
+    parser.add_argument("--cohort-seed", type=int)
     parser.add_argument("--poll-seconds", type=int, default=30)
-    parser.add_argument("--timeout-minutes", type=int, default=120)
+    parser.add_argument("--timeout-minutes", type=int, default=90)
     args = parser.parse_args()
 
-    deployment = json.loads(Path(args.output).read_text(encoding="utf-8"))
-    workspace_id = deployment["workspace"]["id"]
-    pipeline_id = deployment["dataPipeline"]["id"]
+    config = json.loads(Path(args.output).read_text(encoding="utf-8"))
+    workspace_id = config["workspace"]["id"]
+    pipeline_id = config["dataPipeline"]["id"]
 
-    headers = {"Authorization": f"Bearer {get_token()}", "Content-Type": "application/json"}
+    headers = {"Authorization": f"Bearer {token()}", "Content-Type": "application/json"}
 
     parameters = {}
-    if args.latitude is not None:
-        parameters["LATITUDE"] = args.latitude
-    if args.longitude is not None:
-        parameters["LONGITUDE"] = args.longitude
-    if args.radius_km is not None:
-        parameters["RADIUS_KM"] = int(args.radius_km)
-    if args.analysis_radius_km is not None:
-        parameters["ANALYSIS_RADIUS_KM"] = args.analysis_radius_km
+    if args.cohort_size:
+        parameters["COHORT_SIZE"] = args.cohort_size
+    if args.cohort_seed:
+        parameters["COHORT_SEED"] = args.cohort_seed
     body = {"executionData": {"parameters": parameters}} if parameters else {}
 
-    url = f"{BASE}/workspaces/{workspace_id}/items/{pipeline_id}/jobs/instances?jobType=Pipeline"
-    response = requests.post(url, headers=headers, data=json.dumps(body), timeout=120)
-    if not response.ok:
-        raise SystemExit(f"Failed to start pipeline: {response.status_code}\n{response.text[:600]}")
+    response = requests.post(
+        f"{BASE}/workspaces/{workspace_id}/items/{pipeline_id}/jobs/instances"
+        f"?jobType=Pipeline", headers=headers, data=json.dumps(body), timeout=180)
+    if response.status_code not in (200, 202):
+        raise SystemExit(f"pipeline start failed {response.status_code}: "
+                         f"{response.text[:500]}")
+
     location = response.headers.get("Location")
-    if not location:
-        raise SystemExit("Pipeline start returned no Location header")
-    print(f"[{stamp()}] pipeline started  params={parameters or 'defaults'}")
-    print(f"[{stamp()}] job: {location}")
+    job_id = location.rstrip("/").split("/")[-1] if location else None
+    print(f"pipeline started: {job_id}")
+    print(f"  workspace {workspace_id}")
+    if parameters:
+        print(f"  parameters {parameters}")
 
     deadline = time.time() + args.timeout_minutes * 60
-    last_state = None
+    status = None
     while time.time() < deadline:
         time.sleep(args.poll_seconds)
-        try:
-            job = requests.get(location, headers=headers, timeout=120).json()
-        except Exception as error:
-            print(f"[{stamp()}] poll error: {error}")
-            continue
-        state = job.get("status")
-        if state != last_state:
-            print(f"[{stamp()}] status: {state}")
-            last_state = state
-        if state in ("Completed", "Failed", "Cancelled", "Deduped"):
-            print(f"\n[{stamp()}] FINAL: {state}")
-            if state != "Completed":
-                print(json.dumps(job.get("failureReason") or job, indent=2)[:2000])
-            # Per-notebook outcome from the Spark session list.
-            try:
-                sessions = requests.get(
-                    f"{BASE}/workspaces/{workspace_id}/spark/livySessions",
-                    headers=headers, timeout=120).json().get("value", [])
-                sessions.sort(key=lambda s: s.get("submittedDateTime") or "", reverse=True)
-                print("\nRecent Spark sessions:")
-                for session in sessions[:12]:
-                    print(f"  {str(session.get('itemName')):<34} {session.get('state')}")
-            except Exception as error:
-                print(f"  (could not list Spark sessions: {error})")
-            return 0 if state == "Completed" else 1
-    print(f"[{stamp()}] timed out after {args.timeout_minutes} minutes")
-    return 2
+        state = requests.get(
+            f"{BASE}/workspaces/{workspace_id}/items/{pipeline_id}/jobs/instances/"
+            f"{job_id}", headers=headers, timeout=120).json()
+        status = state.get("status")
+        elapsed = int(time.time() - (deadline - args.timeout_minutes * 60))
+        print(f"  [{elapsed // 60:>3}m] {status}")
+        if status in ("Completed", "Failed", "Cancelled", "Deduped"):
+            break
+    else:
+        raise SystemExit(f"pipeline did not finish within {args.timeout_minutes} minutes")
+
+    if status != "Completed":
+        print(json.dumps(state, indent=2)[:1500])
+        raise SystemExit(f"pipeline {status}")
+
+    print(f"\npipeline {status}")
+    print(f"https://app.fabric.microsoft.com/groups/{workspace_id}")
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()

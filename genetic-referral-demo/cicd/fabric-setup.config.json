@@ -36,6 +36,11 @@
       "displayName": "validation_sensitivity",
       "localPath": "fabric/notebooks/validation_sensitivity.ipynb",
       "lakehouse": "gold_lakehouse"
+    },
+    {
+      "displayName": "agent_handoff_publisher",
+      "localPath": "fabric/notebooks/agent_handoff_publisher.ipynb",
+      "lakehouse": "gold_lakehouse"
     }
   ],
   "dataPipeline": {
