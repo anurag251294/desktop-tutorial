@@ -1,7 +1,7 @@
 {
   "workspaceName": "TCHC_Fabric_Demo",
   "capacityId": "",
-  "workspaceDescription": "Toronto Community Housing — Fabric deep dive. Arrears and vacancy on a medallion architecture with a Direct Lake semantic model. Synthetic data only.",
+  "workspaceDescription": "Toronto Community Housing \u2014 Fabric deep dive. Arrears and vacancy on a medallion architecture with a Direct Lake semantic model. Synthetic data only.",
   "lakehouses": [
     {
       "displayName": "bronze_lakehouse",
@@ -30,6 +30,11 @@
     {
       "displayName": "gold_star_schema",
       "localPath": "fabric/notebooks/gold_star_schema.ipynb",
+      "lakehouse": "gold_lakehouse"
+    },
+    {
+      "displayName": "configure_agent",
+      "localPath": "fabric/notebooks/configure_agent.ipynb",
       "lakehouse": "gold_lakehouse"
     }
   ],
