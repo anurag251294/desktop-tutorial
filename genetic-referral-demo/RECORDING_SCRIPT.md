@@ -84,6 +84,16 @@ python scripts/foundry/test_gates.py     # 13/13
 
 > Every child in here is fabricated. Two thousand four hundred of them. No real record was touched, and nothing was connected to a hospital system.
 
+*Scroll the workspace list slowly while you say this.*
+
+> Let me name what is actually in here, because every piece earns its place.
+
+> Three lakehouses — bronze, silver and gold — and one pipeline that runs five notebooks end to end in about nine minutes. Bronze fetches the phenotype vocabulary and generates the record. Silver conforms it. Gold applies the criteria, measures how long the evidence has been sitting there, and checks whether the flag lands evenly.
+
+> Then a graph over those gold tables, and a queryset to ask it questions. And three agents — one that answers questions across the cohort, one that explains clinical vocabulary, and one that writes the brief about a single child.
+
+> Twelve items. No copies of the data, no exports, nothing leaving OneLake.
+
 *If anyone notices gold holds copies of some silver tables — `gold_encounters`, `gold_observations`, `gold_hpo_terms` — have this ready:*
 
 > Gold carries copies of a few silver tables, and that is deliberate. The graph needs every table it reads to sit in one lakehouse — an edge whose two ends and its own source are spread across two lakehouses is silently dropped at load, which cost us four of five relationship types before we found it. Gold is the serving layer, so gold is where the graph reads.
@@ -161,7 +171,11 @@ RETURN f.hpoLabel AS feature, b.bodySystem AS system
 ORDER BY system, feature
 ```
 
-> The whole model is a graph — patients, the features observed on them, the body systems those features belong to, the encounters, the specialties, and the criteria that surfaced each child. Eighteen thousand nodes, thirty-five thousand relationships.
+> This is the referral graph, and it is worth saying what it is before I run anything against it. It is not a visualisation. It is a semantic model of the domain — the same gold tables, expressed as the things they actually are and the relationships between them.
+
+> Six kinds of thing: patients, the features observed on them, the body systems those features belong to, encounters, specialties, and the criteria that surfaced each child. Five kinds of relationship between them. Eighteen thousand nodes, thirty-five thousand relationships.
+
+> And this is a **Fabric IQ** component. Fabric IQ is Microsoft's semantic layer over Fabric data — ontologies, semantic models, graphs and data agents. This is the graph part of it, and the cohort agent is the data agent part.
 
 > So when the pipeline says this child surfaced because their features span multiple body systems, you do not have to take that on trust. You can walk it.
 
@@ -179,6 +193,28 @@ GROUP BY system ORDER BY children DESC
 ```
 
 > And because it is a graph, a question that is awkward in SQL becomes one pattern: which body systems actually co-occur in the children we surfaced. In SQL that is a self-join over a bridge table. Here it is one line.
+
+*Now the third query — the one worth the time.*
+
+```
+MATCH (p:Patient)-[:attendedEncounter]->(:Encounter)
+      -[:encounterWithSpecialty]->(s:Specialty)
+WHERE p.referralState = 'no_indicators_recorded'
+RETURN s.specialty AS specialty, COUNT(DISTINCT p) AS children
+GROUP BY specialty ORDER BY children DESC
+```
+
+> This one asks something different. Not who we found — who we did *not*, and where those children actually turn up.
+
+*Results: General Paediatrics 801 · Cardiology 794 · ENT 785 · Developmental Paediatrics 776 · Neurology 769 · Orthopaedics 754.*
+
+> Eight hundred children the screen did not surface are sitting in General Paediatrics. Nearly eight hundred more in Cardiology, in ENT, in Developmental Paediatrics.
+
+> Most of them are fine. But if this screen is missing children — and the next section shows that it is — that is the list of clinics they are sitting in. Two hops from a patient to a specialty, and you have turned a limitation into something operational.
+
+*— — beat — —*
+
+> That is why a graph rather than a table. Not because the answers are impossible in SQL — they are not. Because the questions arrive in the shape of relationships, and a graph lets you ask them in that shape.
 
 *If asked how the graph was built — and someone will:*
 

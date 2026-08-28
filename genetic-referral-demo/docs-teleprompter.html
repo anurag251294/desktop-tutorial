@@ -267,6 +267,11 @@ python scripts/foundry/test_gates.py     # 13/13</pre>
     <p class="do">Click into the workspace list.</p>
     <p class="say">One Fabric workspace. Three lakehouses in a medallion — bronze, silver, gold. A pipeline. A graph. And three agents, which I will come back to, because the differences between them are the point.</p>
     <p class="say">Every child in here is fabricated. Two thousand four hundred of them. No real record was touched, and nothing was connected to a hospital system.</p>
+    <p class="do">Scroll the workspace list slowly while you say this.</p>
+    <p class="say">Let me name what is actually in here, because every piece earns its place.</p>
+    <p class="say">Three lakehouses — bronze, silver and gold — and one pipeline that runs five notebooks end to end in about nine minutes. Bronze fetches the phenotype vocabulary and generates the record. Silver conforms it. Gold applies the criteria, measures how long the evidence has been sitting there, and checks whether the flag lands evenly.</p>
+    <p class="say">Then a graph over those gold tables, and a queryset to ask it questions. And three agents — one that answers questions across the cohort, one that explains clinical vocabulary, and one that writes the brief about a single child.</p>
+    <p class="say">Twelve items. No copies of the data, no exports, nothing leaving OneLake.</p>
     <p class="do">If anyone notices gold holds copies of some silver tables — <code class="inl">gold_encounters</code>, <code class="inl">gold_observations</code>, <code class="inl">gold_hpo_terms</code> — have this ready:</p>
     <p class="say">Gold carries copies of a few silver tables, and that is deliberate. The graph needs every table it reads to sit in one lakehouse — an edge whose two ends and its own source are spread across two lakehouses is silently dropped at load, which cost us four of five relationship types before we found it. Gold is the serving layer, so gold is where the graph reads.</p>
   </section>
@@ -314,7 +319,9 @@ python scripts/foundry/test_gates.py     # 13/13</pre>
 WHERE p.patientId = 'SYN-00017'
 RETURN f.hpoLabel AS feature, b.bodySystem AS system
 ORDER BY system, feature</pre>
-    <p class="say">The whole model is a graph — patients, the features observed on them, the body systems those features belong to, the encounters, the specialties, and the criteria that surfaced each child. Eighteen thousand nodes, thirty-five thousand relationships.</p>
+    <p class="say">This is the referral graph, and it is worth saying what it is before I run anything against it. It is not a visualisation. It is a semantic model of the domain — the same gold tables, expressed as the things they actually are and the relationships between them.</p>
+    <p class="say">Six kinds of thing: patients, the features observed on them, the body systems those features belong to, encounters, specialties, and the criteria that surfaced each child. Five kinds of relationship between them. Eighteen thousand nodes, thirty-five thousand relationships.</p>
+    <p class="say">And this is a <strong>Fabric IQ</strong> component. Fabric IQ is Microsoft's semantic layer over Fabric data — ontologies, semantic models, graphs and data agents. This is the graph part of it, and the cohort agent is the data agent part.</p>
     <p class="say">So when the pipeline says this child surfaced because their features span multiple body systems, you do not have to take that on trust. You can walk it.</p>
     <p class="do">Results: cardiac · neurodevelopment ×2 · neurology · skeletal.</p>
     <p class="say">There it is. Abnormal heart morphology — cardiac. Developmental regression and global developmental delay — neurodevelopment. Hypotonia — neurology. Scoliosis — skeletal. That is the criterion, made of its evidence.</p>
@@ -324,6 +331,18 @@ WHERE p.referralState = 'indicators_present'
 RETURN b.bodySystem AS system, COUNT(DISTINCT p) AS children
 GROUP BY system ORDER BY children DESC</pre>
     <p class="say">And because it is a graph, a question that is awkward in SQL becomes one pattern: which body systems actually co-occur in the children we surfaced. In SQL that is a self-join over a bridge table. Here it is one line.</p>
+    <p class="do">Now the third query — the one worth the time.</p>
+<pre>MATCH (p:Patient)-[:attendedEncounter]-&gt;(:Encounter)
+      -[:encounterWithSpecialty]-&gt;(s:Specialty)
+WHERE p.referralState = 'no_indicators_recorded'
+RETURN s.specialty AS specialty, COUNT(DISTINCT p) AS children
+GROUP BY specialty ORDER BY children DESC</pre>
+    <p class="say">This one asks something different. Not who we found — who we did <em>not</em>, and where those children actually turn up.</p>
+    <p class="do">Results: General Paediatrics 801 · Cardiology 794 · ENT 785 · Developmental Paediatrics 776 · Neurology 769 · Orthopaedics 754.</p>
+    <p class="say">Eight hundred children the screen did not surface are sitting in General Paediatrics. Nearly eight hundred more in Cardiology, in ENT, in Developmental Paediatrics.</p>
+    <p class="say">Most of them are fine. But if this screen is missing children — and the next section shows that it is — that is the list of clinics they are sitting in. Two hops from a patient to a specialty, and you have turned a limitation into something operational.</p>
+    <p class="beat">— beat —</p>
+    <p class="say">That is why a graph rather than a table. Not because the answers are impossible in SQL — they are not. Because the questions arrive in the shape of relationships, and a graph lets you ask them in that shape.</p>
     <p class="do">If asked how the graph was built — and someone will:</p>
     <p class="say">Nothing was copied to build this. The graph is <em>declared</em> over Delta tables that already exist in OneLake.</p>
     <p class="say">A node type is a table plus a key column: one row becomes one node. Patients come from the referral state table, features from the phenotype terms, criteria from the criteria definitions.</p>
