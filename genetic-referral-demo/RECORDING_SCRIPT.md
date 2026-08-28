@@ -1,7 +1,12 @@
 # Screen recording script — genetic referral case-finding
 
 Generated from the teleprompter, so the two cannot drift.
-Live version: https://claude.ai/code/artifact/6b5e7ad0-e8cd-4567-bae7-fd178dae5846
+Live: https://claude.ai/code/artifact/6b5e7ad0-e8cd-4567-bae7-fd178dae5846
+
+The use case, in one sentence: **use agentic intelligence to identify patients
+early for genetic consultation or testing.** The script is built around the three
+words that do the work — *identify*, *early*, *agentic* — and is honest about the
+one that does not mean what people assume.
 
 > Quoted text is what you say. *Italic* is what you do.
 
@@ -51,6 +56,12 @@ python scripts/foundry/test_gates.py     # 13/13
 > Before anything else, one clarification, because it has already been misunderstood once. **This is not a genomics project.** There is no genome here, no variant, no test result. Nothing in this system reads genetic data of any kind.
 
 > The question is the one that comes *before* genetics gets involved: which children, already in this hospital, should somebody be looking at — sooner than they currently are.
+
+*— — beat · state the use case — —*
+
+> The use case we were given is one sentence: **use agentic intelligence to identify patients early for genetic consultation or testing.**
+
+> Three words in that sentence do real work — **identify**, **early**, and **agentic** — and I am going to show you exactly what each one means here. Including one place where it does not mean what you might assume.
 
 *— — beat — —*
 
@@ -112,7 +123,9 @@ python scripts/foundry/test_gates.py     # 13/13
 
 *Open the **notebook** `gold_referral_signals`. The `CRITERIA` cell.*
 
-> Six criteria. Each one named, each carrying its own threshold, all in one place a clinician can read.
+*First of the three words: **identify**.*
+
+> Six criteria. Each one named, each carrying its own threshold, all in one place a clinician can read. This is the identifying, and I want you to see that it is arithmetic rather than judgement.
 
 > There is deliberately **no risk score.** A clinician reading “surfaced because features span four body systems” can disagree with the threshold and tell you why. A clinician reading “risk zero point eight one” can only defer to it or ignore it. One of those is a conversation. The other is not.
 
@@ -170,7 +183,9 @@ GROUP BY system ORDER BY children DESC
 
 *Open the **notebook** `gold_signal_latency`, or just show the figures.*
 
-> That child surfaced because their features span multiple body systems. Here is the question that actually matters: **when did that become true?**
+*Second word: **early**. This is the section that earns it.*
+
+> That child surfaced because their features span multiple body systems. Here is the question that actually matters, and the one the use case turns on: **when did that become true?**
 
 > The sixth of March, twenty twenty-four. **Twenty-nine months ago.** Every feature the criterion needed was already coded, and had been for nearly two and a half years.
 
@@ -181,6 +196,8 @@ GROUP BY system ORDER BY children DESC
 > Nobody did anything wrong here. Those features were recorded by different clinicians, in different clinics, months apart. No single person ever saw them together — which is exactly what a diagnostic odyssey is.
 
 > This is what the pipeline actually does. Not new information. The same information, joined up, on the day the pattern completed rather than years later.
+
+> That is what *early* means here, and it is measured rather than asserted. Nine months at the median. Thirty-eight per cent of them over a year.
 
 > **NOTE** — **Be precise about the claim.** The synthetic record contains no referral events, so this says the evidence has been **sufficient** since that date. It does **not** say a referral was missed or late. On real data, comparing the qualifying date against the actual referral date is the number you would want — and the obvious next thing to build.
 
@@ -220,7 +237,11 @@ GROUP BY system ORDER BY children DESC
 
 ## 13:30 · Three agents, three different reaches
 
-> There are three agents here, and the interesting thing is not what they do. It is how much each one can reach, and where the safety comes from in each case.
+*Third word: **agentic**. This is the one that does not mean what you might assume.*
+
+> Here is the honest version. The children are identified by those deterministic criteria — not by a model. That is deliberate. Criteria can be inspected, argued with, reproduced next month and measured for bias. A model deciding who surfaces could do none of those things, and in a hospital that is not a trade worth making.
+
+> So the agentic part is not the finding. It is everything around the finding: making it readable, making it queryable, and making it safe. There are three agents, and the interesting thing is not what they do — it is how much each one can reach, and where the safety comes from in each case.
 
 *Open a contract: `gold_lakehouse` → Files → `contracts/` → `patient-evidence.SYN-00195.json`.*
 
@@ -279,6 +300,12 @@ python scripts/foundry/create_referral_agent.py \
 > None of these thresholds are clinically validated — they are placeholders, and they need the genetics service to mark them up. No real data has been anywhere near this.
 
 > What it does show is the shape: case-finding that is inspectable, reproducible, and honest about who it misses.
+
+*— — beat · close on the sentence you opened with — —*
+
+> Back to that one sentence. **Identify** — six named criteria you can read and disagree with. **Early** — a median of nearly nine months that the evidence was already sitting there, and thirty-eight per cent of them over a year. **Agentic** — three agents around the finding, with the one that writes about a child held to four gates and given no reach at all.
+
+> And the part the sentence does not ask for, which I would argue matters most: a measurement of who this misses, and whether it misses the same people the system already misses.
 
 ---
 

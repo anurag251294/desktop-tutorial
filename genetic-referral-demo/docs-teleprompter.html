@@ -219,6 +219,9 @@ python scripts/foundry/test_gates.py     # 13/13</pre>
     <p class="say">This is a demonstration of case-finding in Microsoft Fabric, for a children's hospital.</p>
     <p class="say">Before anything else, one clarification, because it has already been misunderstood once. <strong>This is not a genomics project.</strong> There is no genome here, no variant, no test result. Nothing in this system reads genetic data of any kind.</p>
     <p class="say">The question is the one that comes <em>before</em> genetics gets involved: which children, already in this hospital, should somebody be looking at — sooner than they currently are.</p>
+    <p class="beat">— beat · state the use case —</p>
+    <p class="say">The use case we were given is one sentence: <strong>use agentic intelligence to identify patients early for genetic consultation or testing.</strong></p>
+    <p class="say">Three words in that sentence do real work — <strong>identify</strong>, <strong>early</strong>, and <strong>agentic</strong> — and I am going to show you exactly what each one means here. Including one place where it does not mean what you might assume.</p>
     <p class="beat">— beat —</p>
     <p class="say">Children with undiagnosed rare conditions often spend years in what clinicians call a diagnostic odyssey. Many specialists. Many investigations. No unifying answer. And often no genetics referral, because no single clinician ever sees the whole pattern.</p>
     <p class="say">The signals are usually already in the chart. They are just scattered across it.</p>
@@ -257,7 +260,8 @@ python scripts/foundry/test_gates.py     # 13/13</pre>
   <section id="s4">
     <div class="stamp"><span class="time">4:30</span><h2>Gold — named criteria, two tiers, no score</h2></div>
     <p class="do">Open the <strong>notebook</strong> <code class="inl">gold_referral_signals</code>. The <code class="inl">CRITERIA</code> cell.</p>
-    <p class="say">Six criteria. Each one named, each carrying its own threshold, all in one place a clinician can read.</p>
+    <p class="do">First of the three words: <strong>identify</strong>.</p>
+    <p class="say">Six criteria. Each one named, each carrying its own threshold, all in one place a clinician can read. This is the identifying, and I want you to see that it is arithmetic rather than judgement.</p>
     <p class="say">There is deliberately <strong>no risk score.</strong> A clinician reading “surfaced because features span four body systems” can disagree with the threshold and tell you why. A clinician reading “risk zero point eight one” can only defer to it or ignore it. One of those is a conversation. The other is not.</p>
     <p class="do">Point at the tiers.</p>
     <p class="say">Two tiers. A <em>sufficient</em> criterion surfaces a child on its own — developmental regression does that. A <em>contributory</em> one counts only in combination. Weight them equally and you surface a fifth of the clinic, which is a list nobody reads.</p>
@@ -291,12 +295,14 @@ GROUP BY system ORDER BY children DESC</pre>
   <section id="s6">
     <div class="stamp"><span class="time">9:00</span><h2>How long it was already there</h2></div>
     <p class="do">Open the <strong>notebook</strong> <code class="inl">gold_signal_latency</code>, or just show the figures.</p>
-    <p class="say">That child surfaced because their features span multiple body systems. Here is the question that actually matters: <strong>when did that become true?</strong></p>
+    <p class="do">Second word: <strong>early</strong>. This is the section that earns it.</p>
+    <p class="say">That child surfaced because their features span multiple body systems. Here is the question that actually matters, and the one the use case turns on: <strong>when did that become true?</strong></p>
     <p class="say">The sixth of March, twenty twenty-four. <strong>Twenty-nine months ago.</strong> Every feature the criterion needed was already coded, and had been for nearly two and a half years.</p>
     <p class="beat">— beat · let it sit —</p>
     <p class="say">Across all two hundred and twenty children the screen surfaced, the median is nearly nine months. <strong>Thirty-eight per cent</strong> have had complete, sufficient evidence sitting in the record for over a year. The longest is thirty-three months.</p>
     <p class="say">Nobody did anything wrong here. Those features were recorded by different clinicians, in different clinics, months apart. No single person ever saw them together — which is exactly what a diagnostic odyssey is.</p>
     <p class="say">This is what the pipeline actually does. Not new information. The same information, joined up, on the day the pattern completed rather than years later.</p>
+    <p class="say">That is what <em>early</em> means here, and it is measured rather than asserted. Nine months at the median. Thirty-eight per cent of them over a year.</p>
     <p class="note"><b>Be precise about the claim.</b> The synthetic record contains no referral events, so this says the evidence has been <b>sufficient</b> since that date. It does <b>not</b> say a referral was missed or late. On real data, comparing the qualifying date against the actual referral date is the number you would want — and the obvious next thing to build.</p>
   </section>
 
@@ -320,7 +326,9 @@ GROUP BY system ORDER BY children DESC</pre>
 
   <section id="s8">
     <div class="stamp"><span class="time">13:30</span><h2>Three agents, three different reaches</h2></div>
-    <p class="say">There are three agents here, and the interesting thing is not what they do. It is how much each one can reach, and where the safety comes from in each case.</p>
+    <p class="do">Third word: <strong>agentic</strong>. This is the one that does not mean what you might assume.</p>
+    <p class="say">Here is the honest version. The children are identified by those deterministic criteria — not by a model. That is deliberate. Criteria can be inspected, argued with, reproduced next month and measured for bias. A model deciding who surfaces could do none of those things, and in a hospital that is not a trade worth making.</p>
+    <p class="say">So the agentic part is not the finding. It is everything around the finding: making it readable, making it queryable, and making it safe. There are three agents, and the interesting thing is not what they do — it is how much each one can reach, and where the safety comes from in each case.</p>
     <p class="do">Open a contract: <code class="inl">gold_lakehouse</code> → Files → <code class="inl">contracts/</code> → <code class="inl">patient-evidence.SYN-00195.json</code>.</p>
     <p class="say">The first writes the brief about one child. It never queries anything. It is handed a fixed envelope — the patient's state, the criteria that fired, and a list of evidence items, each with an identifier.</p>
     <p class="say">That is the whole safety argument. It cannot reach a patient it was not handed, because scope is a property of the input, not of the model behaving. And every value it can state already carries a citation, so a claim with no citation is a claim about something that was never supplied.</p>
@@ -354,6 +362,9 @@ GROUP BY system ORDER BY children DESC</pre>
     <p class="say">So: named criteria a clinician can argue with. Three states that never collapse. Evidence that can be walked rather than trusted. A measurement of how long that evidence had been sitting there. Agents whose reach is deliberately different, with four gates on the one that writes about a child. And equity measured as an output, not as a review somebody promises to do later.</p>
     <p class="say">None of these thresholds are clinically validated — they are placeholders, and they need the genetics service to mark them up. No real data has been anywhere near this.</p>
     <p class="say">What it does show is the shape: case-finding that is inspectable, reproducible, and honest about who it misses.</p>
+    <p class="beat">— beat · close on the sentence you opened with —</p>
+    <p class="say">Back to that one sentence. <strong>Identify</strong> — six named criteria you can read and disagree with. <strong>Early</strong> — a median of nearly nine months that the evidence was already sitting there, and thirty-eight per cent of them over a year. <strong>Agentic</strong> — three agents around the finding, with the one that writes about a child held to four gates and given no reach at all.</p>
+    <p class="say">And the part the sentence does not ask for, which I would argue matters most: a measurement of who this misses, and whether it misses the same people the system already misses.</p>
   </section>
 
   <section id="s11">
