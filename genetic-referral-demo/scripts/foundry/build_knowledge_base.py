@@ -281,7 +281,7 @@ def create_knowledge_base(key):
         "models": [{
             "kind": "azureOpenAI",
             "azureOpenAIParameters": {
-                "resourceUri": "https://geohazard-foundry-mcap.openai.azure.com",
+                "resourceUri": "https://referral-foundry-mcap.openai.azure.com",
                 "deploymentId": "gpt-5-4-mini",
                 "modelName": "gpt-5.4-mini",
             },

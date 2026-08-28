@@ -2,12 +2,12 @@
   "patient_id": "SYN-00195",
   "referral_state": "indicators_present",
   "family_history_status": "never_taken",
-  "summary": "The record was surfaced with indicators present. Recorded features span multiple systems, include developmental regression, and include developmental and speech/language findings alongside other system features. Family history was not recorded, so nothing is known about it.",
+  "summary": "The record contains several documented features across growth, craniofacial, sensory, skeletal, and neurodevelopmental domains, and the pipeline also flagged developmental regression. Family history was not recorded, so that part of the picture is unknown. The chart is built from recorded observations and encounters only; undocumented features cannot be seen here.",
   "reasons": [
     {
       "criterion": "MULTI_SYSTEM",
       "tier": "sufficient",
-      "statement": "Features were recorded across several body systems, including growth, craniofacial, sensory, neurodevelopment, and skeletal domains.",
+      "statement": "Recorded features span multiple body systems, including growth, craniofacial, sensory, skeletal, and neurodevelopmental domains.",
       "evidence_ids": [
         "OBS:OBS-0000164",
         "OBS:OBS-0000165",
@@ -19,7 +19,7 @@
     {
       "criterion": "REGRESSION",
       "tier": "sufficient",
-      "statement": "Developmental regression is recorded in the chart.",
+      "statement": "Developmental regression is explicitly documented in the chart.",
       "evidence_ids": [
         "OBS:OBS-0000167"
       ]
@@ -27,7 +27,7 @@
     {
       "criterion": "NEURODEV_PLUS",
       "tier": "contributory",
-      "statement": "A neurodevelopmental feature is recorded together with features in other systems.",
+      "statement": "A neurodevelopmental feature is recorded alongside features in other systems.",
       "evidence_ids": [
         "OBS:OBS-0000169",
         "OBS:OBS-0000164",
@@ -37,18 +37,18 @@
     {
       "criterion": "REPEAT_UNDIAGNOSED_ADMISSION",
       "tier": "contributory",
-      "statement": "The chart includes repeated admissions with no diagnosis recorded in the encounter note.",
+      "statement": "The record includes repeated admissions where no diagnosis was recorded.",
       "evidence_ids": [
         "ENC:ENC-0001400",
-        "ENC:ENC-0001394"
+        "ENC:ENC-0001394",
+        "ENC:ENC-0001393"
       ]
     }
   ],
   "limitations": [
     "This brief reflects only what was recorded in the chart.",
-    "Features that were never documented, never asked about, or not captured in the record cannot be seen by the pipeline, so this is not a complete picture of the child.",
-    "Family history was not recorded, so nothing is known about it.",
-    "The evidence set is limited to the documented encounters and observations available here."
+    "Features that were never documented, never asked about, or never coded cannot be seen by the pipeline, so this is not a complete picture of the child.",
+    "Family history was not recorded, so that domain remains unknown."
   ],
   "recommended_action": "clinician_review"
 }

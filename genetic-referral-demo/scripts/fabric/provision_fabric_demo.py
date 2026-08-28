@@ -1,4 +1,4 @@
-"""Provision the geohazard demo into a Fabric workspace via the Fabric REST API.
+"""Provision the referral demo into a Fabric workspace via the Fabric REST API.
 
 Python equivalent of setup_fabric_demo.ps1, which requires PowerShell 7 for
 -ResponseHeadersVariable. This runs anywhere Python and the Azure CLI are available.

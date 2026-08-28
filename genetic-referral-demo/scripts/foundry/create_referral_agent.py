@@ -204,7 +204,7 @@ def main():
 
     # Fail before calling anything if the schema gate cannot run. A gate that silently
     # skips is not a gate, and this one skipping is exactly how an invalid document
-    # reached a reviewer during the geohazard build.
+    # reached a reviewer on an earlier build.
     try:
         import jsonschema
     except ImportError:

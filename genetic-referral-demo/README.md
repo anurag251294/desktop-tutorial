@@ -162,7 +162,7 @@ When the evidence contract is empty the agent has a lawful escape:
 `{"error": "no-evidence", "patient_id": "..."}`. Without it, a contract requiring at
 least one citation leaves no valid document, and a model with no valid output available
 will invent one — which is exactly how fabricated evidence IDs appeared during the
-geohazard build.
+an earlier build.
 
 ## Layout
 
