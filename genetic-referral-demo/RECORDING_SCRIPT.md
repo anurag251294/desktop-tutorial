@@ -177,6 +177,22 @@ ORDER BY system, feature
 
 > And this is a **Fabric IQ** component. Fabric IQ is Microsoft's semantic layer over Fabric data — ontologies, semantic models, graphs and data agents. This is the graph part of it, and the cohort agent is the data agent part.
 
+*— — what this actually is — —*
+
+> This is where the domain gets defined. Not in a report, not in somebody's SQL — here. Six entities and five relationships, declared once, in one file, that everything downstream reads.
+
+> A patient *has* a feature. A feature *belongs to* a body system. A patient is *surfaced by* a criterion, *attends* an encounter, and an encounter is *with* a specialty. That is the model of this problem, written down, and it is the same model the query, the agent and the clinician are all working from.
+
+*— — and the boundary, said plainly — —*
+
+> People will ask whether this is the ontology. It is worth being precise. This declares the **entities and the relationships** — so in the ordinary sense of the word, yes, it is a domain model.
+
+> But Fabric IQ has a component actually named Ontology, and it is a different thing. An ontology adds the layer above this: hierarchies, so a thing can be a kind of another thing. Constraints, so the model knows what cannot be true. Business definitions that live independently of any particular table, and can be reused across models and agents.
+
+> A property graph gives you structure — entities, relationships, traversal. An ontology gives you *meaning*, and lets a system infer things nobody wrote down.
+
+> We do not have that component in this tenant. It is not enabled. So this is the graph doing the semantic layer's job, and doing it well enough for what you have just seen — and if ontology becomes available, it sits above this rather than replacing it.
+
 > So when the pipeline says this child surfaced because their features span multiple body systems, you do not have to take that on trust. You can walk it.
 
 *Results: cardiac · neurodevelopment ×2 · neurology · skeletal.*
@@ -560,6 +576,10 @@ ontology              403 FeatureNotAvailable in this tenant and region
 
 ***Five definition parts**, POSTed by `scripts/fabric/build_graph_model.py`: `dataSources` (which lakehouse, which tables, bound by item reference) · `graphType` (the schema) · `graphDefinition` (table-to-node/edge mapping and key columns) · `stylingConfiguration` (canvas layout) · `graphSettings`.*
 
+***The schema — entities and relationships — lives in `graphType.json`.** That is the file where the domain is declared: six node types, five edge types, their keys and properties. Everything else in the definition maps that schema onto tables.*
+
+***Graph versus ontology, concretely.** The graph can say *Feature belongs to BodySystem*. An ontology could also say that a phenotype term *is a kind of* clinical finding, that a child cannot be both not-screened and surfaced, or that "developmental regression" means the same thing in this model as in the semantic model and the data agent — definitions decoupled from any table. Structure versus meaning, and inference on top.*
+
 ***Node type = table + unique key column.** One row, one node.*
 
 ```
@@ -606,6 +626,9 @@ On synthetic data that is an artefact of the generator. The useful question is t
 
 **“Why not just let a model read the chart?”**
 Then the model decides who surfaces, and you cannot inspect the criteria, reproduce the run next month, or measure the flag for bias — because there is no flag, only an opinion.
+
+**“Is the graph your ontology?”**
+In the ordinary sense — a declared model of entities and their relationships — yes, and `graphType.json` is where that lives. In the product sense, no: Fabric IQ has a separate component called Ontology which adds hierarchies, constraints, and business definitions decoupled from tables, and it is not enabled in this tenant. The graph gives structure; an ontology would add meaning and inference on top of it.
 
 **“Is this Fabric IQ, or is it Foundry?”**
 Both, and they are different layers. Fabric IQ is the semantic layer over Fabric data — ontologies, semantic models, graphs, data agents. We use the graph and a data agent. Foundry IQ is the managed knowledge layer for agents; we use a knowledge base for clinical vocabulary. The ontology component of Fabric IQ is not enabled in this tenant. The two IQs are standalone products designed to be used together, not plugged into one another.
