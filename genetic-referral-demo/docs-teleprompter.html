@@ -1,0 +1,394 @@
+<title>Referral Demo Teleprompter</title>
+<style>
+  :root {
+    --ground:      #EFF2F4;
+    --panel:       #FFFFFF;
+    --ink:         #10161C;
+    --ink-soft:    #4E5A66;
+    --ink-faint:   #7B8792;
+    --rule:        #D5DCE1;
+    --accent:      #0E6B6B;
+    --accent-soft: #E2EFEE;
+    --caution:     #8C3A2B;
+    --caution-bg:  #F7EBE8;
+    --code-bg:     #1C2530;
+    --code-ink:    #DCE6EE;
+    --speak:       Georgia, "Iowan Old Style", "Times New Roman", serif;
+    --ui:          ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono:        ui-monospace, "Cascadia Mono", Consolas, monospace;
+    --scale:       1;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #10151A; --panel: #171E25; --ink: #E7ECF0; --ink-soft: #A4B0BB;
+      --ink-faint: #78848F; --rule: #2A343E; --accent: #4FB3AD;
+      --accent-soft: #14302F; --caution: #E0937F; --caution-bg: #2E1D19;
+      --code-bg: #0B1117; --code-ink: #CFDAE4;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #10151A; --panel: #171E25; --ink: #E7ECF0; --ink-soft: #A4B0BB;
+    --ink-faint: #78848F; --rule: #2A343E; --accent: #4FB3AD;
+    --accent-soft: #14302F; --caution: #E0937F; --caution-bg: #2E1D19;
+    --code-bg: #0B1117; --code-ink: #CFDAE4;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--ground); color: var(--ink);
+    font-family: var(--ui); line-height: 1.55; -webkit-text-size-adjust: 100%;
+  }
+  .wrap { max-width: 60rem; margin: 0 auto; padding: 2.5rem 1.5rem 6rem; }
+
+  header.masthead { border-bottom: 2px solid var(--ink); padding-bottom: 1.25rem; }
+  .eyebrow {
+    font-size: .72rem; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--accent); font-weight: 700; margin: 0 0 .5rem;
+  }
+  h1 {
+    font-family: var(--speak); font-weight: 400; font-size: clamp(1.9rem, 4.5vw, 2.8rem);
+    margin: 0 0 .4rem; letter-spacing: -.015em; text-wrap: balance;
+  }
+  .sub { color: var(--ink-soft); margin: 0; font-size: .95rem; }
+
+  .controls {
+    position: sticky; top: 0; z-index: 20; display: flex; flex-wrap: wrap;
+    gap: .5rem; align-items: center; padding: .7rem 0;
+    background: var(--ground); border-bottom: 1px solid var(--rule); margin-bottom: 2rem;
+  }
+  .controls .label {
+    font-size: .7rem; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--ink-faint); font-weight: 700;
+  }
+  button {
+    font: inherit; font-size: .82rem; font-weight: 600; cursor: pointer;
+    background: var(--panel); color: var(--ink);
+    border: 1px solid var(--rule); border-radius: 999px; padding: .34rem .8rem;
+  }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--panel); }
+
+  .prep {
+    background: var(--panel); border: 1px solid var(--rule);
+    border-radius: 10px; padding: 1.25rem 1.4rem; margin-bottom: 1.25rem;
+  }
+  .prep h2 {
+    font-size: .74rem; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--accent); margin: 0 0 .8rem;
+  }
+  .prep ul { margin: 0; padding-left: 1.1rem; }
+  .prep li { margin-bottom: .4rem; color: var(--ink-soft); font-size: .93rem; }
+  .prep li strong { color: var(--ink); }
+  code.inl {
+    font-family: var(--mono); font-size: .86em; background: var(--accent-soft);
+    color: var(--accent); padding: .08em .35em; border-radius: 4px;
+  }
+  table.nums { width: 100%; border-collapse: collapse; font-size: .9rem; margin-top: .3rem; }
+  table.nums td { padding: .3rem .5rem; border-bottom: 1px solid var(--rule); }
+  table.nums td:first-child { color: var(--ink-faint); white-space: nowrap; }
+  table.nums td:last-child { font-variant-numeric: tabular-nums; }
+
+  section { margin-bottom: 3rem; scroll-margin-top: 4.5rem; }
+  .stamp {
+    display: flex; align-items: baseline; gap: .85rem; margin-bottom: 1rem;
+    border-bottom: 1px solid var(--rule); padding-bottom: .55rem;
+  }
+  .time {
+    font-family: var(--mono); font-size: 1.05rem; font-weight: 700; color: var(--accent);
+    font-variant-numeric: tabular-nums; flex: none;
+  }
+  .stamp h2 {
+    font-family: var(--speak); font-weight: 400; font-size: 1.3rem; margin: 0;
+    letter-spacing: -.01em;
+  }
+
+  .say {
+    font-family: var(--speak); font-size: calc(1.3rem * var(--scale)); line-height: 1.62;
+    margin: 0 0 1.1rem; padding-left: 1.1rem; border-left: 3px solid var(--accent);
+    text-wrap: pretty;
+  }
+  .do {
+    font-size: calc(.88rem * var(--scale)); color: var(--ink-faint); font-style: italic;
+    margin: 0 0 1.1rem; padding-left: 1.15rem; border-left: 3px dotted var(--rule);
+  }
+  .note {
+    background: var(--caution-bg); border-left: 3px solid var(--caution);
+    padding: .8rem 1rem; margin: 0 0 1.1rem; border-radius: 0 6px 6px 0;
+    font-size: calc(.92rem * var(--scale)); color: var(--ink);
+  }
+  .note b { color: var(--caution); }
+  .beat {
+    color: var(--ink-faint); font-size: .82rem; letter-spacing: .1em;
+    text-transform: uppercase; margin: 0 0 1.1rem; padding-left: 1.15rem; font-weight: 700;
+  }
+  pre {
+    background: var(--code-bg); color: var(--code-ink); font-family: var(--mono);
+    font-size: calc(.82rem * var(--scale)); padding: .9rem 1rem; border-radius: 8px;
+    overflow-x: auto; margin: 0 0 1.1rem; line-height: 1.5;
+  }
+  .qa { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 1.2rem 1.4rem; }
+  .qa dt { font-family: var(--speak); font-size: 1.05rem; margin-top: 1rem; }
+  .qa dt:first-of-type { margin-top: 0; }
+  .qa dd { margin: .3rem 0 0; color: var(--ink-soft); font-size: .93rem; }
+
+  @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+  @media (max-width: 34rem) { .stamp { flex-direction: column; gap: .1rem; } }
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <p class="eyebrow">Screen recording script · about 18 minutes</p>
+    <h1>Genetic referral case-finding</h1>
+    <p class="sub">Large serif is what you say. Dotted italic is what you do. Nothing here needs a Spark session.</p>
+  </header>
+
+  <div class="controls">
+    <span class="label">Text</span>
+    <button type="button" data-scale="0.85">S</button>
+    <button type="button" data-scale="1" aria-pressed="true">M</button>
+    <button type="button" data-scale="1.25">L</button>
+    <button type="button" data-scale="1.55">XL</button>
+    <span class="label" style="margin-left:.75rem">Jump</span>
+    <button type="button" data-go="s0">Open</button>
+    <button type="button" data-go="s4">Criteria</button>
+    <button type="button" data-go="s5">Graph</button>
+    <button type="button" data-go="s6">Latency</button>
+    <button type="button" data-go="s7">Equity</button>
+    <button type="button" data-go="s8">Agents</button>
+  </div>
+
+  <div class="prep">
+    <h2>Before you hit record</h2>
+    <ul>
+      <li>Capacity <code class="inl">fabdemo85829</code> <strong>Active 20+ minutes</strong> — item editors lag a resume.</li>
+      <li>Fabric tabs in order: workspace · bronze · silver · gold criteria · <strong>graph</strong> · <strong>latency</strong> · validation · gold lakehouse.</li>
+      <li>Foundry tab on <code class="inl">referral-foundry-mcap</code> → project <code class="inl">genetic-referral</code>.</li>
+      <li>Terminal in the repo, <code class="inl">az login</code> done.</li>
+      <li><strong>Click every tab once</strong> before recording — Fabric lazy-renders background tabs.</li>
+      <li><strong>Visible but not walked:</strong> <code class="inl">gold_graph_dimensions</code> (builds the graph's dimension tables), <code class="inl">agent_handoff_publisher</code> (writes the evidence contracts), <code class="inl">gold_cohort_summary</code> (the cohort agent's serving table). Know what they are in case someone asks.</li>
+      <li>Gold holds 16 tables, three of which are copies of silver — that is the graph's single-lakehouse requirement, and there is a line for it in the workspace section.</li>
+    </ul>
+  </div>
+
+  <div class="prep">
+    <h2>What is what — nothing here lives inside a lakehouse</h2>
+    <table class="nums">
+      <tr><td>NOTEBOOK</td><td><code class="inl">bronze_clinical_record</code> · <code class="inl">silver_conformed_record</code> · <code class="inl">gold_referral_signals</code> · <code class="inl">gold_signal_latency</code> · <code class="inl">validation_sensitivity</code></td></tr>
+      <tr><td>GRAPH</td><td><code class="inl">referral_graph</code></td></tr>
+      <tr><td>DATA AGENT</td><td><code class="inl">referral_cohort_agent</code></td></tr>
+      <tr><td>LAKEHOUSE</td><td><code class="inl">bronze_lakehouse</code> · <code class="inl">silver_lakehouse</code> · <code class="inl">gold_lakehouse</code></td></tr>
+      <tr><td>TABLES</td><td>live <em>inside</em> the lakehouses — <code class="inl">bronze_patients</code>, <code class="inl">gold_referral_state</code>, and so on</td></tr>
+      <tr><td>CONTRACTS</td><td><code class="inl">gold_lakehouse</code> → Files → <code class="inl">contracts/</code></td></tr>
+    </table>
+    <ul style="margin-top:.7rem">
+      <li>Everything you open in this script is in the <strong>workspace list</strong>, not inside a lakehouse. <code class="inl">bronze_clinical_record</code> is a <strong>notebook</strong> that sits beside <code class="inl">bronze_lakehouse</code>, not in it.</li>
+    </ul>
+  </div>
+
+  <div class="prep">
+    <h2>Verify — seconds each</h2>
+<pre>python scripts/fabric/query_graph.py     # 7/7
+python scripts/foundry/test_gates.py     # 13/13</pre>
+  </div>
+
+  <div class="prep">
+    <h2>Numbers you will say</h2>
+    <table class="nums">
+      <tr><td>Cohort</td><td>2,400 children · <strong>220 surfaced (9.2%)</strong> · 1,766 no indicators · 414 not screened</td></tr>
+      <tr><td>Latency</td><td>median <strong>8.7 months</strong> · <strong>38%</strong> over a year · longest 32.9</td></tr>
+      <tr><td>The one patient</td><td><code class="inl">SYN-00017</code> qualified <strong>2024-03-06</strong> — <strong>29.7 months</strong> ago</td></tr>
+      <tr><td>Sensitivity</td><td><strong>87.8%</strong> no interpreter vs <strong>75.2%</strong> interpreter needed</td></tr>
+      <tr><td>Graph</td><td>18,731 nodes · 35,216 edges</td></tr>
+      <tr><td>Knowledge base</td><td>31 documents</td></tr>
+    </table>
+  </div>
+
+  <div class="note" style="margin-bottom:2.5rem">
+    <b>Two things that will bite.</b> <b>Notebook cells are empty</b> — Fabric stores
+    notebooks as source with no outputs, so a pipeline run leaves nothing on screen. This
+    script is built for that: notebooks are shown for their <b>code</b>, every number
+    comes from the graph, the latency table or an agent. <b>Never run a notebook live</b>
+    — a cold Spark session is three minutes of silence. And the referral agent
+    <b>intermittently fails</b> with an <code class="inl">invalid_prompt</code> error on
+    the model; if it does, just run the command again. It works on the retry.
+  </div>
+
+  <section id="s0">
+    <div class="stamp"><span class="time">0:00</span><h2>Open cold</h2></div>
+    <p class="say">This is a demonstration of case-finding in Microsoft Fabric, for a children's hospital.</p>
+    <p class="say">Before anything else, one clarification, because it has already been misunderstood once. <strong>This is not a genomics project.</strong> There is no genome here, no variant, no test result. Nothing in this system reads genetic data of any kind.</p>
+    <p class="say">The question is the one that comes <em>before</em> genetics gets involved: which children, already in this hospital, should somebody be looking at — sooner than they currently are.</p>
+    <p class="beat">— beat —</p>
+    <p class="say">Children with undiagnosed rare conditions often spend years in what clinicians call a diagnostic odyssey. Many specialists. Many investigations. No unifying answer. And often no genetics referral, because no single clinician ever sees the whole pattern.</p>
+    <p class="say">The signals are usually already in the chart. They are just scattered across it.</p>
+  </section>
+
+  <section id="s1">
+    <div class="stamp"><span class="time">1:00</span><h2>The workspace</h2></div>
+    <p class="do">Click into the workspace list.</p>
+    <p class="say">One Fabric workspace. Three lakehouses in a medallion — bronze, silver, gold. A pipeline. A graph. And three agents, which I will come back to, because the differences between them are the point.</p>
+    <p class="say">Every child in here is fabricated. Two thousand four hundred of them. No real record was touched, and nothing was connected to a hospital system.</p>
+    <p class="do">If anyone notices gold holds copies of some silver tables — <code class="inl">gold_encounters</code>, <code class="inl">gold_observations</code>, <code class="inl">gold_hpo_terms</code> — have this ready:</p>
+    <p class="say">Gold carries copies of a few silver tables, and that is deliberate. The graph needs every table it reads to sit in one lakehouse — an edge whose two ends and its own source are spread across two lakehouses is silently dropped at load, which cost us four of five relationship types before we found it. Gold is the serving layer, so gold is where the graph reads.</p>
+  </section>
+
+  <section id="s2">
+    <div class="stamp"><span class="time">1:30</span><h2>Bronze — the record as it actually arrives</h2></div>
+    <p class="do">Open the <strong>notebook</strong> <code class="inl">bronze_clinical_record</code> from the workspace list. Header, then the cohort cell.</p>
+    <p class="say">Bronze does two things. It pulls the Human Phenotype Ontology from its public API — a vocabulary of <em>observable clinical features</em>: developmental delay, hypotonia, short stature. It is used by genetics services, which is not the same thing as being genetic information.</p>
+    <p class="say">And it generates the clinical record deliberately untidy.</p>
+    <p class="do">Point at the comments in the cohort cell.</p>
+    <p class="say">Two date formats, because the encounter feed and the observation feed were built by different teams a decade apart. Five spellings of three services. Family history recorded for only about six children in ten.</p>
+    <p class="say">A demo built on tidy data teaches you nothing, because the hard part of this problem is that the record is not tidy.</p>
+  </section>
+
+  <section id="s3">
+    <div class="stamp"><span class="time">3:00</span><h2>Silver — the distinction everything rests on</h2></div>
+    <p class="do">Open the <strong>notebook</strong> <code class="inl">silver_conformed_record</code>. The family history cell.</p>
+    <p class="say">This is the cell I would ask you to remember.</p>
+    <p class="say">Family history is missing for four children in ten. The obvious engineering move is to fill the gap with <code class="inl">false</code> and get a clean boolean column.</p>
+    <p class="say">That would be wrong, and it would be dangerous. <strong>Asked, and the answer was no</strong> is not the same as <strong>nobody asked.</strong> Filling that gap invents a negative finding for forty per cent of the cohort, and every count downstream becomes a lie.</p>
+    <p class="do">Point at <code class="inl">history_taken</code>.</p>
+    <p class="say">So <code class="inl">history_taken</code> is its own column, and the three flags stay null — unknown — where nobody asked. Gold refuses to score on an absence.</p>
+    <p class="say">The same reasoning gives us a third state later: a child whose record is too short to read is <em>not screened</em>, which is not the same as screened and clear.</p>
+  </section>
+
+  <section id="s4">
+    <div class="stamp"><span class="time">4:30</span><h2>Gold — named criteria, two tiers, no score</h2></div>
+    <p class="do">Open the <strong>notebook</strong> <code class="inl">gold_referral_signals</code>. The <code class="inl">CRITERIA</code> cell.</p>
+    <p class="say">Six criteria. Each one named, each carrying its own threshold, all in one place a clinician can read.</p>
+    <p class="say">There is deliberately <strong>no risk score.</strong> A clinician reading “surfaced because features span four body systems” can disagree with the threshold and tell you why. A clinician reading “risk zero point eight one” can only defer to it or ignore it. One of those is a conversation. The other is not.</p>
+    <p class="do">Point at the tiers.</p>
+    <p class="say">Two tiers. A <em>sufficient</em> criterion surfaces a child on its own — developmental regression does that. A <em>contributory</em> one counts only in combination. Weight them equally and you surface a fifth of the clinic, which is a list nobody reads.</p>
+    <p class="do">Scroll to the three-states table.</p>
+    <p class="say">Three states, and they must never collapse into each other. Indicators present. No indicators recorded. Not screened.</p>
+    <p class="say">The middle one is the one that gets misread. It does <strong>not</strong> mean the child has no indication. It means nothing was found <em>in the record</em>. A child whose features were never coded looks exactly like a child who does not have them. The pipeline cannot tell those apart, so it does not pretend to.</p>
+    <p class="beat">— beat —</p>
+    <p class="say">And every threshold in that cell is a <strong>placeholder</strong>, pending sign-off by the genetics service. They are written out as a table so that conversation is about something a clinician can mark up, not a number buried in code.</p>
+  </section>
+
+  <section id="s5">
+    <div class="stamp"><span class="time">7:00</span><h2>The graph — the criterion, walked</h2></div>
+    <p class="do">Switch to the <strong>graph</strong> <code class="inl">referral_graph</code>. Run it.</p>
+<pre>MATCH (p:Patient)-[:hasFeature]-&gt;(f:Feature)-[:inBodySystem]-&gt;(b:BodySystem)
+WHERE p.patientId = 'SYN-00017'
+RETURN f.hpoLabel AS feature, b.bodySystem AS system
+ORDER BY system, feature</pre>
+    <p class="say">The whole model is a graph — patients, the features observed on them, the body systems those features belong to, the encounters, the specialties, and the criteria that surfaced each child. Eighteen thousand nodes, thirty-five thousand relationships.</p>
+    <p class="say">So when the pipeline says this child surfaced because their features span multiple body systems, you do not have to take that on trust. You can walk it.</p>
+    <p class="do">Results: cardiac · neurodevelopment ×2 · neurology · skeletal.</p>
+    <p class="say">There it is. Abnormal heart morphology — cardiac. Developmental regression and global developmental delay — neurodevelopment. Hypotonia — neurology. Scoliosis — skeletal. That is the criterion, made of its evidence.</p>
+    <p class="do">Run the co-occurrence query.</p>
+<pre>MATCH (p:Patient)-[:hasFeature]-&gt;(:Feature)-[:inBodySystem]-&gt;(b:BodySystem)
+WHERE p.referralState = 'indicators_present'
+RETURN b.bodySystem AS system, COUNT(DISTINCT p) AS children
+GROUP BY system ORDER BY children DESC</pre>
+    <p class="say">And because it is a graph, a question that is awkward in SQL becomes one pattern: which body systems actually co-occur in the children we surfaced. In SQL that is a self-join over a bridge table. Here it is one line.</p>
+    <p class="note"><b>Do not overstate this.</b> It is a Fabric graph — a labelled property graph over OneLake, queried in standard GQL, documented under Fabric IQ. It is <b>not</b> a Fabric IQ ontology; that is a different feature and it is not enabled in this tenant.</p>
+  </section>
+
+  <section id="s6">
+    <div class="stamp"><span class="time">9:00</span><h2>How long it was already there</h2></div>
+    <p class="do">Open the <strong>notebook</strong> <code class="inl">gold_signal_latency</code>, or just show the figures.</p>
+    <p class="say">That child surfaced because their features span multiple body systems. Here is the question that actually matters: <strong>when did that become true?</strong></p>
+    <p class="say">The sixth of March, twenty twenty-four. <strong>Twenty-nine months ago.</strong> Every feature the criterion needed was already coded, and had been for nearly two and a half years.</p>
+    <p class="beat">— beat · let it sit —</p>
+    <p class="say">Across all two hundred and twenty children the screen surfaced, the median is nearly nine months. <strong>Thirty-eight per cent</strong> have had complete, sufficient evidence sitting in the record for over a year. The longest is thirty-three months.</p>
+    <p class="say">Nobody did anything wrong here. Those features were recorded by different clinicians, in different clinics, months apart. No single person ever saw them together — which is exactly what a diagnostic odyssey is.</p>
+    <p class="say">This is what the pipeline actually does. Not new information. The same information, joined up, on the day the pattern completed rather than years later.</p>
+    <p class="note"><b>Be precise about the claim.</b> The synthetic record contains no referral events, so this says the evidence has been <b>sufficient</b> since that date. It does <b>not</b> say a referral was missed or late. On real data, comparing the qualifying date against the actual referral date is the number you would want — and the obvious next thing to build.</p>
+  </section>
+
+  <section id="s7">
+    <div class="stamp"><span class="time">11:00</span><h2>The finding that matters</h2></div>
+    <p class="do">Show the <strong>table</strong> <code class="inl">gold_validation_sensitivity</code> (inside <code class="inl">gold_lakehouse</code>), or run the interpreter query on the graph.</p>
+    <p class="say">Now the part I would not want you to miss.</p>
+    <p class="say">This cohort was generated so that children whose families need an interpreter have <strong>exactly the same underlying rate</strong> of clustered presentation as everybody else. Same biology. The only thing that differs is how much of it reached the record.</p>
+    <p class="do">Point at the feature counts: 939 across 486 children, versus 766 across 467.</p>
+    <p class="say">Just under two features recorded per child where no interpreter is needed. About one point six where one is. Consultations run shorter through an interpreter, history-taking is harder, and description is less likely to land in a coded field.</p>
+    <p class="say">Here is what that costs.</p>
+    <p class="do">Switch to the sensitivity figures.</p>
+    <p class="say">The screen finds <strong>eighty-eight per cent</strong> of affected children in one group, and <strong>seventy-five per cent</strong> in the other. A twelve-point gap, from identical planted prevalence.</p>
+    <p class="say">And nothing in the criteria reads language, or interpreter need. The notebook asserts that and fails the build if it ever stops being true.</p>
+    <p class="say"><strong>A flag can be blind to a protected attribute and still reproduce the inequity attached to it.</strong> Excluding the column proves nothing. Measuring the outcome is the only thing that shows it.</p>
+    <p class="beat">— beat · the most important sentence in the recording —</p>
+    <p class="say">Measuring it does not fix it. What it does is point at the actual remedy — which is interpreter-supported history-taking, not a better model.</p>
+    <p class="note"><b>If you also show latency by interpreter need, read it carefully.</b> It appears to say interpreter-needing children are found <em>sooner</em> — eight months against ten. That is <b>survivorship, not good news</b>: the screen only surfaces children whose evidence crossed the threshold, and fewer of their features reach the record, so the ones that do surface are the more florid cases. The subtler ones are not in that table because the screen never found them. They are in this sensitivity gap instead.</p>
+    <p class="note"><b>If asked how you know the sensitivity:</b> the cohort is synthetic and carries an answer key. A real deployment cannot compute this — which is precisely the argument for the synthetic cohort. It measures what production never shows you: not how many flagged children turn out to be affected, but how many affected children were never flagged. Be equally plain that the <b>absolute</b> figure is close to circular; the <b>gap between groups</b> is not, because both were planted identically.</p>
+  </section>
+
+  <section id="s8">
+    <div class="stamp"><span class="time">13:30</span><h2>Three agents, three different reaches</h2></div>
+    <p class="say">There are three agents here, and the interesting thing is not what they do. It is how much each one can reach, and where the safety comes from in each case.</p>
+    <p class="do">Open a contract: <code class="inl">gold_lakehouse</code> → Files → <code class="inl">contracts/</code> → <code class="inl">patient-evidence.SYN-00195.json</code>.</p>
+    <p class="say">The first writes the brief about one child. It never queries anything. It is handed a fixed envelope — the patient's state, the criteria that fired, and a list of evidence items, each with an identifier.</p>
+    <p class="say">That is the whole safety argument. It cannot reach a patient it was not handed, because scope is a property of the input, not of the model behaving. And every value it can state already carries a citation, so a claim with no citation is a claim about something that was never supplied.</p>
+    <p class="beat">— second agent —</p>
+    <p class="say">The second answers questions about <strong>vocabulary</strong>. What developmental regression means. What makes a criterion sufficient rather than contributory. It is backed by a Foundry IQ knowledge base — thirty-one documents: phenotype definitions pulled from the ontology, the six criteria, the three states.</p>
+    <p class="say">It can retrieve freely, because there is nothing in that corpus that identifies anybody. Ask it which patients have been surfaced and it returns design documentation — because <strong>there are no patients in it.</strong> Not because we told it to refuse. Because the data is not there.</p>
+    <p class="say">A knowledge layer answers what a word means. It must not become a way to ask who a child is. That line is enforced by what we indexed, not by a prompt.</p>
+    <p class="beat">— third agent —</p>
+    <p class="say">The third answers cohort questions straight from Fabric — how many surfaced, which criteria fire most, how long the evidence has been sitting there.</p>
+    <p class="say">And this is the one to scrutinise hardest, so I want to be honest about it. It <em>can</em> reach every child in the gold tables. Its restraint does not come from the shape of its input the way the first agent's does. It comes from instructions — and instructions are weaker than structure.</p>
+    <p class="say">That is why it is pointed at a summary table of precomputed figures rather than the raw records, and why every figure carries its caveat as data travelling alongside it. Where you can make safety structural, do. Where you cannot, say so out loud.</p>
+  </section>
+
+  <section id="s9">
+    <div class="stamp"><span class="time">15:30</span><h2>The brief, and the four gates</h2></div>
+    <p class="do">Terminal.</p>
+<pre>python scripts/foundry/create_referral_agent.py \
+    --evidence cicd/patient-evidence.SYN-00195.json \
+    --output cicd/referral-brief.SYN-00195.json</pre>
+    <p class="do">While it drafts — about thirty seconds:</p>
+    <p class="say">Four gates run on whatever comes back. Schema — is it the right shape. Citations — does every claim point at evidence actually supplied. Clinical safety — no diagnosis, no named condition, no recommendation to refer or not refer, and no language that turns “nothing was recorded” into “nothing is wrong”.</p>
+    <p class="say">And separately, a fourth: does the brief state its own limitations. That is its own gate because gate three catches a bad sentence being <em>present</em>, and gate four catches a necessary sentence being <em>absent</em>. Absence is much harder to notice by reading.</p>
+    <p class="do">Gates print. Open the brief; read the family history line aloud.</p>
+    <p class="say">This is the child where nobody ever took a family history. The agent writes: <em>“Family history was not recorded, so nothing is known about it.”</em></p>
+    <p class="say">Not “no significant family history”. That would be a different claim about a real child, and it would be false.</p>
+    <p class="note"><b>If it fails</b> with <code class="inl">invalid_prompt: Unsupported parameter 'top_p'</code> — that is a service-side intermittent, not your fault and not a configuration error. Re-run the same command; it works on the retry.</p>
+  </section>
+
+  <section id="s10">
+    <div class="stamp"><span class="time">17:00</span><h2>Close</h2></div>
+    <p class="say">So: named criteria a clinician can argue with. Three states that never collapse. Evidence that can be walked rather than trusted. A measurement of how long that evidence had been sitting there. Agents whose reach is deliberately different, with four gates on the one that writes about a child. And equity measured as an output, not as a review somebody promises to do later.</p>
+    <p class="say">None of these thresholds are clinically validated — they are placeholders, and they need the genetics service to mark them up. No real data has been anywhere near this.</p>
+    <p class="say">What it does show is the shape: case-finding that is inspectable, reproducible, and honest about who it misses.</p>
+  </section>
+
+  <section id="s11">
+    <div class="stamp"><span class="time">—</span><h2>Have an answer ready</h2></div>
+    <dl class="qa">
+      <dt>“So is the AI actually identifying the patients?”</dt>
+      <dd>Be exact; this is the question that catches people out. The children are identified by <strong>deterministic criteria, not by a model</strong> — deliberately, because criteria can be inspected, argued with and measured for bias, and a model deciding who surfaces could not be. The agentic parts are the ones that exercise no judgement over a child.</dd>
+      <dt>“Would this work on our data?”</dt>
+      <dd>Unknown, and say so. What transfers is the shape — inspectable criteria, three states, evidence contracts, gates, equity measured as an output.</dd>
+      <dt>“What is the false positive rate?”</dt>
+      <dd>On synthetic data that is an artefact of the generator. The useful question is the one the validation notebook answers: who gets missed, and is it the same people who already get missed.</dd>
+      <dt>“Why not just let a model read the chart?”</dt>
+      <dd>Then the model decides who surfaces, and you cannot inspect the criteria, reproduce the run next month, or measure the flag for bias — because there is no flag, only an opinion.</dd>
+      <dt>“Is any of this genomic?”</dt>
+      <dd>No. Nothing reads a genome, a variant, or a test result.</dd>
+      <dt>If something breaks</dt>
+      <dd>Graph query fails → may be mid-refresh; skip it. Agent errors → re-run, it is intermittent. Anything Spark → do not wait on it; nothing here needs a session. Blank tab → Fabric lazy-loads; click it and keep talking.</dd>
+    </dl>
+  </section>
+</div>
+
+<script>
+  const root = document.documentElement;
+  document.querySelectorAll("button[data-scale]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      root.style.setProperty("--scale", b.dataset.scale);
+      document.querySelectorAll("button[data-scale]").forEach(function (o) {
+        o.setAttribute("aria-pressed", String(o === b));
+      });
+    });
+  });
+  document.querySelectorAll("button[data-go]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      const el = document.getElementById(b.dataset.go);
+      if (el) el.scrollIntoView({ block: "start" });
+    });
+  });
+</script>

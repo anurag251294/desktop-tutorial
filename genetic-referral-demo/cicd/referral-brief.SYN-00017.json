@@ -2,24 +2,26 @@
   "patient_id": "SYN-00017",
   "referral_state": "indicators_present",
   "family_history_status": "taken",
-  "summary": "The pipeline surfaced this record because multiple criteria fired, including developmental regression, a neurodevelopmental feature with findings in other systems, family history, and multi-system features. The chart contains observations across neurodevelopment, cardiac, skeletal, and other specialties. Family history was recorded and includes an affected first-degree relative.",
+  "summary": "The record contains multiple fired criteria: developmental regression, a family history item, neurodevelopmental features with another system involved, and features spanning several body systems. The chart is substantial, with repeated specialist encounters and multiple coded observations. Family history was recorded; one affected first-degree relative was documented.",
   "reasons": [
     {
       "criterion": "MULTI_SYSTEM",
       "tier": "sufficient",
-      "statement": "Recorded features span more than one body system, including neurodevelopmental, cardiac, skeletal, and neurology observations in the chart.",
+      "statement": "Recorded observations span more than one body system, including neurodevelopmental, cardiac, and skeletal findings, with additional system involvement documented in specialty care.",
       "evidence_ids": [
-        "OBS:OBS-0000010",
+        "OBS:OBS-0000008",
         "OBS:OBS-0000007",
         "OBS:OBS-0000006",
         "OBS:OBS-0000009",
-        "OBS:OBS-0000008"
+        "ENC:ENC-0000114",
+        "ENC:ENC-0000112",
+        "ENC:ENC-0000113"
       ]
     },
     {
       "criterion": "REGRESSION",
       "tier": "sufficient",
-      "statement": "Developmental regression is explicitly documented in the record.",
+      "statement": "Developmental regression was explicitly recorded in the chart.",
       "evidence_ids": [
         "OBS:OBS-0000010"
       ]
@@ -27,7 +29,7 @@
     {
       "criterion": "FAMILY_HISTORY",
       "tier": "contributory",
-      "statement": "Family history was recorded and notes an affected first-degree relative.",
+      "statement": "Family history was recorded and includes an affected first-degree relative.",
       "evidence_ids": [
         "FHX:SYN-00017"
       ]
@@ -44,9 +46,9 @@
     }
   ],
   "limitations": [
-    "This brief reflects only what was recorded in the chart; features that were never documented cannot be seen by the pipeline.",
-    "The record provides selected observations and encounters, so this is not a complete picture of the child.",
-    "Family history was recorded, but the rest of the chart may still be incomplete or sparse in places."
+    "This brief reflects only what was recorded in the chart.",
+    "Features that were never documented, never asked about, or not captured in structured form cannot be seen by the pipeline, so this is not a complete picture of the child.",
+    "The clinical significance of each recorded feature is not established here; this output only surfaces the charted criteria for review."
   ],
   "recommended_action": "clinician_review"
 }

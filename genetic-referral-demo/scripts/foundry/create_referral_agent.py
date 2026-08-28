@@ -235,19 +235,30 @@ def main():
                      if a.get("name") == args.agent_name), None)
     body = {"model": model, "name": args.agent_name, "instructions": instructions,
             "tools": [], "response_format": {"type": "json_object"}}
+    # Delete and recreate rather than update. An updated assistant is not reliably
+    # equivalent to a fresh one, and recreating costs nothing here.
+    #
+    # Runs against this model intermittently fail with `invalid_prompt: Unsupported
+    # parameter: 'top_p' is not supported with this model`, even though nothing here
+    # sets top_p and every assistant carries the service default top_p=1.0 whether it
+    # was created or updated. Probing afterwards -- plain agent, json_object agent, the
+    # real instructions, the real payload -- all completed, so it is a service-side
+    # condition rather than anything in this request. If you hit it, retry.
     if existing:
-        agent_id = existing["id"]
-        requests.post(f"{endpoint}/assistants/{agent_id}?api-version={API_VERSION}",
-                      headers=headers, data=json.dumps(body), timeout=120)
-        print(f"agent updated: {agent_id}")
-    else:
-        response = requests.post(f"{endpoint}/assistants?api-version={API_VERSION}",
-                                 headers=headers, data=json.dumps(body), timeout=120)
-        if not response.ok:
-            raise SystemExit(f"agent create failed {response.status_code}: "
-                             f"{response.text[:500]}")
-        agent_id = response.json()["id"]
-        print(f"agent created: {agent_id}")
+        requests.delete(
+            f"{endpoint}/assistants/{existing['id']}?api-version={API_VERSION}",
+            headers=headers, timeout=120)
+        print(f"replacing existing agent {existing['id']}")
+
+    response = requests.post(f"{endpoint}/assistants?api-version={API_VERSION}",
+                             headers=headers, data=json.dumps(body), timeout=120)
+    if not response.ok:
+        raise SystemExit(f"agent create failed {response.status_code}: "
+                         f"{response.text[:500]}")
+    created = response.json()
+    agent_id = created["id"]
+    print(f"agent created: {agent_id}")
+
 
     # ------------------------------------------------------------ generation
     thread = requests.post(f"{endpoint}/threads?api-version={API_VERSION}",
