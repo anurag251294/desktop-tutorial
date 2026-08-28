@@ -312,7 +312,37 @@ python scripts/foundry/create_referral_agent.py \
 
 ---
 
-## 17:00 · Close
+## 16:30 · Where Fabric stops and Foundry starts
+
+*No screen needed. Say this over the workspace, or over the brief you just produced.*
+
+> It is worth being explicit about which platform did what here, because the seam between them is not arbitrary — it falls exactly where the nature of the problem changes.
+
+*— — what fabric did — —*
+
+> Fabric holds the data and decides **who**. One copy in OneLake, three layers of treatment, six criteria you can read, and a graph over the same tables so the reasoning can be walked rather than trusted. Then it governs all of that — lineage, permissions, capacity, and a refresh you can schedule.
+
+> That is a lot, and it is the right home for it. Identification should be arithmetic on governed data, and Fabric is very good at governed data.
+
+*— — where it stops — —*
+
+> But three things this needs before a hospital would run it, Fabric does not do.
+
+> It has no way to say *this model may see this envelope and nothing else*. It has no mechanism for an output contract — no schema the answer must validate against, no gate that refuses a document because a required sentence is missing. And it has no place to keep the reference knowledge a clinician needs, the definitions and the guidance, separately from the patient data.
+
+> Those are not gaps in Fabric. They are simply a different kind of problem: not "what is true of this cohort" but "what may this system say about a child, and how do we prove it stayed inside that".
+
+*— — what foundry did — —*
+
+> That is the Foundry half. The bounded contract, so scope is structural. The four gates, which are code we own rather than a setting we toggled. The knowledge base that holds vocabulary and provably no patients. And the model choice and versioning underneath it.
+
+> So: **Fabric decides who. Foundry decides what may be said about them, and proves it.** Neither half is sufficient alone, and the reason is not commercial — it is that identification and disclosure are genuinely different problems with different failure modes.
+
+> **NOTE** — **Be straight about Fabric IQ.** The graph is real and is documented under Fabric IQ. The Fabric IQ **ontology** is a different feature and is **not enabled in this tenant** — we checked, it returns FeatureNotAvailable. If it lands, it would take over part of the semantic layer the graph is doing here, and that is a good thing, not a threat to this design. Do not imply we used it.
+
+---
+
+## 18:00 · Close
 
 > So: named criteria a clinician can argue with. Three states that never collapse. Evidence that can be walked rather than trusted. A measurement of how long that evidence had been sitting there. Agents whose reach is deliberately different, with four gates on the one that writes about a child. And equity measured as an output, not as a review somebody promises to do later.
 
@@ -325,6 +355,8 @@ python scripts/foundry/create_referral_agent.py \
 > Back to that one sentence. **Identify** — six named criteria you can read and disagree with. **Early** — a median of nearly nine months that the evidence was already sitting there, and thirty-eight per cent of them over a year. **Agentic** — three agents around the finding, with the one that writes about a child held to four gates and given no reach at all.
 
 > And the part the sentence does not ask for, which I would argue matters most: a measurement of who this misses, and whether it misses the same people the system already misses.
+
+> And it takes both platforms to do it. Fabric to find the children on governed data you can audit. Foundry to make sure what gets said about them is bounded, cited, and provably inside the line.
 
 ---
 
@@ -447,6 +479,22 @@ provenance { run_id, reference_source, reference_read_on, note }
 *It reads a summary rather than the raw tables for two reasons. An agent answering from raw tables has to do arithmetic, and arithmetic is where it invents. And `gold_referral_state` carries an `array` column, which the SQL analytics endpoint cannot surface at all — the agent could only ever discover three of the nine gold tables.*
 
 > **NOTE** — **This is the agent to scrutinise hardest, and say so.** It can reach every child in gold. Its restraint comes from instructions, not from the shape of its input, and instructions are weaker than structure. Where you can make safety structural, do. Where you cannot, say it out loud.
+
+---
+
+## ref · The capability split, for the follow-up
+
+*Not spoken. For the conversation after the recording.*
+
+***Fabric carries:** OneLake as the single copy · medallion transformation and conformance · the criteria, as inspectable deterministic logic · the graph, a labelled property graph over the same tables with GQL and no ETL · the equity and latency measurements · scheduled refresh · lineage, workspace RBAC, capacity governance · a data agent for natural-language cohort questions.*
+
+***Fabric does not carry:** a way to bound what a model can see to one supplied envelope · output contracts, meaning a schema an answer must validate against · refusal behaviour you can test in CI · reference knowledge held separately from patient data · model choice, versioning or evaluation.*
+
+***Foundry carries those:** the evidence contract, making scope structural rather than instructed · four gates as code, exiting non-zero, provable by 13 offline test cases · a Foundry IQ knowledge base whose corpus is vocabulary only, enforced at build time · model deployment and versioning.*
+
+> **NOTE** — **The honest seam.** Fabric answers "who, and on what evidence". Foundry answers "what may be said about them, and can you prove it stayed inside that". The cohort agent sits awkwardly across the line — it is a Fabric agent with the widest reach and only instructions restraining it, which is precisely why it reads a summary table rather than the raw records.
+
+> **NOTE** — **Fabric IQ status, so nobody is misled.** Graph: available, used, documented under Fabric IQ. Ontology and Digital Twin Builder: `403 FeatureNotAvailable` in this tenant and region, verified from two workspaces. If ontology arrives it would absorb part of what the graph does here — worth asking the tenant admin whether it can be enabled.
 
 ---
 

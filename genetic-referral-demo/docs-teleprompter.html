@@ -138,7 +138,7 @@
 
 <div class="wrap">
   <header class="masthead">
-    <p class="eyebrow">Screen recording script · about 18 minutes</p>
+    <p class="eyebrow">Screen recording script · about 19 minutes</p>
     <h1>Genetic referral case-finding</h1>
     <p class="sub">Large serif is what you say. Dotted italic is what you do. Nothing here needs a Spark session.</p>
   </header>
@@ -156,6 +156,7 @@
     <button type="button" data-go="s6">Latency</button>
     <button type="button" data-go="s7">Equity</button>
     <button type="button" data-go="s8">Agents</button>
+    <button type="button" data-go="s9b">Fabric + Foundry</button>
     <button type="button" data-go="refpipe">Reference</button>
   </div>
 
@@ -367,14 +368,32 @@ GROUP BY system ORDER BY children DESC</pre>
     <p class="note"><b>If it fails</b> with <code class="inl">invalid_prompt: Unsupported parameter 'top_p'</code> — that is a service-side intermittent, not your fault and not a configuration error. Re-run the same command; it works on the retry.</p>
   </section>
 
+  <section id="s9b">
+    <div class="stamp"><span class="time">16:30</span><h2>Where Fabric stops and Foundry starts</h2></div>
+    <p class="do">No screen needed. Say this over the workspace, or over the brief you just produced.</p>
+    <p class="say">It is worth being explicit about which platform did what here, because the seam between them is not arbitrary — it falls exactly where the nature of the problem changes.</p>
+    <p class="beat">— what Fabric did —</p>
+    <p class="say">Fabric holds the data and decides <strong>who</strong>. One copy in OneLake, three layers of treatment, six criteria you can read, and a graph over the same tables so the reasoning can be walked rather than trusted. Then it governs all of that — lineage, permissions, capacity, and a refresh you can schedule.</p>
+    <p class="say">That is a lot, and it is the right home for it. Identification should be arithmetic on governed data, and Fabric is very good at governed data.</p>
+    <p class="beat">— where it stops —</p>
+    <p class="say">But three things this needs before a hospital would run it, Fabric does not do.</p>
+    <p class="say">It has no way to say <em>this model may see this envelope and nothing else</em>. It has no mechanism for an output contract — no schema the answer must validate against, no gate that refuses a document because a required sentence is missing. And it has no place to keep the reference knowledge a clinician needs, the definitions and the guidance, separately from the patient data.</p>
+    <p class="say">Those are not gaps in Fabric. They are simply a different kind of problem: not "what is true of this cohort" but "what may this system say about a child, and how do we prove it stayed inside that".</p>
+    <p class="beat">— what Foundry did —</p>
+    <p class="say">That is the Foundry half. The bounded contract, so scope is structural. The four gates, which are code we own rather than a setting we toggled. The knowledge base that holds vocabulary and provably no patients. And the model choice and versioning underneath it.</p>
+    <p class="say">So: <strong>Fabric decides who. Foundry decides what may be said about them, and proves it.</strong> Neither half is sufficient alone, and the reason is not commercial — it is that identification and disclosure are genuinely different problems with different failure modes.</p>
+    <p class="note"><b>Be straight about Fabric IQ.</b> The graph is real and is documented under Fabric IQ. The Fabric IQ <b>ontology</b> is a different feature and is <b>not enabled in this tenant</b> — we checked, it returns FeatureNotAvailable. If it lands, it would take over part of the semantic layer the graph is doing here, and that is a good thing, not a threat to this design. Do not imply we used it.</p>
+  </section>
+
   <section id="s10">
-    <div class="stamp"><span class="time">17:00</span><h2>Close</h2></div>
+    <div class="stamp"><span class="time">18:00</span><h2>Close</h2></div>
     <p class="say">So: named criteria a clinician can argue with. Three states that never collapse. Evidence that can be walked rather than trusted. A measurement of how long that evidence had been sitting there. Agents whose reach is deliberately different, with four gates on the one that writes about a child. And equity measured as an output, not as a review somebody promises to do later.</p>
     <p class="say">None of these thresholds are clinically validated — they are placeholders, and they need the genetics service to mark them up. No real data has been anywhere near this.</p>
     <p class="say">What it does show is the shape: case-finding that is inspectable, reproducible, and honest about who it misses.</p>
     <p class="beat">— beat · close on the sentence you opened with —</p>
     <p class="say">Back to that one sentence. <strong>Identify</strong> — six named criteria you can read and disagree with. <strong>Early</strong> — a median of nearly nine months that the evidence was already sitting there, and thirty-eight per cent of them over a year. <strong>Agentic</strong> — three agents around the finding, with the one that writes about a child held to four gates and given no reach at all.</p>
     <p class="say">And the part the sentence does not ask for, which I would argue matters most: a measurement of who this misses, and whether it misses the same people the system already misses.</p>
+    <p class="say">And it takes both platforms to do it. Fabric to find the children on governed data you can audit. Foundry to make sure what gets said about them is bounded, cited, and provably inside the line.</p>
   </section>
 
   <section id="refpipe">
@@ -458,6 +477,16 @@ provenance { run_id, reference_source, reference_read_on, note }</pre>
     <p class="do">Not spoken. <code class="inl">referral_cohort_agent</code>, a Fabric data agent over <code class="inl">gold_cohort_summary</code> — one tall table, one row per figure, with each figure's caveat travelling beside it as data rather than living in a prompt.</p>
     <p class="do">It reads a summary rather than the raw tables for two reasons. An agent answering from raw tables has to do arithmetic, and arithmetic is where it invents. And <code class="inl">gold_referral_state</code> carries an <code class="inl">array</code> column, which the SQL analytics endpoint cannot surface at all — the agent could only ever discover three of the nine gold tables.</p>
     <p class="note"><b>This is the agent to scrutinise hardest, and say so.</b> It can reach every child in gold. Its restraint comes from instructions, not from the shape of its input, and instructions are weaker than structure. Where you can make safety structural, do. Where you cannot, say it out loud.</p>
+  </section>
+
+  <section id="refsplit">
+    <div class="stamp"><span class="time">ref</span><h2>The capability split, for the follow-up</h2></div>
+    <p class="do">Not spoken. For the conversation after the recording.</p>
+    <p class="do"><strong>Fabric carries:</strong> OneLake as the single copy · medallion transformation and conformance · the criteria, as inspectable deterministic logic · the graph, a labelled property graph over the same tables with GQL and no ETL · the equity and latency measurements · scheduled refresh · lineage, workspace RBAC, capacity governance · a data agent for natural-language cohort questions.</p>
+    <p class="do"><strong>Fabric does not carry:</strong> a way to bound what a model can see to one supplied envelope · output contracts, meaning a schema an answer must validate against · refusal behaviour you can test in CI · reference knowledge held separately from patient data · model choice, versioning or evaluation.</p>
+    <p class="do"><strong>Foundry carries those:</strong> the evidence contract, making scope structural rather than instructed · four gates as code, exiting non-zero, provable by 13 offline test cases · a Foundry IQ knowledge base whose corpus is vocabulary only, enforced at build time · model deployment and versioning.</p>
+    <p class="note"><b>The honest seam.</b> Fabric answers "who, and on what evidence". Foundry answers "what may be said about them, and can you prove it stayed inside that". The cohort agent sits awkwardly across the line — it is a Fabric agent with the widest reach and only instructions restraining it, which is precisely why it reads a summary table rather than the raw records.</p>
+    <p class="note"><b>Fabric IQ status, so nobody is misled.</b> Graph: available, used, documented under Fabric IQ. Ontology and Digital Twin Builder: <code class="inl">403 FeatureNotAvailable</code> in this tenant and region, verified from two workspaces. If ontology arrives it would absorb part of what the graph does here — worth asking the tenant admin whether it can be enabled.</p>
   </section>
 
   <section id="sref">
