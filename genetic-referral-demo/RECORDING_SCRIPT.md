@@ -16,10 +16,11 @@ Sections marked **ref** are not spoken. They exist so you can answer
 ## Before you hit record
 
 - Capacity `fabdemo85829` **Active 20+ minutes** — item editors lag a resume.
-- Fabric tabs in order: workspace · bronze · silver · gold criteria · **graph** · **latency** · validation · gold lakehouse.
+- Fabric tabs in order: workspace · bronze · silver · gold criteria · **referral_queries** (the queryset — this is where GQL runs) · **latency** · validation · gold lakehouse.
 - Foundry tab on `referral-foundry-mcap` → project `genetic-referral`.
 - Terminal in the repo, `az login` done.
 - **Click every tab once** before recording — Fabric lazy-renders background tabs.
+- **Bind the queryset first, once.** Open `referral_queries` → *Use an existing model* → `referral_graph`. Do this before you record; the first time it asks, and after that it remembers. You run GQL in the **queryset**, not in the graph model — the model is only the schema.
 - **Visible but not walked:** `gold_graph_dimensions` (builds the graph's dimension tables), `agent_handoff_publisher` (writes the evidence contracts), `gold_cohort_summary` (the cohort agent's serving table). Know what they are in case someone asks.
 - Gold holds 16 tables, three of which are copies of silver — that is the graph's single-lakehouse requirement, and there is a line for it in the workspace section.
 
@@ -27,7 +28,8 @@ Sections marked **ref** are not spoken. They exist so you can answer
 
 - Everything you open in this script is in the **workspace list**, not inside a lakehouse. `bronze_clinical_record` is a **notebook** that sits beside `bronze_lakehouse`, not in it.
 - **NOTEBOOK** — `bronze_clinical_record` · `silver_conformed_record` · `gold_referral_signals` · `gold_signal_latency` · `validation_sensitivity`
-- **GRAPH** — `referral_graph`
+- **GRAPH MODEL** — `referral_graph` — the schema. You do *not* run queries here.
+- **GRAPH QUERYSET** — `referral_queries` — where GQL is written and run. Bind it to the model once.
 - **DATA AGENT** — `referral_cohort_agent`
 - **LAKEHOUSE** — `bronze_lakehouse` · `silver_lakehouse` · `gold_lakehouse`
 - **TABLES** — live *inside* the lakehouses — `bronze_patients`, `gold_referral_state`, and so on
@@ -150,7 +152,7 @@ python scripts/foundry/test_gates.py     # 13/13
 
 ## 7:00 · The graph — the criterion, walked
 
-*Switch to the **graph** `referral_graph`. Run it.*
+*Switch to `referral_queries` — the **graph queryset**, which is the thing you run queries in. The graph model itself is just the schema. Paste the query and press **Run**.*
 
 ```
 MATCH (p:Patient)-[:hasFeature]->(f:Feature)-[:inBodySystem]->(b:BodySystem)
@@ -478,6 +480,8 @@ encounterWithSpecialty  Encounter -> Specialty    via gold_encounters     encoun
 *`gold_hpo_terms` and `gold_encounters` each appear twice — once as a node table, once as an edge table. A table holding both an entity and its relationship serves both roles.*
 
 ***Why body systems and specialties got their own tables:** a node key must be unique. Pointing `BodySystem` at `gold_hpo_terms` would offer sixteen rows for seven systems.*
+
+***Running queries:** a graph model holds the schema and the data; a **graph queryset** is the surface you query from. Bind the queryset to the model once via *Use an existing model*. The portal path is `/graph-queryset/{id}` — hyphenated, which guessed deep links get wrong.*
 
 ***Loading:** creating the model fires a Refresh job automatically — 3½ minutes for 18,731 nodes and 35,216 edges. In the portal that is the **Save** button; save and ingest are one operation, so every save reloads the data.*
 

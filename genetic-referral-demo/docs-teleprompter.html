@@ -163,10 +163,11 @@
     <h2>Before you hit record</h2>
     <ul>
       <li>Capacity <code class="inl">fabdemo85829</code> <strong>Active 20+ minutes</strong> — item editors lag a resume.</li>
-      <li>Fabric tabs in order: workspace · bronze · silver · gold criteria · <strong>graph</strong> · <strong>latency</strong> · validation · gold lakehouse.</li>
+      <li>Fabric tabs in order: workspace · bronze · silver · gold criteria · <strong>referral_queries</strong> (the queryset — this is where GQL runs) · <strong>latency</strong> · validation · gold lakehouse.</li>
       <li>Foundry tab on <code class="inl">referral-foundry-mcap</code> → project <code class="inl">genetic-referral</code>.</li>
       <li>Terminal in the repo, <code class="inl">az login</code> done.</li>
       <li><strong>Click every tab once</strong> before recording — Fabric lazy-renders background tabs.</li>
+      <li><strong>Bind the queryset first, once.</strong> Open <code class="inl">referral_queries</code> → <em>Use an existing model</em> → <code class="inl">referral_graph</code>. Do this before you record; the first time it asks, and after that it remembers. You run GQL in the <strong>queryset</strong>, not in the graph model — the model is only the schema.</li>
       <li><strong>Visible but not walked:</strong> <code class="inl">gold_graph_dimensions</code> (builds the graph's dimension tables), <code class="inl">agent_handoff_publisher</code> (writes the evidence contracts), <code class="inl">gold_cohort_summary</code> (the cohort agent's serving table). Know what they are in case someone asks.</li>
       <li>Gold holds 16 tables, three of which are copies of silver — that is the graph's single-lakehouse requirement, and there is a line for it in the workspace section.</li>
     </ul>
@@ -176,7 +177,8 @@
     <h2>What is what — nothing here lives inside a lakehouse</h2>
     <table class="nums">
       <tr><td>NOTEBOOK</td><td><code class="inl">bronze_clinical_record</code> · <code class="inl">silver_conformed_record</code> · <code class="inl">gold_referral_signals</code> · <code class="inl">gold_signal_latency</code> · <code class="inl">validation_sensitivity</code></td></tr>
-      <tr><td>GRAPH</td><td><code class="inl">referral_graph</code></td></tr>
+      <tr><td>GRAPH MODEL</td><td><code class="inl">referral_graph</code> — the schema. You do <em>not</em> run queries here.</td></tr>
+      <tr><td>GRAPH QUERYSET</td><td><code class="inl">referral_queries</code> — where GQL is written and run. Bind it to the model once.</td></tr>
       <tr><td>DATA AGENT</td><td><code class="inl">referral_cohort_agent</code></td></tr>
       <tr><td>LAKEHOUSE</td><td><code class="inl">bronze_lakehouse</code> · <code class="inl">silver_lakehouse</code> · <code class="inl">gold_lakehouse</code></td></tr>
       <tr><td>TABLES</td><td>live <em>inside</em> the lakehouses — <code class="inl">bronze_patients</code>, <code class="inl">gold_referral_state</code>, and so on</td></tr>
@@ -275,7 +277,7 @@ python scripts/foundry/test_gates.py     # 13/13</pre>
 
   <section id="s5">
     <div class="stamp"><span class="time">7:00</span><h2>The graph — the criterion, walked</h2></div>
-    <p class="do">Switch to the <strong>graph</strong> <code class="inl">referral_graph</code>. Run it.</p>
+    <p class="do">Switch to <code class="inl">referral_queries</code> — the <strong>graph queryset</strong>, which is the thing you run queries in. The graph model itself is just the schema. Paste the query and press <strong>Run</strong>.</p>
 <pre>MATCH (p:Patient)-[:hasFeature]-&gt;(f:Feature)-[:inBodySystem]-&gt;(b:BodySystem)
 WHERE p.patientId = 'SYN-00017'
 RETURN f.hpoLabel AS feature, b.bodySystem AS system
@@ -477,6 +479,7 @@ attendedEncounter       Patient   -&gt; Encounter    via gold_encounters     pat
 encounterWithSpecialty  Encounter -&gt; Specialty    via gold_encounters     encounter_id-&gt; specialty</pre>
     <p class="do"><code class="inl">gold_hpo_terms</code> and <code class="inl">gold_encounters</code> each appear twice — once as a node table, once as an edge table. A table holding both an entity and its relationship serves both roles.</p>
     <p class="do"><strong>Why body systems and specialties got their own tables:</strong> a node key must be unique. Pointing <code class="inl">BodySystem</code> at <code class="inl">gold_hpo_terms</code> would offer sixteen rows for seven systems.</p>
+    <p class="do"><strong>Running queries:</strong> a graph model holds the schema and the data; a <strong>graph queryset</strong> is the surface you query from. Bind the queryset to the model once via <em>Use an existing model</em>. The portal path is <code class="inl">/graph-queryset/{id}</code> — hyphenated, which guessed deep links get wrong.</p>
     <p class="do"><strong>Loading:</strong> creating the model fires a Refresh job automatically — 3½ minutes for 18,731 nodes and 35,216 edges. In the portal that is the <strong>Save</strong> button; save and ingest are one operation, so every save reloads the data.</p>
     <p class="note"><b>Why gold holds copies of silver.</b> An edge whose two endpoints and its own source table are not all in the same lakehouse is <b>silently dropped at load</b> — the refresh reports Completed with a null failure reason and the definition still lists the edge type. Four of five edge types vanished this way before every source was moved into gold. Always count edges by label after a load; never trust Completed.</p>
   </section>
