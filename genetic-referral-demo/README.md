@@ -22,6 +22,28 @@ observations and encounters that put them on the list.
 
 **It does not decide anything.** It surfaces records. A clinician decides.
 
+### Where the intelligence actually sits
+
+Worth being exact, because it is easy to overclaim. The children are identified by
+**named, deterministic criteria** — not by a language model. That is a deliberate
+choice: criteria can be inspected, argued with, reproduced next month, and measured for
+bias. A model that decided who surfaced could do none of those things.
+
+The agentic parts of the system are the ones where judgement is not being exercised over
+a child:
+
+| Component | What it does | Decides who surfaces? |
+| --- | --- | --- |
+| Criteria in Gold | Identifies the cohort | **Yes** — deterministic, inspectable |
+| Referral brief agent | Renders one child's evidence into prose, with citations | No |
+| Cohort agent | Answers a clinician's questions across the surfaced cohort | No |
+| Vocabulary knowledge base | Explains what a term or criterion means | No |
+
+So this is an agentic system in which the identification step is deliberately *not*
+agentic. If someone asks "is the AI finding the patients", the honest answer is: the AI
+makes the finding readable, queryable and safe; the finding itself is arithmetic you can
+audit.
+
 Of a 2,400-child cohort the live run surfaces **220 (9.2%)**, reports 1,766 (73.6%) with
 no indicators recorded, and 414 (17.2%) as not screened at all.
 

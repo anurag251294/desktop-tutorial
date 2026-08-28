@@ -1,15 +1,18 @@
 # Recording script — genetic referral case-finding
 
-Word-for-word narration with the click path beside it. Roughly **14 minutes**.
+Word-for-word narration with the click path beside it. Roughly **18 minutes**.
 
 ## Before you hit record
 
 | | |
 | --- | --- |
 | Capacity | `fabdemo85829` **Active** for at least 20 minutes — item editors lag a resume |
-| Tabs open, in this order | workspace list · `gold_referral_signals` · `referral_graph` queryset · `Files/contracts/` · a terminal in the repo |
+| Tabs, in this order | workspace · bronze · silver · gold criteria · **graph** · **latency** · validation · gold lakehouse · Foundry |
+| Also | a terminal in the repo, and the Azure portal on `referral-kb-search` if you show the knowledge base |
 | Terminal | `cd genetic-referral-demo` and `az login` already done |
-| Verified live | `python scripts/fabric/query_graph.py` → 7/7 · `python scripts/foundry/test_gates.py` → 13/13 |
+| Verified live | `query_graph.py` → 7/7 · `test_gates.py` → 13/13 · knowledge base retrieves |
+| Headline numbers | 220 surfaced · median **8.7 months** of latent evidence · **38%** over a year · sensitivity **87.8% vs 75.2%** |
+| The one patient | `SYN-00017` — qualified **2024-03-06**, i.e. **29.7 months** ago |
 
 **Notebook cells will be empty.** Fabric stores notebooks as source without outputs, so a
 pipeline run leaves nothing on screen. That is fine and this script is built for it —
@@ -182,7 +185,41 @@ Fabric IQ ontology; that is a different feature and it is not enabled in this te
 
 ---
 
-## 9:30 — The finding that matters
+## 9:00 — How long it was already there
+
+*Stay in the graph, or open `gold_signal_latency`. Show the cohort figures.*
+
+> That child surfaced because their features span multiple body systems. Here is the
+> question that actually matters: **when did that become true?**
+>
+> For this child, the sixth of March, twenty twenty-four. Twenty-nine months ago.
+> Every feature the criterion needed was already coded, and had been for nearly two and
+> a half years.
+
+*Beat. Let that sit.*
+
+> Across all two hundred and twenty children the screen surfaced, the median is nearly
+> nine months. Thirty-eight per cent have had complete, sufficient evidence sitting in
+> the record for a year or more. The longest is thirty-three months.
+
+*Point at the numbers.*
+
+> Nobody did anything wrong here. The features were recorded by different clinicians, in
+> different clinics, months apart. No single person ever saw them together — which is
+> exactly what a diagnostic odyssey is.
+>
+> This is the thing the pipeline actually does. Not new information. The same
+> information, joined up, on the day the pattern completed rather than years later.
+
+**Be precise about the claim.** The synthetic record has no referral events in it, so
+this says the evidence has been *sufficient* since that date. It does **not** say a
+referral was missed or late. On real data, comparing the qualifying date against the
+actual referral date is the number you would want, and it is the obvious next thing to
+build.
+
+---
+
+## 11:00 — The finding that matters
 
 *Run the interpreter query, or show `gold_validation_sensitivity`.*
 
@@ -225,6 +262,14 @@ GROUP BY interpreterRequired ORDER BY interpreterRequired
 > Measuring it does not fix it. What it does is point at the actual remedy — which is
 > interpreter-supported history-taking, not a better model.
 
+**If you also show latency by interpreter need, read it carefully.** It appears to say
+interpreter-needing children are found *sooner* — eight months against ten. That is
+survivorship, not good news: the screen only surfaces children whose evidence crossed the
+threshold, and fewer of their features reach the record, so the ones that do surface are
+the more florid cases. The subtler ones are not in that table because the screen never
+found them. They are in this sensitivity gap instead. Say that, or someone will
+reasonably conclude there is no equity problem in timing.
+
 **If asked how you know the sensitivity:** because the cohort is synthetic and carries an
 answer key. Say plainly that a real deployment cannot compute this — which is precisely
 the argument for building the synthetic cohort. It measures the thing production never
@@ -234,7 +279,38 @@ circular; the *gap between groups* is not, because both were planted identically
 
 ---
 
-## 12:00 — The agent: it renders, it does not reason
+## 13:30 — Foundry IQ: the knowledge layer, and where it stops
+
+*Switch to the Search resource or just describe it.*
+
+> There are two agents here, and the split between them is deliberate.
+>
+> This one answers questions about **vocabulary**. What does developmental regression
+> mean. What makes a criterion sufficient rather than contributory. What does "not
+> screened" actually tell you. It is backed by a Foundry IQ knowledge base — thirty-one
+> documents: phenotype definitions pulled from the ontology, the six criteria, the three
+> states.
+>
+> It can retrieve freely, because there is nothing in that corpus that identifies
+> anybody.
+
+*Beat.*
+
+> Ask it "which patients have been surfaced" and it returns design documentation, because
+> **there are no patients in it.** Not because we told it to refuse — because the data is
+> not there. The build script refuses to publish if a patient identifier appears in the
+> corpus at all.
+>
+> A knowledge layer answers what a word means. It must not become a way to ask who a
+> child is. That is the line, and it is enforced by what we indexed, not by a prompt.
+
+**Say what this is:** a Foundry IQ knowledge base on Azure AI Search, attached to an
+agent. It is a real IQ component. The Fabric graph earlier is documented under Fabric IQ
+but is **not** a Fabric IQ ontology — that feature is not enabled in this tenant.
+
+---
+
+## 15:00 — The referral agent: it renders, it does not reason
 
 *Open a contract from `Files/contracts/` — use `patient-evidence.SYN-00195.json`.*
 
@@ -275,7 +351,7 @@ python scripts/foundry/create_referral_agent.py \
 
 ---
 
-## 13:30 — Close
+## 17:00 — Close
 
 > So: named criteria a clinician can argue with. Three states that never collapse. An
 > agent that can only say what the pipeline gave it, with four gates on the way out. And
@@ -303,6 +379,14 @@ already get missed.
 **"Why not just let a model read the chart?"**
 Then the model decides who surfaces, and you cannot inspect the criteria, reproduce the
 run next month, or measure the flag for bias — because there is no flag, only an opinion.
+
+**"So is the AI actually identifying the patients?"**
+Be exact — this is the question that catches people out. The children are identified by
+deterministic criteria, not by a model. That is deliberate: criteria can be inspected,
+argued with and measured for bias, and a model deciding who surfaces could not be. The
+agentic parts are the ones that exercise no judgement over a child — the brief, the
+cohort questions, the vocabulary lookup. Say that plainly rather than implying the model
+is doing the finding.
 
 **"Is any of this genomic?"**
 No. Nothing reads a genome, a variant, or a test result.

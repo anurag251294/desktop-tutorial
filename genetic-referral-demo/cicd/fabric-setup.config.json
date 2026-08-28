@@ -46,6 +46,11 @@
       "displayName": "gold_graph_dimensions",
       "localPath": "fabric/notebooks/gold_graph_dimensions.ipynb",
       "lakehouse": "gold_lakehouse"
+    },
+    {
+      "displayName": "gold_signal_latency",
+      "localPath": "fabric/notebooks/gold_signal_latency.ipynb",
+      "lakehouse": "gold_lakehouse"
     }
   ],
   "dataPipeline": {
