@@ -8,6 +8,9 @@ early for genetic consultation or testing.** The script is built around the thre
 words that do the work — *identify*, *early*, *agentic* — and is honest about the
 one that does not mean what people assume.
 
+Sections marked **ref** are not spoken. They exist so you can answer
+"how does that actually work?" precisely rather than approximately.
+
 > Quoted text is what you say. *Italic* is what you do.
 
 ## Before you hit record
@@ -149,6 +152,13 @@ python scripts/foundry/test_gates.py     # 13/13
 
 *Switch to the **graph** `referral_graph`. Run it.*
 
+```
+MATCH (p:Patient)-[:hasFeature]->(f:Feature)-[:inBodySystem]->(b:BodySystem)
+WHERE p.patientId = 'SYN-00017'
+RETURN f.hpoLabel AS feature, b.bodySystem AS system
+ORDER BY system, feature
+```
+
 > The whole model is a graph — patients, the features observed on them, the body systems those features belong to, the encounters, the specialties, and the criteria that surfaced each child. Eighteen thousand nodes, thirty-five thousand relationships.
 
 > So when the pipeline says this child surfaced because their features span multiple body systems, you do not have to take that on trust. You can walk it.
@@ -159,23 +169,30 @@ python scripts/foundry/test_gates.py     # 13/13
 
 *Run the co-occurrence query.*
 
-> And because it is a graph, a question that is awkward in SQL becomes one pattern: which body systems actually co-occur in the children we surfaced. In SQL that is a self-join over a bridge table. Here it is one line.
-
-> **NOTE** — **Do not overstate this.** It is a Fabric graph — a labelled property graph over OneLake, queried in standard GQL, documented under Fabric IQ. It is **not** a Fabric IQ ontology; that is a different feature and it is not enabled in this tenant.
-
-```
-MATCH (p:Patient)-[:hasFeature]->(f:Feature)-[:inBodySystem]->(b:BodySystem)
-WHERE p.patientId = 'SYN-00017'
-RETURN f.hpoLabel AS feature, b.bodySystem AS system
-ORDER BY system, feature
-```
-
 ```
 MATCH (p:Patient)-[:hasFeature]->(:Feature)-[:inBodySystem]->(b:BodySystem)
 WHERE p.referralState = 'indicators_present'
 RETURN b.bodySystem AS system, COUNT(DISTINCT p) AS children
 GROUP BY system ORDER BY children DESC
 ```
+
+> And because it is a graph, a question that is awkward in SQL becomes one pattern: which body systems actually co-occur in the children we surfaced. In SQL that is a self-join over a bridge table. Here it is one line.
+
+*If asked how the graph was built — and someone will:*
+
+> Nothing was copied to build this. The graph is *declared* over Delta tables that already exist in OneLake.
+
+> A node type is a table plus a key column: one row becomes one node. Patients come from the referral state table, features from the phenotype terms, criteria from the criteria definitions.
+
+> And an edge type is just a table that happens to contain **both** endpoint keys. The observations table already has a patient id and an HPO id sitting side by side — so the foreign key you already had becomes the relationship. No ETL, no pipeline, no second copy.
+
+> Fabric matches those column values against the node keys and materialises the graph. Eighteen thousand nodes and thirty-five thousand edges took about three and a half minutes to load. The report, the agent and the graph are all reading the same tables.
+
+*— — beat — —*
+
+> One honest caveat: the schema is fixed once it loads. Fabric graph has no schema evolution, so adding a property or changing a key means building a new model and reloading everything. That is why the properties here are minimal and there are no dates on them.
+
+> **NOTE** — **Do not overstate this.** It is a Fabric graph — a labelled property graph over OneLake, queried in standard GQL, documented under Fabric IQ. It is **not** a Fabric IQ ontology; that is a different feature and it is not enabled in this tenant.
 
 ---
 
@@ -271,6 +288,12 @@ GROUP BY system ORDER BY children DESC
 
 *Terminal.*
 
+```
+python scripts/foundry/create_referral_agent.py \
+    --evidence cicd/patient-evidence.SYN-00195.json \
+    --output cicd/referral-brief.SYN-00195.json
+```
+
 *While it drafts — about thirty seconds:*
 
 > Four gates run on whatever comes back. Schema — is it the right shape. Citations — does every claim point at evidence actually supplied. Clinical safety — no diagnosis, no named condition, no recommendation to refer or not refer, and no language that turns “nothing was recorded” into “nothing is wrong”.
@@ -284,12 +307,6 @@ GROUP BY system ORDER BY children DESC
 > Not “no significant family history”. That would be a different claim about a real child, and it would be false.
 
 > **NOTE** — **If it fails** with `invalid_prompt: Unsupported parameter 'top_p'` — that is a service-side intermittent, not your fault and not a configuration error. Re-run the same command; it works on the retry.
-
-```
-python scripts/foundry/create_referral_agent.py \
-    --evidence cicd/patient-evidence.SYN-00195.json \
-    --output cicd/referral-brief.SYN-00195.json
-```
 
 ---
 
@@ -306,6 +323,165 @@ python scripts/foundry/create_referral_agent.py \
 > Back to that one sentence. **Identify** — six named criteria you can read and disagree with. **Early** — a median of nearly nine months that the evidence was already sitting there, and thirty-eight per cent of them over a year. **Agentic** — three agents around the finding, with the one that writes about a child held to four gates and given no reach at all.
 
 > And the part the sentence does not ask for, which I would argue matters most: a measurement of who this misses, and whether it misses the same people the system already misses.
+
+---
+
+## ref · The pipeline, if anyone digs
+
+*Not spoken. `pl_genetic_referral`, five notebook activities, about nine minutes end to end.*
+
+```
+bronze_clinical_record   HPO fetch + synthetic cohort      -> 6 bronze tables
+silver_conformed_record  typing, conformance, gates        -> 6 silver tables
+gold_referral_signals    criteria, 3 states, equity check  -> gold
+gold_signal_latency      temporal replay                   -> gold_signal_latency
+agent_handoff_publisher  bounded evidence contracts        -> Files/contracts/
+```
+
+***Bronze** calls the public HPO API for 16 phenotype terms and stamps the release date as data — a term's meaning is fixed by its ontology version. It generates 2,400 children, 16,288 encounters and 1,705 observations, deliberately untidy: two date formats, five spellings of three services, family history for about 60%.*
+
+***Silver** parses each feed with the format it actually writes — `dd/MM/yyyy` for encounters, `MM/dd/yyyy` for observations — and quarantines anything that will not parse rather than coercing it into a plausible wrong date. It conforms the specialty spellings, attaches HPO labels and body systems, and keeps `history_taken` as its own column. A populated-rate gate at 97% runs on every column the evidence contract will later cite, and fails the build below that.*
+
+***Gold** applies the criteria, assigns the three states, asserts that language and interpreter need never reached the scoring inputs, and builds the contracts. The generator's answer key is dropped in silver with an assert, so nothing in the scoring path can read it.*
+
+---
+
+## ref · How the criteria are computed
+
+*Not spoken. Plain Spark predicates in one cell of `gold_referral_signals`. No model anywhere near the identification.*
+
+```
+MULTI_SYSTEM        sufficient    systems_involved >= 3
+REGRESSION          sufficient    HP:0002376 observed
+NEURODEV_PLUS       contributory  neurodev feature AND systems >= 2
+DIAGNOSTIC_ODYSSEY  contributory  4+ specialties AND 12+ months
+                                  AND diagnosis recorded at < 50% of encounters
+REPEAT_UNDIAGNOSED  contributory  2+ admissions with no diagnosis recorded
+FAMILY_HISTORY      contributory  affected relative / consanguinity /
+                                  recurrent loss, only where history was taken
+
+surfaced = any sufficient  OR  two or more contributory
+```
+
+*Thresholds live in one parameter cell and are written out as `gold_criteria_definitions`, so the clinical conversation is about a table someone can mark up rather than a number buried in code. All are **placeholders**; none has been reviewed by a clinician.*
+
+***Fire counts:** FAMILY_HISTORY 230 · NEURODEV_PLUS 204 · MULTI_SYSTEM 134 · REPEAT_UNDIAGNOSED 131 · REGRESSION 114 · DIAGNOSTIC_ODYSSEY 106. Weighting them flat surfaced 21% of the cohort; tiering brings it to 9.2%.*
+
+---
+
+## ref · How latency is computed
+
+*Not spoken. `gold_signal_latency` replays each record forward in date order with running windows, and finds the first moment the tier rule was already satisfied.*
+
+```
+running distinct body systems   -> when did it reach 3?      MULTI_SYSTEM
+first HP:0002376 observation    -> that date                 REGRESSION
+running specialties, months,
+  and diagnosed share           -> when did all three hold?  DIAGNOSTIC_ODYSSEY
+cumulative undiagnosed admits   -> the second one            REPEAT_UNDIAGNOSED
+
+qualifying_date = earliest( first sufficient , second contributory )
+latency         = cutoff - qualifying_date
+```
+
+***Results:** median 8.7 months · mean 10.7 · p90 21.0 · longest 32.9. 83 of 220 — 38% — over a year. Qualified by a sufficient criterion: 144 children, median 8.1 months. By combination: 76 children, median 9.9.*
+
+> **NOTE** — **The claim it makes, precisely.** The evidence has been **sufficient** since that date. It does **not** say a referral was missed — the synthetic record contains no referral events at all. On real data, qualifying date against actual referral date is the number worth having.
+
+---
+
+## ref · The evidence contract and the four gates
+
+*Not spoken. `agent_handoff_publisher` writes one JSON envelope per surfaced child — 34 of them.*
+
+```
+patient    { patient_id, referral_state, age_years, family_history_status }
+criteria   [ { criterion, tier, description } ]
+evidence   [ { evidence_id, evidence_type, evidence_date, evidence_text } ]
+provenance { run_id, reference_source, reference_read_on, note }
+```
+
+*Only children in state `indicators_present` get one. A child the pipeline did not surface is one the agent must not write about, and the cleanest way to enforce that is never to hand it over.*
+
+***The four gates** run in `create_referral_agent.py` and exit non-zero if any fails:*
+
+```
+1 schema      validates against referral-brief.schema.json. Hard-fails if the
+              jsonschema library is missing -- a gate that skips is not a gate
+2 citation    every reason cites at least one evidence_id, and every id cited
+              was actually supplied
+3 clinical    no diagnosis, no named condition, no refer / do-not-refer, no
+              reassuring language; state and criteria copied, not invented
+4 limitation  the brief says out loud that it reflects only what was recorded
+```
+
+*Gate 4 is separate because gate 3 catches a bad sentence being *present* and gate 4 catches a necessary sentence being *absent*. `test_gates.py` proves all four across 13 cases, needs no Azure and runs in about a second.*
+
+*There is a lawful escape: an empty envelope returns `{"error": "no-evidence"}`. Without it, a contract demanding a citation leaves no valid document, and a model with no valid output available will invent one — which is exactly how fabricated evidence IDs appeared on an earlier build.*
+
+---
+
+## ref · The Foundry IQ knowledge base
+
+*Not spoken. Azure AI Search `referral-kb-search` on the Free tier → index `referral-vocabulary` → knowledge source → knowledge base `referral-vocabulary-kb`, reached from the agent over MCP.*
+
+```
+31 documents:  16 phenotype terms, definitions fetched from the ontology
+                6 criteria, with tier and placeholder status
+                3 referral states, and what each one does NOT mean
+                6 design concepts: tiers, no-score, equity, scope
+```
+
+*A knowledge base will not retrieve at all without a model attached to it, and that model is called with the **Search** service's managed identity — so that identity needs Cognitive Services User on the Foundry account.*
+
+> **NOTE** — **The scope line is structural, not prompted.** Ask it which patients were surfaced and it returns design documentation, because the corpus contains no patients. The build script refuses to publish if `SYN-`, `OBS:`, `ENC:` or `patient_id` appears anywhere in it.
+
+---
+
+## ref · The cohort agent
+
+*Not spoken. `referral_cohort_agent`, a Fabric data agent over `gold_cohort_summary` — one tall table, one row per figure, with each figure's caveat travelling beside it as data rather than living in a prompt.*
+
+*It reads a summary rather than the raw tables for two reasons. An agent answering from raw tables has to do arithmetic, and arithmetic is where it invents. And `gold_referral_state` carries an `array` column, which the SQL analytics endpoint cannot surface at all — the agent could only ever discover three of the nine gold tables.*
+
+> **NOTE** — **This is the agent to scrutinise hardest, and say so.** It can reach every child in gold. Its restraint comes from instructions, not from the shape of its input, and instructions are weaker than structure. Where you can make safety structural, do. Where you cannot, say it out loud.
+
+---
+
+## ref · The graph model, if anyone digs
+
+*Not spoken. Here so you can answer precisely rather than approximately.*
+
+***Five definition parts**, POSTed by `scripts/fabric/build_graph_model.py`: `dataSources` (which lakehouse, which tables, bound by item reference) · `graphType` (the schema) · `graphDefinition` (table-to-node/edge mapping and key columns) · `stylingConfiguration` (canvas layout) · `graphSettings`.*
+
+***Node type = table + unique key column.** One row, one node.*
+
+```
+Patient      <- gold_referral_state        key patientId
+Feature      <- gold_hpo_terms             key hpoId
+BodySystem   <- gold_body_systems          key bodySystem
+Criterion    <- gold_criteria_definitions  key criterion
+Encounter    <- gold_encounters            key encounterId
+Specialty    <- gold_specialties           key specialty
+```
+
+***Edge type = a table holding both endpoint keys.** The foreign key becomes the relationship.*
+
+```
+hasFeature              Patient   -> Feature      via gold_observations   patient_id  -> hpo_id
+inBodySystem            Feature   -> BodySystem   via gold_hpo_terms      hpo_id      -> body_system
+surfacedBy              Patient   -> Criterion    via gold_criteria_hits  patient_id  -> criterion
+attendedEncounter       Patient   -> Encounter    via gold_encounters     patient_id  -> encounter_id
+encounterWithSpecialty  Encounter -> Specialty    via gold_encounters     encounter_id-> specialty
+```
+
+*`gold_hpo_terms` and `gold_encounters` each appear twice — once as a node table, once as an edge table. A table holding both an entity and its relationship serves both roles.*
+
+***Why body systems and specialties got their own tables:** a node key must be unique. Pointing `BodySystem` at `gold_hpo_terms` would offer sixteen rows for seven systems.*
+
+***Loading:** creating the model fires a Refresh job automatically — 3½ minutes for 18,731 nodes and 35,216 edges. In the portal that is the **Save** button; save and ingest are one operation, so every save reloads the data.*
+
+> **NOTE** — **Why gold holds copies of silver.** An edge whose two endpoints and its own source table are not all in the same lakehouse is **silently dropped at load** — the refresh reports Completed with a null failure reason and the definition still lists the edge type. Four of five edge types vanished this way before every source was moved into gold. Always count edges by label after a load; never trust Completed.
 
 ---
 
