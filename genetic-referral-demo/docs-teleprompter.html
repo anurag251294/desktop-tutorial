@@ -134,6 +134,32 @@
 
   @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
   @media (max-width: 34rem) { .stamp { flex-direction: column; gap: .1rem; } }
+
+  /* ---- read-aloud mode: hide everything that is not spoken ---- */
+  body.reading .do,
+  body.reading .note,
+  body.reading pre,
+  body.reading .prep,
+  body.reading .qa,
+  body.reading section[id^="ref"] { display: none; }
+  body.reading .say {
+    font-size: calc(1.62rem * var(--scale));
+    line-height: 1.75;
+    border-left-width: 4px;
+    margin-bottom: 1.5rem;
+  }
+  body.reading .beat {
+    color: var(--accent); opacity: .75; font-size: .8rem; margin-bottom: 1.5rem;
+  }
+  body.reading .stamp { border-bottom-width: 2px; margin-bottom: 1.5rem; }
+  body.reading section { margin-bottom: 4rem; }
+  body.reading .wrap { max-width: 52rem; }
+  .readbar {
+    display: none; background: var(--accent-soft); border: 1px solid var(--accent);
+    border-radius: 8px; padding: .7rem 1rem; margin-bottom: 2rem;
+    font-size: .9rem; color: var(--ink);
+  }
+  body.reading .readbar { display: block; }
 </style>
 
 <div class="wrap">
@@ -149,6 +175,7 @@
     <button type="button" data-scale="1" aria-pressed="true">M</button>
     <button type="button" data-scale="1.25">L</button>
     <button type="button" data-scale="1.55">XL</button>
+    <button type="button" id="readmode" style="margin-left:.75rem">Read aloud</button>
     <span class="label" style="margin-left:.75rem">Jump</span>
     <button type="button" data-go="s0">Open</button>
     <button type="button" data-go="s4">Criteria</button>
@@ -158,6 +185,10 @@
     <button type="button" data-go="s8">Agents</button>
     <button type="button" data-go="s9b">Fabric + Foundry</button>
     <button type="button" data-go="refpipe">Reference</button>
+  </div>
+
+  <div class="readbar">
+    <strong>Read-aloud mode.</strong> Everything on screen is spoken — read straight down. Stage directions, code and reference material are hidden; switch back to see them. Teal markers are pause beats.
   </div>
 
   <div class="prep">
@@ -547,6 +578,13 @@ encounterWithSpecialty  Encounter -&gt; Specialty    via gold_encounters     enc
 
 <script>
   const root = document.documentElement;
+  const readBtn = document.getElementById("readmode");
+  readBtn.addEventListener("click", function () {
+    const on = document.body.classList.toggle("reading");
+    readBtn.setAttribute("aria-pressed", String(on));
+    readBtn.textContent = on ? "Show all" : "Read aloud";
+    window.scrollTo({ top: 0 });
+  });
   document.querySelectorAll("button[data-scale]").forEach(function (b) {
     b.addEventListener("click", function () {
       root.style.setProperty("--scale", b.dataset.scale);
