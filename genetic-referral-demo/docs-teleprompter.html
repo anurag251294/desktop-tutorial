@@ -156,6 +156,7 @@
     <button type="button" data-go="s6">Latency</button>
     <button type="button" data-go="s7">Equity</button>
     <button type="button" data-go="s8">Agents</button>
+    <button type="button" data-go="refpipe">Reference</button>
   </div>
 
   <div class="prep">
@@ -289,6 +290,13 @@ WHERE p.referralState = 'indicators_present'
 RETURN b.bodySystem AS system, COUNT(DISTINCT p) AS children
 GROUP BY system ORDER BY children DESC</pre>
     <p class="say">And because it is a graph, a question that is awkward in SQL becomes one pattern: which body systems actually co-occur in the children we surfaced. In SQL that is a self-join over a bridge table. Here it is one line.</p>
+    <p class="do">If asked how the graph was built — and someone will:</p>
+    <p class="say">Nothing was copied to build this. The graph is <em>declared</em> over Delta tables that already exist in OneLake.</p>
+    <p class="say">A node type is a table plus a key column: one row becomes one node. Patients come from the referral state table, features from the phenotype terms, criteria from the criteria definitions.</p>
+    <p class="say">And an edge type is just a table that happens to contain <strong>both</strong> endpoint keys. The observations table already has a patient id and an HPO id sitting side by side — so the foreign key you already had becomes the relationship. No ETL, no pipeline, no second copy.</p>
+    <p class="say">Fabric matches those column values against the node keys and materialises the graph. Eighteen thousand nodes and thirty-five thousand edges took about three and a half minutes to load. The report, the agent and the graph are all reading the same tables.</p>
+    <p class="beat">— beat —</p>
+    <p class="say">One honest caveat: the schema is fixed once it loads. Fabric graph has no schema evolution, so adding a property or changing a key means building a new model and reloading everything. That is why the properties here are minimal and there are no dates on them.</p>
     <p class="note"><b>Do not overstate this.</b> It is a Fabric graph — a labelled property graph over OneLake, queried in standard GQL, documented under Fabric IQ. It is <b>not</b> a Fabric IQ ontology; that is a different feature and it is not enabled in this tenant.</p>
   </section>
 
@@ -365,6 +373,112 @@ GROUP BY system ORDER BY children DESC</pre>
     <p class="beat">— beat · close on the sentence you opened with —</p>
     <p class="say">Back to that one sentence. <strong>Identify</strong> — six named criteria you can read and disagree with. <strong>Early</strong> — a median of nearly nine months that the evidence was already sitting there, and thirty-eight per cent of them over a year. <strong>Agentic</strong> — three agents around the finding, with the one that writes about a child held to four gates and given no reach at all.</p>
     <p class="say">And the part the sentence does not ask for, which I would argue matters most: a measurement of who this misses, and whether it misses the same people the system already misses.</p>
+  </section>
+
+  <section id="refpipe">
+    <div class="stamp"><span class="time">ref</span><h2>The pipeline, if anyone digs</h2></div>
+    <p class="do">Not spoken. <code class="inl">pl_genetic_referral</code>, five notebook activities, about nine minutes end to end.</p>
+<pre>bronze_clinical_record   HPO fetch + synthetic cohort      -&gt; 6 bronze tables
+silver_conformed_record  typing, conformance, gates        -&gt; 6 silver tables
+gold_referral_signals    criteria, 3 states, equity check  -&gt; gold
+gold_signal_latency      temporal replay                   -&gt; gold_signal_latency
+agent_handoff_publisher  bounded evidence contracts        -&gt; Files/contracts/</pre>
+    <p class="do"><strong>Bronze</strong> calls the public HPO API for 16 phenotype terms and stamps the release date as data — a term's meaning is fixed by its ontology version. It generates 2,400 children, 16,288 encounters and 1,705 observations, deliberately untidy: two date formats, five spellings of three services, family history for about 60%.</p>
+    <p class="do"><strong>Silver</strong> parses each feed with the format it actually writes — <code class="inl">dd/MM/yyyy</code> for encounters, <code class="inl">MM/dd/yyyy</code> for observations — and quarantines anything that will not parse rather than coercing it into a plausible wrong date. It conforms the specialty spellings, attaches HPO labels and body systems, and keeps <code class="inl">history_taken</code> as its own column. A populated-rate gate at 97% runs on every column the evidence contract will later cite, and fails the build below that.</p>
+    <p class="do"><strong>Gold</strong> applies the criteria, assigns the three states, asserts that language and interpreter need never reached the scoring inputs, and builds the contracts. The generator's answer key is dropped in silver with an assert, so nothing in the scoring path can read it.</p>
+  </section>
+
+  <section id="refcrit">
+    <div class="stamp"><span class="time">ref</span><h2>How the criteria are computed</h2></div>
+    <p class="do">Not spoken. Plain Spark predicates in one cell of <code class="inl">gold_referral_signals</code>. No model anywhere near the identification.</p>
+<pre>MULTI_SYSTEM        sufficient    systems_involved &gt;= 3
+REGRESSION          sufficient    HP:0002376 observed
+NEURODEV_PLUS       contributory  neurodev feature AND systems &gt;= 2
+DIAGNOSTIC_ODYSSEY  contributory  4+ specialties AND 12+ months
+                                  AND diagnosis recorded at &lt; 50% of encounters
+REPEAT_UNDIAGNOSED  contributory  2+ admissions with no diagnosis recorded
+FAMILY_HISTORY      contributory  affected relative / consanguinity /
+                                  recurrent loss, only where history was taken
+
+surfaced = any sufficient  OR  two or more contributory</pre>
+    <p class="do">Thresholds live in one parameter cell and are written out as <code class="inl">gold_criteria_definitions</code>, so the clinical conversation is about a table someone can mark up rather than a number buried in code. All are <strong>placeholders</strong>; none has been reviewed by a clinician.</p>
+    <p class="do"><strong>Fire counts:</strong> FAMILY_HISTORY 230 · NEURODEV_PLUS 204 · MULTI_SYSTEM 134 · REPEAT_UNDIAGNOSED 131 · REGRESSION 114 · DIAGNOSTIC_ODYSSEY 106. Weighting them flat surfaced 21% of the cohort; tiering brings it to 9.2%.</p>
+  </section>
+
+  <section id="reflat">
+    <div class="stamp"><span class="time">ref</span><h2>How latency is computed</h2></div>
+    <p class="do">Not spoken. <code class="inl">gold_signal_latency</code> replays each record forward in date order with running windows, and finds the first moment the tier rule was already satisfied.</p>
+<pre>running distinct body systems   -&gt; when did it reach 3?      MULTI_SYSTEM
+first HP:0002376 observation    -&gt; that date                 REGRESSION
+running specialties, months,
+  and diagnosed share           -&gt; when did all three hold?  DIAGNOSTIC_ODYSSEY
+cumulative undiagnosed admits   -&gt; the second one            REPEAT_UNDIAGNOSED
+
+qualifying_date = earliest( first sufficient , second contributory )
+latency         = cutoff - qualifying_date</pre>
+    <p class="do"><strong>Results:</strong> median 8.7 months · mean 10.7 · p90 21.0 · longest 32.9. 83 of 220 — 38% — over a year. Qualified by a sufficient criterion: 144 children, median 8.1 months. By combination: 76 children, median 9.9.</p>
+    <p class="note"><b>The claim it makes, precisely.</b> The evidence has been <b>sufficient</b> since that date. It does <b>not</b> say a referral was missed — the synthetic record contains no referral events at all. On real data, qualifying date against actual referral date is the number worth having.</p>
+  </section>
+
+  <section id="refagent">
+    <div class="stamp"><span class="time">ref</span><h2>The evidence contract and the four gates</h2></div>
+    <p class="do">Not spoken. <code class="inl">agent_handoff_publisher</code> writes one JSON envelope per surfaced child — 34 of them.</p>
+<pre>patient    { patient_id, referral_state, age_years, family_history_status }
+criteria   [ { criterion, tier, description } ]
+evidence   [ { evidence_id, evidence_type, evidence_date, evidence_text } ]
+provenance { run_id, reference_source, reference_read_on, note }</pre>
+    <p class="do">Only children in state <code class="inl">indicators_present</code> get one. A child the pipeline did not surface is one the agent must not write about, and the cleanest way to enforce that is never to hand it over.</p>
+    <p class="do"><strong>The four gates</strong> run in <code class="inl">create_referral_agent.py</code> and exit non-zero if any fails:</p>
+<pre>1 schema      validates against referral-brief.schema.json. Hard-fails if the
+              jsonschema library is missing -- a gate that skips is not a gate
+2 citation    every reason cites at least one evidence_id, and every id cited
+              was actually supplied
+3 clinical    no diagnosis, no named condition, no refer / do-not-refer, no
+              reassuring language; state and criteria copied, not invented
+4 limitation  the brief says out loud that it reflects only what was recorded</pre>
+    <p class="do">Gate 4 is separate because gate 3 catches a bad sentence being <em>present</em> and gate 4 catches a necessary sentence being <em>absent</em>. <code class="inl">test_gates.py</code> proves all four across 13 cases, needs no Azure and runs in about a second.</p>
+    <p class="do">There is a lawful escape: an empty envelope returns <code class="inl">{"error": "no-evidence"}</code>. Without it, a contract demanding a citation leaves no valid document, and a model with no valid output available will invent one — which is exactly how fabricated evidence IDs appeared on an earlier build.</p>
+  </section>
+
+  <section id="refiq">
+    <div class="stamp"><span class="time">ref</span><h2>The Foundry IQ knowledge base</h2></div>
+    <p class="do">Not spoken. Azure AI Search <code class="inl">referral-kb-search</code> on the Free tier → index <code class="inl">referral-vocabulary</code> → knowledge source → knowledge base <code class="inl">referral-vocabulary-kb</code>, reached from the agent over MCP.</p>
+<pre>31 documents:  16 phenotype terms, definitions fetched from the ontology
+                6 criteria, with tier and placeholder status
+                3 referral states, and what each one does NOT mean
+                6 design concepts: tiers, no-score, equity, scope</pre>
+    <p class="do">A knowledge base will not retrieve at all without a model attached to it, and that model is called with the <strong>Search</strong> service's managed identity — so that identity needs Cognitive Services User on the Foundry account.</p>
+    <p class="note"><b>The scope line is structural, not prompted.</b> Ask it which patients were surfaced and it returns design documentation, because the corpus contains no patients. The build script refuses to publish if <code class="inl">SYN-</code>, <code class="inl">OBS:</code>, <code class="inl">ENC:</code> or <code class="inl">patient_id</code> appears anywhere in it.</p>
+  </section>
+
+  <section id="refcohort">
+    <div class="stamp"><span class="time">ref</span><h2>The cohort agent</h2></div>
+    <p class="do">Not spoken. <code class="inl">referral_cohort_agent</code>, a Fabric data agent over <code class="inl">gold_cohort_summary</code> — one tall table, one row per figure, with each figure's caveat travelling beside it as data rather than living in a prompt.</p>
+    <p class="do">It reads a summary rather than the raw tables for two reasons. An agent answering from raw tables has to do arithmetic, and arithmetic is where it invents. And <code class="inl">gold_referral_state</code> carries an <code class="inl">array</code> column, which the SQL analytics endpoint cannot surface at all — the agent could only ever discover three of the nine gold tables.</p>
+    <p class="note"><b>This is the agent to scrutinise hardest, and say so.</b> It can reach every child in gold. Its restraint comes from instructions, not from the shape of its input, and instructions are weaker than structure. Where you can make safety structural, do. Where you cannot, say it out loud.</p>
+  </section>
+
+  <section id="sref">
+    <div class="stamp"><span class="time">ref</span><h2>The graph model, if anyone digs</h2></div>
+    <p class="do">Not spoken. Here so you can answer precisely rather than approximately.</p>
+    <p class="do"><strong>Five definition parts</strong>, POSTed by <code class="inl">scripts/fabric/build_graph_model.py</code>: <code class="inl">dataSources</code> (which lakehouse, which tables, bound by item reference) · <code class="inl">graphType</code> (the schema) · <code class="inl">graphDefinition</code> (table-to-node/edge mapping and key columns) · <code class="inl">stylingConfiguration</code> (canvas layout) · <code class="inl">graphSettings</code>.</p>
+    <p class="do"><strong>Node type = table + unique key column.</strong> One row, one node.</p>
+<pre>Patient      &lt;- gold_referral_state        key patientId
+Feature      &lt;- gold_hpo_terms             key hpoId
+BodySystem   &lt;- gold_body_systems          key bodySystem
+Criterion    &lt;- gold_criteria_definitions  key criterion
+Encounter    &lt;- gold_encounters            key encounterId
+Specialty    &lt;- gold_specialties           key specialty</pre>
+    <p class="do"><strong>Edge type = a table holding both endpoint keys.</strong> The foreign key becomes the relationship.</p>
+<pre>hasFeature              Patient   -&gt; Feature      via gold_observations   patient_id  -&gt; hpo_id
+inBodySystem            Feature   -&gt; BodySystem   via gold_hpo_terms      hpo_id      -&gt; body_system
+surfacedBy              Patient   -&gt; Criterion    via gold_criteria_hits  patient_id  -&gt; criterion
+attendedEncounter       Patient   -&gt; Encounter    via gold_encounters     patient_id  -&gt; encounter_id
+encounterWithSpecialty  Encounter -&gt; Specialty    via gold_encounters     encounter_id-&gt; specialty</pre>
+    <p class="do"><code class="inl">gold_hpo_terms</code> and <code class="inl">gold_encounters</code> each appear twice — once as a node table, once as an edge table. A table holding both an entity and its relationship serves both roles.</p>
+    <p class="do"><strong>Why body systems and specialties got their own tables:</strong> a node key must be unique. Pointing <code class="inl">BodySystem</code> at <code class="inl">gold_hpo_terms</code> would offer sixteen rows for seven systems.</p>
+    <p class="do"><strong>Loading:</strong> creating the model fires a Refresh job automatically — 3½ minutes for 18,731 nodes and 35,216 edges. In the portal that is the <strong>Save</strong> button; save and ingest are one operation, so every save reloads the data.</p>
+    <p class="note"><b>Why gold holds copies of silver.</b> An edge whose two endpoints and its own source table are not all in the same lakehouse is <b>silently dropped at load</b> — the refresh reports Completed with a null failure reason and the definition still lists the edge type. Four of five edge types vanished this way before every source was moved into gold. Always count edges by label after a load; never trust Completed.</p>
   </section>
 
   <section id="s11">
