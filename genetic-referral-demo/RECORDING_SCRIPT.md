@@ -28,6 +28,7 @@ Sections marked **ref** are not spoken. They exist so you can answer
 
 - Everything you open in this script is in the **workspace list**, not inside a lakehouse. `bronze_clinical_record` is a **notebook** that sits beside `bronze_lakehouse`, not in it.
 - **NOTEBOOK** — `bronze_clinical_record` · `silver_conformed_record` · `gold_referral_signals` · `gold_signal_latency` · `validation_sensitivity`
+- **ONTOLOGY** — `referral_ontology` — the semantic layer. Six entity types, five relationship types, bound to gold. **Open this before the graph.**
 - **GRAPH MODEL** — `referral_graph` — the schema. You do *not* run queries here.
 - **GRAPH QUERYSET** — `referral_queries` — where GQL is written and run. Bind it to the model once.
 - **DATA AGENT** — `referral_cohort_agent`
@@ -49,6 +50,7 @@ python scripts/foundry/test_gates.py     # 13/13
 - **Latency** — median **8.7 months** · **38%** over a year · longest 32.9
 - **The one patient** — `SYN-00017` qualified **2024-03-06** — **29.7 months** ago
 - **Sensitivity** — **87.8%** no interpreter vs **75.2%** interpreter needed
+- **Ontology** — 6 entity types · 5 relationship types · 19 bound properties
 - **Graph** — 18,731 nodes · 35,216 edges
 - **Knowledge base** — 31 documents
 
@@ -80,7 +82,7 @@ python scripts/foundry/test_gates.py     # 13/13
 
 *Click into the workspace list.*
 
-> One Fabric workspace. Three lakehouses in a medallion — bronze, silver, gold. A pipeline. A graph. And three agents, which I will come back to, because the differences between them are the point.
+> One Fabric workspace. Three lakehouses in a medallion — bronze, silver, gold. A pipeline. An ontology, and a graph underneath it. And three agents, which I will come back to, because the differences between them are the point.
 
 > Every child in here is fabricated. Two thousand four hundred of them. No real record was touched, and nothing was connected to a hospital system.
 
@@ -90,9 +92,11 @@ python scripts/foundry/test_gates.py     # 13/13
 
 > Three lakehouses — bronze, silver and gold — and one pipeline that runs five notebooks end to end in about nine minutes. Bronze fetches the phenotype vocabulary and generates the record. Silver conforms it. Gold applies the criteria, measures how long the evidence has been sitting there, and checks whether the flag lands evenly.
 
-> Then a graph over those gold tables, and a queryset to ask it questions. And three agents — one that answers questions across the cohort, one that explains clinical vocabulary, and one that writes the brief about a single child.
+> Then the semantic layer on top of gold: an **ontology** that declares what these things are and how they relate, a graph that makes that model walkable, and a queryset to ask it questions.
 
-> Twelve items. No copies of the data, no exports, nothing leaving OneLake.
+> And three agents — one that answers questions across the cohort, one that explains clinical vocabulary, and one that writes the brief about a single child.
+
+> All of it in one workspace. No copies of the data, no exports, nothing leaving OneLake.
 
 *If anyone notices gold holds copies of some silver tables — `gold_encounters`, `gold_observations`, `gold_hpo_terms` — have this ready:*
 
@@ -160,7 +164,41 @@ python scripts/foundry/test_gates.py     # 13/13
 
 ---
 
-## 7:00 · The graph — the criterion, walked
+## 6:30 · The ontology — where the domain is declared
+
+*Open `referral_ontology`. Let the canvas render — six entity types and the relationships between them.*
+
+> Everything so far has been tables. Rows, columns, a criterion computed in a notebook. Useful, but a table does not know what it *is*.
+
+> This does. This is the ontology, and it is where the domain gets declared — not in a report, not in somebody's SQL, here. One place that says what a patient is, what a phenotypic feature is, and how the two are connected.
+
+*— — walk the canvas — —*
+
+> Six entity types. A **Patient**. A **Feature** — an observable clinical finding. The **BodySystem** that feature belongs to. A **Criterion**. An **Encounter**, and the **Specialty** it happened in.
+
+> And five relationship types between them. A patient *has* a feature. A feature is *in* a body system. A patient is *surfaced by* a criterion, *attends* an encounter, and an encounter is *with* a specialty.
+
+> That is the model of this problem, written down once, in the language a clinician would actually use.
+
+*— — the part that matters — —*
+
+> Now, the important bit. None of this is a copy. Every entity type is **bound** to a table in the gold lakehouse — Patient to the referral state table, Feature to the phenotype terms, Criterion to the criteria definitions. Nineteen properties, each one mapped to a real column.
+
+> So the ontology is not a diagram somebody drew in a workshop and left to rot. It is attached to the data. When gold refreshes, this is describing the refreshed data, not last quarter's picture of it.
+
+> And that is the difference between a data model and a semantic layer. A data model tells you how the bytes are arranged. This tells you what they *mean* — and it tells the same thing to the query, to the agent, and to the clinician, because there is only one of it.
+
+*— — name it — —*
+
+> This is **Fabric IQ**. Microsoft defines Fabric IQ as ontologies, semantic models, graphs and data agents — the semantic intelligence layer over what is in OneLake. This is the ontology component of it, and it is the piece that makes the rest of the layer coherent.
+
+> **NOTE** — **Be accurate about what is new here.** The ontology and the graph declare the *same* six entities and five relationships against the *same* gold tables. That is deliberate — one model, expressed once. Do not claim the ontology found anything the criteria did not; it does not compute the criteria. What it changes is that the meaning now lives in one declared place instead of being implied by a notebook.
+
+> **NOTE** — **Preview.** Ontology is in preview and we enabled it in this tenant for this build. If someone asks how long it took: flip the tenant setting, then about ten minutes before the service honoured it. Worth saying plainly rather than pretending it was instant.
+
+---
+
+## 8:00 · The graph — the criterion, walked
 
 *Switch to `referral_queries` — the **graph queryset**, which is the thing you run queries in. The graph model itself is just the schema. Paste the query and press **Run**.*
 
@@ -171,27 +209,17 @@ RETURN f.hpoLabel AS feature, b.bodySystem AS system
 ORDER BY system, feature
 ```
 
-> This is the referral graph, and it is worth saying what it is before I run anything against it. It is not a visualisation. It is a semantic model of the domain — the same gold tables, expressed as the things they actually are and the relationships between them.
+> A declared model is worth something on its own. But you cannot ask a diagram a question. This is the graph, and it is the same six entities and five relationships — made walkable.
 
-> Six kinds of thing: patients, the features observed on them, the body systems those features belong to, encounters, specialties, and the criteria that surfaced each child. Five kinds of relationship between them. Eighteen thousand nodes, thirty-five thousand relationships.
+> Eighteen thousand nodes, thirty-five thousand relationships, over the same gold tables. The ontology says a patient has features and features belong to body systems. The graph is what lets me actually traverse that, for one child, right now.
 
-> And this is a **Fabric IQ** component. Fabric IQ is Microsoft's semantic layer over Fabric data — ontologies, semantic models, graphs and data agents. This is the graph part of it, and the cohort agent is the data agent part.
+> Both are **Fabric IQ** components — ontology and graph, with the cohort agent as the data agent part. Meaning, then traversal, then the agent that uses both.
 
-*— — what this actually is — —*
+*— — if someone asks why both — —*
 
-> This is where the domain gets defined. Not in a report, not in somebody's SQL — here. Six entities and five relationships, declared once, in one file, that everything downstream reads.
+> The two do different jobs. The ontology carries *meaning* — what a thing is, what it may be connected to, and which column that comes from. The graph carries *reach* — path finding, traversal, questions shaped like relationships rather than joins.
 
-> A patient *has* a feature. A feature *belongs to* a body system. A patient is *surfaced by* a criterion, *attends* an encounter, and an encounter is *with* a specialty. That is the model of this problem, written down, and it is the same model the query, the agent and the clinician are all working from.
-
-*— — and the boundary, said plainly — —*
-
-> People will ask whether this is the ontology. It is worth being precise. This declares the **entities and the relationships** — so in the ordinary sense of the word, yes, it is a domain model.
-
-> But Fabric IQ has a component actually named Ontology, and it is a different thing. An ontology adds the layer above this: hierarchies, so a thing can be a kind of another thing. Constraints, so the model knows what cannot be true. Business definitions that live independently of any particular table, and can be reused across models and agents.
-
-> A property graph gives you structure — entities, relationships, traversal. An ontology gives you *meaning*, and lets a system infer things nobody wrote down.
-
-> We do not have that component in this tenant. It is not enabled. So this is the graph doing the semantic layer's job, and doing it well enough for what you have just seen — and if ontology becomes available, it sits above this rather than replacing it.
+> Microsoft's own framing is that ontology works together with graph, and that is exactly how it is used here. Declare it once; walk it when you need to.
 
 > So when the pipeline says this child surfaced because their features span multiple body systems, you do not have to take that on trust. You can walk it.
 
@@ -246,11 +274,11 @@ GROUP BY specialty ORDER BY children DESC
 
 > One honest caveat: the schema is fixed once it loads. Fabric graph has no schema evolution, so adding a property or changing a key means building a new model and reloading everything. That is why the properties here are minimal and there are no dates on them.
 
-> **NOTE** — **Get this exactly right.** A graph is one of the things **Fabric IQ** is made of — Microsoft defines Fabric IQ as ontologies, semantic models, graphs and data agents. So this **is** a Fabric IQ component and you can say so. What it is **not** is a Fabric IQ **ontology**: that is a different component of the same layer, and it is not enabled in this tenant.
+> **NOTE** — **Get this exactly right.** Ontology and graph are both **Fabric IQ** components — Microsoft defines Fabric IQ as ontologies, semantic models, graphs and data agents. Both are real here and both are on screen. What you must **not** say is that the ontology found the children — the named criteria in gold do that, deterministically, and that separation is the point of the whole demo.
 
 ---
 
-## 9:00 · How long it was already there
+## 10:00 · How long it was already there
 
 *Open the **notebook** `gold_signal_latency`, or just show the figures.*
 
@@ -274,7 +302,7 @@ GROUP BY specialty ORDER BY children DESC
 
 ---
 
-## 11:00 · The finding that matters
+## 12:00 · The finding that matters
 
 *Show the **table** `gold_validation_sensitivity` (inside `gold_lakehouse`), or run the interpreter query on the graph.*
 
@@ -306,7 +334,7 @@ GROUP BY specialty ORDER BY children DESC
 
 ---
 
-## 13:30 · Three agents, three different reaches
+## 14:30 · Three agents, three different reaches
 
 *Third word: **agentic**. This is the one that does not mean what you might assume.*
 
@@ -338,7 +366,7 @@ GROUP BY specialty ORDER BY children DESC
 
 ---
 
-## 15:30 · The brief, and the four gates
+## 16:30 · The brief, and the four gates
 
 *Terminal.*
 
@@ -364,7 +392,7 @@ python scripts/foundry/create_referral_agent.py \
 
 ---
 
-## 16:30 · Where Fabric stops and Foundry starts
+## 17:30 · Where Fabric stops and Foundry starts
 
 *No screen needed. Say this over the workspace, or over the brief you just produced.*
 
@@ -398,11 +426,11 @@ python scripts/foundry/create_referral_agent.py \
 
 > They are separate products, deliberately, and Microsoft is explicit that each stands alone and they are meant to be used together. That is what this is: **Fabric IQ for the semantics, Foundry IQ for the knowledge, and gates of our own around whatever gets said about a child.**
 
-> **NOTE** — **Two things to keep straight.** Graphs and data agents **are** Fabric IQ, so saying this uses Fabric IQ is accurate. The Fabric IQ **ontology** is a separate component of it and is **not enabled in this tenant** — verified, it returns FeatureNotAvailable from two workspaces. And Foundry IQ does **not** take Fabric IQ as a knowledge source; its sources are Blob, SharePoint, OneLake and the web. The two layers are used together, not plugged into one another.
+> **NOTE** — **Two things to keep straight.** Graphs and data agents **are** Fabric IQ, so saying this uses Fabric IQ is accurate. The Fabric IQ **ontology** is a separate component of it. It is **enabled in this tenant as of today**, and an ontology item exists but is empty — the graph is what carries the model in this demo. And Foundry IQ does **not** take Fabric IQ as a knowledge source; its sources are Blob, SharePoint, OneLake and the web. The two layers are used together, not plugged into one another.
 
 ---
 
-## 18:00 · Close
+## 19:00 · Close
 
 > So: named criteria a clinician can argue with. Three states that never collapse. Evidence that can be walked rather than trusted. A measurement of how long that evidence had been sitting there. Agents whose reach is deliberately different, with four gates on the one that writes about a child. And equity measured as an output, not as a review somebody promises to do later.
 
@@ -561,12 +589,12 @@ Fabric IQ component   status here
 graph                 USED   referral_graph, 18,731 nodes / 35,216 edges
 data agent            USED   referral_cohort_agent over gold_cohort_summary
 semantic model        not used -- the graph carries the semantics instead
-ontology              403 FeatureNotAvailable in this tenant and region
+ontology              USED   referral_ontology, 6 entity types / 5 relationship types
 ```
 
 ***What Foundry IQ is:** a managed knowledge layer — knowledge bases over Azure Blob, SharePoint, OneLake and the web, with agentic retrieval, permission enforcement and citations. Used here for the vocabulary knowledge base, 31 documents.*
 
-> **NOTE** — **Do not claim they plug into each other.** Foundry IQ does not list Fabric IQ among its knowledge sources. Microsoft says each IQ workload is standalone and they can be used together — which is what this is. If ontology becomes available it would absorb part of what the graph does here; worth asking the tenant admin whether it can be enabled in Canada Central.
+> **NOTE** — **Do not claim they plug into each other.** Foundry IQ does not list Fabric IQ among its knowledge sources. Microsoft says each IQ workload is standalone and they can be used together — which is what this is. Ontology is enabled here (tenant setting `OntologyPreview`; Canada Central supports it — the only region that does not is South Central US) and is built out: six entity types bound to gold, five relationship types. It sits above the graph rather than replacing it.
 
 ---
 
@@ -628,10 +656,13 @@ On synthetic data that is an artefact of the generator. The useful question is t
 Then the model decides who surfaces, and you cannot inspect the criteria, reproduce the run next month, or measure the flag for bias — because there is no flag, only an opinion.
 
 **“Is the graph your ontology?”**
-In the ordinary sense — a declared model of entities and their relationships — yes, and `graphType.json` is where that lives. In the product sense, no: Fabric IQ has a separate component called Ontology which adds hierarchies, constraints, and business definitions decoupled from tables, and it is not enabled in this tenant. The graph gives structure; an ontology would add meaning and inference on top of it.
+No — they are two items and you saw both. `referral_ontology` is the Fabric IQ ontology: six entity types and five relationship types, each bound to a gold table, declaring what the things *are*. `referral_graph` is the property graph over the same gold tables, which is what makes the model traversable in GQL. Microsoft’s own framing is that ontology works together with graph, and that is how it is used here — declare it once, walk it when you need to.
+
+**“Why declare the same model twice?”**
+Fair challenge, and the honest answer is that today they are separate declarations of one model, because the graph was built first. The direction of travel is that the ontology is the place the domain is defined and everything else reads from it. What you should not hear me claim is that the ontology is computing anything — the named criteria in gold do the identifying, deterministically, and that separation is deliberate.
 
 **“Is this Fabric IQ, or is it Foundry?”**
-Both, and they are different layers. Fabric IQ is the semantic layer over Fabric data — ontologies, semantic models, graphs, data agents. We use the graph and a data agent. Foundry IQ is the managed knowledge layer for agents; we use a knowledge base for clinical vocabulary. The ontology component of Fabric IQ is not enabled in this tenant. The two IQs are standalone products designed to be used together, not plugged into one another.
+Both, and they are different layers. Fabric IQ is the semantic layer over Fabric data — ontologies, semantic models, graphs, data agents. We use the graph and a data agent. Foundry IQ is the managed knowledge layer for agents; we use a knowledge base for clinical vocabulary. We use the ontology, the graph and a data agent — three of the four Fabric IQ components. The two IQs are standalone products designed to be used together, not plugged into one another.
 
 **“Is any of this genomic?”**
 No. Nothing reads a genome, a variant, or a test result.

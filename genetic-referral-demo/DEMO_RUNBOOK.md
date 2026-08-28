@@ -119,9 +119,37 @@ Be equally plain that the **absolute** figure is close to circular — it is mea
 against a pattern this repository planted. The **gap between groups** is not, because
 both groups were planted identically.
 
-### 5. The graph — the criterion, walked instead of asserted (3 min)
+### 5. The ontology — where the domain is declared (2 min)
 
-Open `referral_graph`. Six node types, five edge types, over the gold tables.
+Open `referral_ontology`. Six entity types, five relationship types, each bound to a
+gold table. Select an entity type to show its bindings.
+
+| Entity type | Bound to | Properties |
+| --- | --- | --- |
+| `Patient` | `gold_referral_state` | 5 |
+| `Feature` | `gold_hpo_terms` | 2 |
+| `BodySystem` | `gold_body_systems` | 2 |
+| `Criterion` | `gold_criteria_definitions` | 3 |
+| `Encounter` | `gold_encounters` | 4 |
+| `Specialty` | `gold_specialties` | 3 |
+
+> "A table does not know what it is. This does. Six entity types, five relationships,
+> and every one of them bound to a real column in a real gold table — so this is not a
+> diagram somebody drew in a workshop, it is attached to the data. When gold refreshes,
+> this describes the refreshed data."
+
+**The distinction worth making:** a data model tells you how the bytes are arranged; a
+semantic layer tells you what they mean — and tells the same thing to the query, the
+agent and the clinician, because there is only one of it.
+
+**What it does not do:** the ontology does not decide who gets surfaced. The named
+criteria in gold do that, deterministically. Do not let anyone leave thinking the
+semantic layer is doing the identifying — that separation is the design.
+
+### 6. The graph — the criterion, walked instead of asserted (3 min)
+
+Open `referral_graph`. The same six entities and five relationships as the ontology,
+made traversable. You cannot ask a diagram a question; this is what answers one.
 
 Run the traversal for `SYN-00017`:
 
@@ -149,15 +177,20 @@ GROUP BY s.specialty ORDER BY children DESC LIMIT 10
 > "These are the children the screen did *not* surface, and where they actually turn
 > up. If the screen is missing people, this is the clinic they are sitting in."
 
-**Say what this is, and what it is not.** It is a Fabric graph — a labeled property
-graph over OneLake, queried with standard GQL, documented under Fabric IQ. It is **not**
-a Fabric IQ ontology: that feature returns `FeatureNotAvailable` in this tenant and
-region, so nothing here should be described as one.
+**Say what this is.** Ontology and graph are both **Fabric IQ** components — Microsoft defines Fabric IQ as ontologies, semantic models, graphs and data agents, and this demo uses three of the four. The ontology carries meaning; the graph is a
+labeled property graph over OneLake queried in standard GQL, and carries reach.
+Microsoft's own framing is that ontology works together with graph, which is exactly
+how they are used here.
+
+Both declare the same model over the same gold tables — 18,731 instances and 35,216
+relationships either way. If challenged on why it is declared twice, be straight: the
+graph was built first, and the direction of travel is that the ontology becomes the
+one place the domain is defined.
 
 If asked about the agent and the graph together: Fabric Data Agent supports graph as a
 data source with natural-language-to-GQL, in preview. Not wired up here.
 
-### 5. The agent — it renders, it does not reason (2 min)
+### 7. The agent — it renders, it does not reason (2 min)
 
 Open a contract from `Files/contracts/`, or the two committed samples:
 `SYN-00017` (family history taken, four criteria) and `SYN-00195` (family
