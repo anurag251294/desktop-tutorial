@@ -300,7 +300,7 @@ GROUP BY system ORDER BY children DESC</pre>
     <p class="say">Fabric matches those column values against the node keys and materialises the graph. Eighteen thousand nodes and thirty-five thousand edges took about three and a half minutes to load. The report, the agent and the graph are all reading the same tables.</p>
     <p class="beat">— beat —</p>
     <p class="say">One honest caveat: the schema is fixed once it loads. Fabric graph has no schema evolution, so adding a property or changing a key means building a new model and reloading everything. That is why the properties here are minimal and there are no dates on them.</p>
-    <p class="note"><b>Do not overstate this.</b> It is a Fabric graph — a labelled property graph over OneLake, queried in standard GQL, documented under Fabric IQ. It is <b>not</b> a Fabric IQ ontology; that is a different feature and it is not enabled in this tenant.</p>
+    <p class="note"><b>Get this exactly right.</b> A graph is one of the things <b>Fabric IQ</b> is made of — Microsoft defines Fabric IQ as ontologies, semantic models, graphs and data agents. So this <b>is</b> a Fabric IQ component and you can say so. What it is <b>not</b> is a Fabric IQ <b>ontology</b>: that is a different component of the same layer, and it is not enabled in this tenant.</p>
   </section>
 
   <section id="s6">
@@ -382,7 +382,11 @@ GROUP BY system ORDER BY children DESC</pre>
     <p class="beat">— what Foundry did —</p>
     <p class="say">That is the Foundry half. The bounded contract, so scope is structural. The four gates, which are code we own rather than a setting we toggled. The knowledge base that holds vocabulary and provably no patients. And the model choice and versioning underneath it.</p>
     <p class="say">So: <strong>Fabric decides who. Foundry decides what may be said about them, and proves it.</strong> Neither half is sufficient alone, and the reason is not commercial — it is that identification and disclosure are genuinely different problems with different failure modes.</p>
-    <p class="note"><b>Be straight about Fabric IQ.</b> The graph is real and is documented under Fabric IQ. The Fabric IQ <b>ontology</b> is a different feature and is <b>not enabled in this tenant</b> — we checked, it returns FeatureNotAvailable. If it lands, it would take over part of the semantic layer the graph is doing here, and that is a good thing, not a threat to this design. Do not imply we used it.</p>
+    <p class="beat">— name both layers, accurately —</p>
+    <p class="say">And both halves have names. Microsoft calls the semantic layer over Fabric data <strong>Fabric IQ</strong> — ontologies, semantic models, graphs and data agents, so agents can reason over what is in OneLake. The graph you just saw and the cohort agent are both Fabric IQ components.</p>
+    <p class="say">The managed knowledge layer on the Foundry side is <strong>Foundry IQ</strong> — knowledge bases that give an agent permission-aware, cited retrieval. The vocabulary knowledge base is that.</p>
+    <p class="say">They are separate products, deliberately, and Microsoft is explicit that each stands alone and they are meant to be used together. That is what this is: <strong>Fabric IQ for the semantics, Foundry IQ for the knowledge, and gates of our own around whatever gets said about a child.</strong></p>
+    <p class="note"><b>Two things to keep straight.</b> Graphs and data agents <b>are</b> Fabric IQ, so saying this uses Fabric IQ is accurate. The Fabric IQ <b>ontology</b> is a separate component of it and is <b>not enabled in this tenant</b> — verified, it returns FeatureNotAvailable from two workspaces. And Foundry IQ does <b>not</b> take Fabric IQ as a knowledge source; its sources are Blob, SharePoint, OneLake and the web. The two layers are used together, not plugged into one another.</p>
   </section>
 
   <section id="s10">
@@ -486,7 +490,14 @@ provenance { run_id, reference_source, reference_read_on, note }</pre>
     <p class="do"><strong>Fabric does not carry:</strong> a way to bound what a model can see to one supplied envelope · output contracts, meaning a schema an answer must validate against · refusal behaviour you can test in CI · reference knowledge held separately from patient data · model choice, versioning or evaluation.</p>
     <p class="do"><strong>Foundry carries those:</strong> the evidence contract, making scope structural rather than instructed · four gates as code, exiting non-zero, provable by 13 offline test cases · a Foundry IQ knowledge base whose corpus is vocabulary only, enforced at build time · model deployment and versioning.</p>
     <p class="note"><b>The honest seam.</b> Fabric answers "who, and on what evidence". Foundry answers "what may be said about them, and can you prove it stayed inside that". The cohort agent sits awkwardly across the line — it is a Fabric agent with the widest reach and only instructions restraining it, which is precisely why it reads a summary table rather than the raw records.</p>
-    <p class="note"><b>Fabric IQ status, so nobody is misled.</b> Graph: available, used, documented under Fabric IQ. Ontology and Digital Twin Builder: <code class="inl">403 FeatureNotAvailable</code> in this tenant and region, verified from two workspaces. If ontology arrives it would absorb part of what the graph does here — worth asking the tenant admin whether it can be enabled.</p>
+    <p class="do"><strong>What Fabric IQ is, per Microsoft:</strong> a semantic intelligence layer for Fabric, made of <em>ontologies, semantic models, graphs and data agents</em>, so agents can reason over analytics in OneLake and Power BI.</p>
+<pre>Fabric IQ component   status here
+graph                 USED   referral_graph, 18,731 nodes / 35,216 edges
+data agent            USED   referral_cohort_agent over gold_cohort_summary
+semantic model        not used -- the graph carries the semantics instead
+ontology              403 FeatureNotAvailable in this tenant and region</pre>
+    <p class="do"><strong>What Foundry IQ is:</strong> a managed knowledge layer — knowledge bases over Azure Blob, SharePoint, OneLake and the web, with agentic retrieval, permission enforcement and citations. Used here for the vocabulary knowledge base, 31 documents.</p>
+    <p class="note"><b>Do not claim they plug into each other.</b> Foundry IQ does not list Fabric IQ among its knowledge sources. Microsoft says each IQ workload is standalone and they can be used together — which is what this is. If ontology becomes available it would absorb part of what the graph does here; worth asking the tenant admin whether it can be enabled in Canada Central.</p>
   </section>
 
   <section id="sref">
@@ -524,6 +535,8 @@ encounterWithSpecialty  Encounter -&gt; Specialty    via gold_encounters     enc
       <dd>On synthetic data that is an artefact of the generator. The useful question is the one the validation notebook answers: who gets missed, and is it the same people who already get missed.</dd>
       <dt>“Why not just let a model read the chart?”</dt>
       <dd>Then the model decides who surfaces, and you cannot inspect the criteria, reproduce the run next month, or measure the flag for bias — because there is no flag, only an opinion.</dd>
+      <dt>“Is this Fabric IQ, or is it Foundry?”</dt>
+      <dd>Both, and they are different layers. Fabric IQ is the semantic layer over Fabric data — ontologies, semantic models, graphs, data agents. We use the graph and a data agent. Foundry IQ is the managed knowledge layer for agents; we use a knowledge base for clinical vocabulary. The ontology component of Fabric IQ is not enabled in this tenant. The two IQs are standalone products designed to be used together, not plugged into one another.</dd>
       <dt>“Is any of this genomic?”</dt>
       <dd>No. Nothing reads a genome, a variant, or a test result.</dd>
       <dt>If something breaks</dt>
