@@ -164,7 +164,7 @@
 
 <div class="wrap">
   <header class="masthead">
-    <p class="eyebrow">Screen recording script · outcome first · about 15 minutes of narration</p>
+    <p class="eyebrow">Screen recording script · outcome first · about 16 minutes of narration</p>
     <h1>Genetic referral case-finding</h1>
     <p class="sub">Large serif is what you say. Dotted italic is what you do. Nothing here needs a Spark session. Written to be read by someone who built it, not pitched.</p>
   </header>
@@ -198,14 +198,15 @@
     <h2>Before you hit record</h2>
     <ul>
       <li>Capacity <code class="inl">fabdemo85829</code> <strong>Active 20+ minutes</strong> — item editors lag a resume.</li>
-      <li><strong>Tab order is outcome-first now:</strong> ontology (1:50) · <strong>referral_queries</strong> (3:10 — the queryset, this is where GQL runs) · graph model · latency (5:20) · gold lakehouse (6:20 validation, then 7:45 Files/contracts) · workspace (9:45) · bronze · silver · gold criteria · cohort agent (13:15) · Foundry (15:00). Run <code class="inl">tabs_ont.py</code> and it lands in this order.</li>
+      <li><strong>Tab order is outcome-first now:</strong> <strong>cohort agent</strong> (0:00) · ontology (1:50) · <strong>referral_queries</strong> (3:10 — the queryset, this is where GQL runs) · graph model · latency (5:20) · gold lakehouse (6:20 validation, then 7:45 Files/contracts) · workspace (9:45) · bronze · silver · gold criteria · cohort agent (13:15) · Foundry (15:00). Run <code class="inl">tabs_ont.py</code> and it lands in this order.</li>
       <li>Foundry tab on <code class="inl">referral-foundry-mcap</code> → project <code class="inl">genetic-referral</code>.</li>
       <li>Terminal in the repo, <code class="inl">az login</code> done.</li>
       <li><strong>Click every tab once</strong> before recording — Fabric lazy-renders background tabs.</li>
       <li><strong>Bind the queryset first, once.</strong> Open <code class="inl">referral_queries</code> → <em>Use an existing model</em> → <code class="inl">referral_graph</code>. Do this before you record; the first time it asks, and after that it remembers. You run GQL in the <strong>queryset</strong>, not in the graph model — the model is only the schema.</li>
       <li><strong>Visible but not walked:</strong> <code class="inl">gold_graph_dimensions</code> (builds the graph's dimension tables), <code class="inl">agent_handoff_publisher</code> (writes the evidence contracts), <code class="inl">gold_cohort_summary</code> (the cohort agent's serving table). Know what they are in case someone asks.</li>
       <li>Gold holds 16 tables, three of which are copies of silver — that is the graph's single-lakehouse requirement, and there is a line for it in the workspace section.</li>
-      <li><strong>You open on the ontology, not the workspace.</strong> The first ninety seconds are spoken over the opening screen with no clicking — say the numbers, <em>then</em> show the canvas.</li>
+      <li><strong>You open on the cohort agent, not the workspace.</strong> Say the three numbers first, then ask the agent for the state breakdown and let it corroborate. The narration never depends on its answer — if it stalls, carry on.</li>
+      <li><strong>Warm the agent before you record.</strong> Ask it <code class="inl">How many patients are in each referral state?</code> once and discard the answer. First call after a capacity resume is slow, and the model intermittently returns <code class="inl">invalid_prompt</code> — you want that to happen in rehearsal, not in the take.</li>
     </ul>
   </div>
 
@@ -257,18 +258,26 @@ python scripts/foundry/test_gates.py     # 13/13</pre>
 
   <section id="s0">
     <div class="stamp"><span class="time">0:00</span><h2>What it produces</h2></div>
+    <p class="do">Open on the <strong>cohort agent</strong> tab, chat pane empty. Nothing else on screen for the first minute.</p>
     <p class="say">This is a case-finding pipeline in Microsoft Fabric, built for <strong>SickKids</strong>.</p>
     <p class="say">The ask was one line: <strong>use agentic intelligence to identify patients early for genetic consultation or testing.</strong></p>
     <p class="say">Children with undiagnosed rare conditions get referred late because their findings are spread across different clinics and different visits. No single clinician sees all of them. The data is in the chart already; it is just not in one place.</p>
-        <p class="beat">— beat · the numbers, before any screen —</p><p class="say">Here is what the pipeline outputs, before I show you any of it. Two thousand four hundred patients in, <strong>two hundred and twenty</strong> flagged for genetics review. Each one comes with the specific reason it was flagged.</p><p class="say">For those two hundred and twenty, the findings that triggered the flag had been in the record for a median of <strong>eight point seven months</strong>. Thirty-eight per cent of them, over a year.</p>
-    <p class="say">We also measured what it misses. It catches <strong>eighty-seven point eight per cent</strong> of affected patients where no interpreter is needed, and <strong>seventy-five point two</strong> where one is. I will show you that number and where it comes from.</p>
+    <p class="beat">— beat · say the numbers, then ask for them —</p>
+    <p class="say">Two thousand four hundred patients in. <strong>Two hundred and twenty</strong> flagged for genetics review — nine point two per cent. One thousand seven hundred and sixty-six where the record was read and nothing fired. Four hundred and fourteen with too little record to read at all.</p>
+    <p class="do">Now type it and send. Keep talking while it runs — about fifteen seconds.</p>
+<pre>How many patients are in each referral state?</pre>
+    <p class="beat">— TYPE NOW: “How many patients are in each referral state?” · send · keep talking —</p>
+    <p class="say">That is the cohort agent answering off the gold tables, not me reading a slide. And notice it returns the caveat with each figure — the middle state does not mean the patient is clear, it means nothing was found in the record.</p>
+    <p class="say">Two more numbers I will come back to. The findings that triggered each flag had been sitting in the record for a median of <strong>eight point seven months</strong>, thirty-eight per cent of them over a year. And the screen catches <strong>eighty-seven point eight per cent</strong> of affected patients where no interpreter is needed, <strong>seventy-five point two</strong> where one is.</p>
     <p class="beat">— beat —</p>
-    <p class="say">Two things to be clear about up front. <strong>This is not genomics.</strong> No genome, no variant, no test result — nothing here reads genetic data. It runs on phenotype codes and encounter records.</p><p class="say">And the data is synthetic. Two thousand four hundred generated patients. <strong>No SickKids data</strong>, and no connection to any SickKids system.</p>
-    <p class="say">So — the output first, then the code behind it.</p>
+    <p class="say">Two things to be clear about up front. <strong>This is not genomics.</strong> No genome, no variant, no test result — nothing here reads genetic data. It runs on phenotype codes and encounter records.</p>
+    <p class="say">And the data is synthetic. Two thousand four hundred generated patients. <strong>No SickKids data</strong>, and no connection to any SickKids system.</p>
+    <p class="say">That agent is one of three, and it is the least constrained of them — I will come back to why that matters. First, where the definitions it just used are declared.</p>
+    <p class="note"><b>If the agent stalls or returns <code class="inl">invalid_prompt</code>.</b> Keep going — you have already said the numbers, so nothing in the narration depends on it. Say "that one is intermittent, I will come back to it" and pick up at the ontology. Do not re-send mid-take; the retry lands in the middle of the next section.</p>
   </section>
 
   <section id="s4b">
-    <div class="stamp"><span class="time">1:50</span><h2>The ontology</h2></div>
+    <div class="stamp"><span class="time">2:05</span><h2>The ontology</h2></div>
     <p class="do">Open <code class="inl">referral_ontology</code>. Let the canvas render — six entity types and the relationships between them.</p>
     <p class="say">This is the ontology. It is where the entity types and the relationships between them are defined.</p>
     <p class="say"><strong>Fabric IQ</strong> is Microsoft's name for this layer — ontologies, semantic models, graphs and data agents. This is the ontology part of it.</p>
@@ -285,7 +294,7 @@ python scripts/foundry/test_gates.py     # 13/13</pre>
   </section>
 
   <section id="s5">
-    <div class="stamp"><span class="time">3:10</span><h2>The graph — checking a flag</h2></div>
+    <div class="stamp"><span class="time">3:25</span><h2>The graph — checking a flag</h2></div>
     <p class="do">Switch to <code class="inl">referral_queries</code> — the <strong>graph queryset</strong>, which is the thing you run queries in. The graph model itself is just the schema. Paste the query and press <strong>Run</strong>.</p>
 <pre>MATCH (p:Patient)-[:hasFeature]-&gt;(f:Feature)-[:inBodySystem]-&gt;(b:BodySystem)
 WHERE p.patientId = 'SYN-00017'
@@ -314,7 +323,7 @@ GROUP BY specialty ORDER BY children DESC</pre>
   </section>
 
   <section id="s6">
-    <div class="stamp"><span class="time">5:20</span><h2>Latency — how long the data sat there</h2></div>
+    <div class="stamp"><span class="time">5:35</span><h2>Latency — how long the data sat there</h2></div>
     <p class="do">Open the <strong>notebook</strong> <code class="inl">gold_signal_latency</code>, or just show the figures.</p>
     <p class="do">Second word: <strong>early</strong>.</p>
     <p class="say">Same patient. Next question: when did that criterion first become true?</p>
@@ -328,7 +337,7 @@ GROUP BY specialty ORDER BY children DESC</pre>
   </section>
 
   <section id="s7">
-    <div class="stamp"><span class="time">6:20</span><h2>Sensitivity, split by interpreter need</h2></div>
+    <div class="stamp"><span class="time">6:35</span><h2>Sensitivity, split by interpreter need</h2></div>
     <p class="do">Show the <strong>table</strong> <code class="inl">gold_validation_sensitivity</code> (inside <code class="inl">gold_lakehouse</code>), or run the interpreter query on the graph.</p>
     <p class="say">This is the number I opened with, and where it comes from.</p>
     <p class="say">The generator plants the same underlying rate of clustered presentation in both groups. Patients whose families need an interpreter get the same simulated biology as everyone else. What differs is how much of it gets recorded.</p>
@@ -345,7 +354,7 @@ GROUP BY specialty ORDER BY children DESC</pre>
   </section>
 
   <section id="s9">
-    <div class="stamp"><span class="time">7:45</span><h2>The brief, and the four checks</h2></div>
+    <div class="stamp"><span class="time">8:00</span><h2>The brief, and the four checks</h2></div>
     <p class="do">Terminal. Run it, then open the brief on screen — this section is about the <em>document</em>, not the pipeline.</p>
 <pre>python scripts/foundry/create_referral_agent.py \
     --evidence cicd/patient-evidence.SYN-00195.json \
@@ -360,14 +369,14 @@ GROUP BY specialty ORDER BY children DESC</pre>
   </section>
 
   <section id="showhow">
-    <div class="stamp"><span class="time">9:25</span><h2>How it works</h2></div>
+    <div class="stamp"><span class="time">9:40</span><h2>How it works</h2></div>
     <p class="do">Back to the workspace list.</p>
     <p class="say">That is the output. Now the code that produces it.</p>
     <p class="say">Three parts worth looking at: how the record gets conformed, how the criteria are written, and what each agent can reach.</p>
   </section>
 
   <section id="s1">
-    <div class="stamp"><span class="time">9:45</span><h2>The workspace</h2></div>
+    <div class="stamp"><span class="time">10:00</span><h2>The workspace</h2></div>
     <p class="do">Click into the workspace list.</p>
     <p class="say">One workspace. Three lakehouses — bronze, silver, gold. A pipeline with five notebook activities, about nine minutes end to end. Plus the ontology, the graph and three agents.</p>
     <p class="say">Bronze pulls the vocabulary and generates the record. Silver conforms it. Gold applies the criteria, computes latency, and runs the sensitivity check.</p>
@@ -378,7 +387,7 @@ GROUP BY specialty ORDER BY children DESC</pre>
   </section>
 
   <section id="s2">
-    <div class="stamp"><span class="time">10:15</span><h2>Bronze — the raw record</h2></div>
+    <div class="stamp"><span class="time">10:30</span><h2>Bronze — the raw record</h2></div>
     <p class="do">Open the <strong>notebook</strong> <code class="inl">bronze_clinical_record</code> from the workspace list. Header, then the cohort cell.</p>
     <p class="say">Bronze pulls the Human Phenotype Ontology from its public API. It is a coded vocabulary of observable clinical findings — developmental delay, hypotonia, short stature. Genetics services use it; it is not genetic data.</p>
     <p class="say">Then it generates the record with realistic mess in it. Two date formats, because the encounter feed and the observation feed are simulated as different-era systems. Five spellings across three service names. Family history present for about sixty per cent of patients.</p>
@@ -387,7 +396,7 @@ GROUP BY specialty ORDER BY children DESC</pre>
   </section>
 
   <section id="s3">
-    <div class="stamp"><span class="time">11:00</span><h2>Silver — null is not false</h2></div>
+    <div class="stamp"><span class="time">11:15</span><h2>Silver — null is not false</h2></div>
     <p class="do">Open the <strong>notebook</strong> <code class="inl">silver_conformed_record</code>. The family history cell.</p>
     <p class="say">This is the cell that matters most.</p>
     <p class="say">Family history is missing for forty per cent of patients. The easy fix is <code class="inl">fillna(False)</code> and you get a clean boolean column.</p>
@@ -398,7 +407,7 @@ GROUP BY specialty ORDER BY children DESC</pre>
   </section>
 
   <section id="s4">
-    <div class="stamp"><span class="time">12:00</span><h2>Gold — the criteria</h2></div>
+    <div class="stamp"><span class="time">12:15</span><h2>Gold — the criteria</h2></div>
     <p class="do">Open the <strong>notebook</strong> <code class="inl">gold_referral_signals</code>. The <code class="inl">CRITERIA</code> cell.</p>
     <p class="do">First of the three words: <strong>identify</strong>.</p>
     <p class="say">Six criteria. Each named, each with its own threshold, all in one <code class="inl">CRITERIA</code> dict at the top of the notebook.</p>
@@ -413,7 +422,7 @@ GROUP BY specialty ORDER BY children DESC</pre>
   </section>
 
   <section id="s8">
-    <div class="stamp"><span class="time">13:15</span><h2>Three agents, and what each can reach</h2></div>
+    <div class="stamp"><span class="time">13:30</span><h2>Three agents, and what each can reach</h2></div>
     <p class="do">Third word: <strong>agentic</strong>. This is the one that does not mean what you might assume.</p>
     <p class="say">Patients are flagged by the criteria in gold, not by a model. That is deliberate: you can read the criteria, version them, re-run them next month and measure them for bias. You cannot do any of that with a model that decides who surfaces.</p>
     <p class="say">So the agents are not doing the finding. They do everything around it, and what matters about each one is what it can reach.</p>
@@ -422,13 +431,13 @@ GROUP BY specialty ORDER BY children DESC</pre>
     <p class="say">So its scope is whatever is in the file. It cannot reach a patient it was not given, whatever you prompt it with.</p>
     <p class="beat">— second agent —</p>
     <p class="say">Second agent answers vocabulary questions from a Foundry IQ knowledge base — thirty-one documents, no patient data indexed. Ask it which patients were flagged and it returns design docs, because there is nothing else in there to return.</p>
-    <p class="say">Third is a Fabric data agent over the gold lakehouse. This is the one to look at hardest, because it can reach every patient row. Its limits are prompt instructions, and instructions are weaker than not having access.</p>
+    <p class="say">Third is the agent I opened with — a Fabric data agent over the gold lakehouse. This is the one to look at hardest, because it can reach every patient row. Its limits are prompt instructions, and instructions are weaker than not having access.</p>
     <p class="beat">— third agent —</p>
     <p class="say">So it is pointed at <code class="inl">gold_cohort_summary</code> — precomputed aggregates with the caveats stored as columns. Where you can enforce scope structurally, do that. Where you cannot, be explicit that you have not.</p>
   </section>
 
   <section id="s9b">
-    <div class="stamp"><span class="time">15:00</span><h2>Fabric and Foundry — which does what</h2></div>
+    <div class="stamp"><span class="time">15:15</span><h2>Fabric and Foundry — which does what</h2></div>
     <p class="do">No screen needed. Say this over the workspace, or over the brief you just produced.</p>
     <p class="say">Quick note on which platform does what, because it comes up.</p>
     <p class="beat">— what Fabric did —</p>
@@ -444,7 +453,7 @@ GROUP BY specialty ORDER BY children DESC</pre>
   </section>
 
   <section id="s10">
-    <div class="stamp"><span class="time">16:05</span><h2>Close</h2></div>
+    <div class="stamp"><span class="time">16:20</span><h2>Close</h2></div>
     <p class="say">Recap. Criteria you can read in a table. Three states kept separate. Evidence you can walk in the graph. Latency computed per patient. And a sensitivity check split by interpreter need.</p>
     <p class="say">The thresholds are not clinically validated. They are placeholders for the SickKids genetics service to review. And the data is synthetic — no SickKids data was used.</p>
     <p class="say">Back to the original ask. <strong>Identify</strong>: six named criteria. <strong>Early</strong>: a median of eight point seven months, measured. <strong>Agentic</strong>: three agents around the pipeline, and the one that writes about a patient has no query access and four output checks.</p>

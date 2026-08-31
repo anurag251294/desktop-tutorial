@@ -5,7 +5,7 @@ so the two cannot drift. Re-run it after any edit to `docs-teleprompter.html`.
 
 Live: https://claude.ai/code/artifact/6b5e7ad0-e8cd-4567-bae7-fd178dae5846
 
-*Screen recording script · outcome first · about 15 minutes of narration*
+*Screen recording script · outcome first · about 16 minutes of narration*
 
 The recording leads with the outcome, demonstrates the Fabric IQ experience,
 and only then explains the machinery underneath. Sections marked **ref** are
@@ -17,14 +17,15 @@ precisely rather than approximately.
 ## Before you hit record
 
 - Capacity `fabdemo85829` **Active 20+ minutes** — item editors lag a resume.
-- **Tab order is outcome-first now:** ontology (1:50) · **referral_queries** (3:10 — the queryset, this is where GQL runs) · graph model · latency (5:20) · gold lakehouse (6:20 validation, then 7:45 Files/contracts) · workspace (9:45) · bronze · silver · gold criteria · cohort agent (13:15) · Foundry (15:00). Run `tabs_ont.py` and it lands in this order.
+- **Tab order is outcome-first now:** **cohort agent** (0:00) · ontology (1:50) · **referral_queries** (3:10 — the queryset, this is where GQL runs) · graph model · latency (5:20) · gold lakehouse (6:20 validation, then 7:45 Files/contracts) · workspace (9:45) · bronze · silver · gold criteria · cohort agent (13:15) · Foundry (15:00). Run `tabs_ont.py` and it lands in this order.
 - Foundry tab on `referral-foundry-mcap` → project `genetic-referral`.
 - Terminal in the repo, `az login` done.
 - **Click every tab once** before recording — Fabric lazy-renders background tabs.
 - **Bind the queryset first, once.** Open `referral_queries` → *Use an existing model* → `referral_graph`. Do this before you record; the first time it asks, and after that it remembers. You run GQL in the **queryset**, not in the graph model — the model is only the schema.
 - **Visible but not walked:** `gold_graph_dimensions` (builds the graph's dimension tables), `agent_handoff_publisher` (writes the evidence contracts), `gold_cohort_summary` (the cohort agent's serving table). Know what they are in case someone asks.
 - Gold holds 16 tables, three of which are copies of silver — that is the graph's single-lakehouse requirement, and there is a line for it in the workspace section.
-- **You open on the ontology, not the workspace.** The first ninety seconds are spoken over the opening screen with no clicking — say the numbers, *then* show the canvas.
+- **You open on the cohort agent, not the workspace.** Say the three numbers first, then ask the agent for the state breakdown and let it corroborate. The narration never depends on its answer — if it stalls, carry on.
+- **Warm the agent before you record.** Ask it `How many patients are in each referral state?` once and discard the answer. First call after a capacity resume is slow, and the model intermittently returns `invalid_prompt` — you want that to happen in rehearsal, not in the take.
 
 ## What is what — nothing here lives inside a lakehouse
 
@@ -58,19 +59,30 @@ python scripts/foundry/test_gates.py     # 13/13
 
 ## 0:00 · What it produces
 
+*Open on the **cohort agent** tab, chat pane empty. Nothing else on screen for the first minute.*
+
 > This is a case-finding pipeline in Microsoft Fabric, built for **SickKids**.
 
 > The ask was one line: **use agentic intelligence to identify patients early for genetic consultation or testing.**
 
 > Children with undiagnosed rare conditions get referred late because their findings are spread across different clinics and different visits. No single clinician sees all of them. The data is in the chart already; it is just not in one place.
 
-`— beat · the numbers, before any screen —`
+`— beat · say the numbers, then ask for them —`
 
-> Here is what the pipeline outputs, before I show you any of it. Two thousand four hundred patients in, **two hundred and twenty** flagged for genetics review. Each one comes with the specific reason it was flagged.
+> Two thousand four hundred patients in. **Two hundred and twenty** flagged for genetics review — nine point two per cent. One thousand seven hundred and sixty-six where the record was read and nothing fired. Four hundred and fourteen with too little record to read at all.
 
-> For those two hundred and twenty, the findings that triggered the flag had been in the record for a median of **eight point seven months**. Thirty-eight per cent of them, over a year.
+*Now type it and send. Keep talking while it runs — about fifteen seconds.*
 
-> We also measured what it misses. It catches **eighty-seven point eight per cent** of affected patients where no interpreter is needed, and **seventy-five point two** where one is. I will show you that number and where it comes from.
+
+```
+How many patients are in each referral state?
+```
+
+`— TYPE NOW: “How many patients are in each referral state?” · send · keep talking —`
+
+> That is the cohort agent answering off the gold tables, not me reading a slide. And notice it returns the caveat with each figure — the middle state does not mean the patient is clear, it means nothing was found in the record.
+
+> Two more numbers I will come back to. The findings that triggered each flag had been sitting in the record for a median of **eight point seven months**, thirty-eight per cent of them over a year. And the screen catches **eighty-seven point eight per cent** of affected patients where no interpreter is needed, **seventy-five point two** where one is.
 
 `— beat —`
 
@@ -78,10 +90,12 @@ python scripts/foundry/test_gates.py     # 13/13
 
 > And the data is synthetic. Two thousand four hundred generated patients. **No SickKids data**, and no connection to any SickKids system.
 
-> So — the output first, then the code behind it.
+> That agent is one of three, and it is the least constrained of them — I will come back to why that matters. First, where the definitions it just used are declared.
+
+**Note.** **If the agent stalls or returns `invalid_prompt`.** Keep going — you have already said the numbers, so nothing in the narration depends on it. Say "that one is intermittent, I will come back to it" and pick up at the ontology. Do not re-send mid-take; the retry lands in the middle of the next section.
 
 
-## 1:50 · The ontology
+## 2:05 · The ontology
 
 *Open `referral_ontology`. Let the canvas render — six entity types and the relationships between them.*
 
@@ -110,7 +124,7 @@ python scripts/foundry/test_gates.py     # 13/13
 **Note.** **Preview.** Ontology is in preview and we enabled it in this tenant for this build. If someone asks how long it took: flip the tenant setting, then about ten minutes before the service honoured it. Worth saying plainly rather than pretending it was instant.
 
 
-## 3:10 · The graph — checking a flag
+## 3:25 · The graph — checking a flag
 
 *Switch to `referral_queries` — the **graph queryset**, which is the thing you run queries in. The graph model itself is just the schema. Paste the query and press **Run**.*
 
@@ -162,7 +176,7 @@ GROUP BY specialty ORDER BY children DESC
 **Note.** **Get this exactly right.** Ontology and graph are both **Fabric IQ** components — Microsoft defines Fabric IQ as ontologies, semantic models, graphs and data agents. Both are real here and both are on screen. What you must **not** say is that the ontology found the children — the named criteria in gold do that, deterministically, and that separation is the point of the whole demo.
 
 
-## 5:20 · Latency — how long the data sat there
+## 5:35 · Latency — how long the data sat there
 
 *Open the **notebook** `gold_signal_latency`, or just show the figures.*
 
@@ -185,7 +199,7 @@ GROUP BY specialty ORDER BY children DESC
 **Note.** **Be precise about the claim.** The synthetic record contains no referral events, so this says the evidence has been **sufficient** since that date. It does **not** say a referral was missed or late. On real data, comparing the qualifying date against the actual referral date is the number you would want — and the obvious next thing to build.
 
 
-## 6:20 · Sensitivity, split by interpreter need
+## 6:35 · Sensitivity, split by interpreter need
 
 *Show the **table** `gold_validation_sensitivity` (inside `gold_lakehouse`), or run the interpreter query on the graph.*
 
@@ -214,7 +228,7 @@ GROUP BY specialty ORDER BY children DESC
 **Note.** **If asked how you know the sensitivity:** the cohort is synthetic and carries an answer key. A real deployment cannot compute this — which is precisely the argument for the synthetic cohort. It measures what production never shows you: not how many flagged children turn out to be affected, but how many affected children were never flagged. Be equally plain that the **absolute** figure is close to circular; the **gap between groups** is not, because both were planted identically.
 
 
-## 7:45 · The brief, and the four checks
+## 8:00 · The brief, and the four checks
 
 *Terminal. Run it, then open the brief on screen — this section is about the *document*, not the pipeline.*
 
@@ -242,7 +256,7 @@ python scripts/foundry/create_referral_agent.py \
 **Note.** **If it fails** with `invalid_prompt: Unsupported parameter 'top_p'` — that is a service-side intermittent, not your fault and not a configuration error. Re-run the same command; it works on the retry.
 
 
-## 9:25 · How it works
+## 9:40 · How it works
 
 *Back to the workspace list.*
 
@@ -251,7 +265,7 @@ python scripts/foundry/create_referral_agent.py \
 > Three parts worth looking at: how the record gets conformed, how the criteria are written, and what each agent can reach.
 
 
-## 9:45 · The workspace
+## 10:00 · The workspace
 
 *Click into the workspace list.*
 
@@ -266,7 +280,7 @@ python scripts/foundry/create_referral_agent.py \
 *If anyone notices gold holds copies of some silver tables — `gold_encounters`, `gold_observations`, `gold_hpo_terms` — have this ready:*
 
 
-## 10:15 · Bronze — the raw record
+## 10:30 · Bronze — the raw record
 
 *Open the **notebook** `bronze_clinical_record` from the workspace list. Header, then the cohort cell.*
 
@@ -279,7 +293,7 @@ python scripts/foundry/create_referral_agent.py \
 > That is deliberate. If the input is clean, the pipeline never exercises the parts that matter.
 
 
-## 11:00 · Silver — null is not false
+## 11:15 · Silver — null is not false
 
 *Open the **notebook** `silver_conformed_record`. The family history cell.*
 
@@ -298,7 +312,7 @@ python scripts/foundry/create_referral_agent.py \
 > This is also where that twelve-point gap comes from. The criteria read recorded findings. Fewer findings recorded means fewer patients flagged.
 
 
-## 12:00 · Gold — the criteria
+## 12:15 · Gold — the criteria
 
 *Open the **notebook** `gold_referral_signals`. The `CRITERIA` cell.*
 
@@ -323,7 +337,7 @@ python scripts/foundry/create_referral_agent.py \
 > Every threshold in that dict is a placeholder. They need sign-off from the SickKids genetics service. They are in a table so that is a concrete review rather than a conversation about the code.
 
 
-## 13:15 · Three agents, and what each can reach
+## 13:30 · Three agents, and what each can reach
 
 *Third word: **agentic**. This is the one that does not mean what you might assume.*
 
@@ -341,14 +355,14 @@ python scripts/foundry/create_referral_agent.py \
 
 > Second agent answers vocabulary questions from a Foundry IQ knowledge base — thirty-one documents, no patient data indexed. Ask it which patients were flagged and it returns design docs, because there is nothing else in there to return.
 
-> Third is a Fabric data agent over the gold lakehouse. This is the one to look at hardest, because it can reach every patient row. Its limits are prompt instructions, and instructions are weaker than not having access.
+> Third is the agent I opened with — a Fabric data agent over the gold lakehouse. This is the one to look at hardest, because it can reach every patient row. Its limits are prompt instructions, and instructions are weaker than not having access.
 
 `— third agent —`
 
 > So it is pointed at `gold_cohort_summary` — precomputed aggregates with the caveats stored as columns. Where you can enforce scope structurally, do that. Where you cannot, be explicit that you have not.
 
 
-## 15:00 · Fabric and Foundry — which does what
+## 15:15 · Fabric and Foundry — which does what
 
 *No screen needed. Say this over the workspace, or over the brief you just produced.*
 
@@ -375,7 +389,7 @@ python scripts/foundry/create_referral_agent.py \
 **Note.** **Two things to keep straight.** The ontology, the graph and the data agent are all **Fabric IQ** components, and all three are live and populated here — six entity types, five relationship types, nineteen bound properties. And Foundry IQ does **not** take Fabric IQ as a knowledge source; its sources are Blob, SharePoint, OneLake and the web. The two are used together, not plugged into one another.
 
 
-## 16:05 · Close
+## 16:20 · Close
 
 > Recap. Criteria you can read in a table. Three states kept separate. Evidence you can walk in the graph. Latency computed per patient. And a sensitivity check split by interpreter need.
 
@@ -587,4 +601,4 @@ encounterWithSpecialty  Encounter -> Specialty    via gold_encounters     encoun
 
 ---
 
-2034 spoken words — about 15 minutes of narration at a measured pace, nearer 18 recorded once page loads and query runs are in.
+2101 spoken words — about 15 minutes of narration at a measured pace, nearer 18 recorded once page loads and query runs are in.
