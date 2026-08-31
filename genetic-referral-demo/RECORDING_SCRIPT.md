@@ -211,9 +211,13 @@ ORDER BY system, feature
 
 > This is one of the forty-four — a patient the coded feed alone would never have surfaced. They were flagged for findings spanning multiple body systems. The query walks patient, to findings, to body systems — so you can check the flag rather than trust it.
 
-*Results: cardiac · neurodevelopment ×2 · neurology · skeletal.*
+*Results — five rows. **Small for gestational age** / growth / *note extraction*. Seizure / neurology, twice: once *Clinician*, once *note extraction*. Scoliosis / skeletal, the same pair.*
 
-> And look at `recordedBy` on each edge. Most say *Clinician*. Some say *note extraction* — that finding reached the graph from a sentence, not a coded field. Same evidence chain, different origin, both auditable back to a row.
+> Look at `recordedBy`. Seizure and scoliosis were both coded *and* described in a note. But **small for gestational age** only ever appears in prose.
+
+> And that is the one that matters. On coded evidence this patient has findings in two body systems — neurology and skeletal. The criterion needs three. The note adds growth, and that is what takes them over the line.
+
+> So this is not a patient the coded pipeline scored slightly lower. It is a patient it could not see at all — and you can walk exactly why, back to the sentence it came from.
 
 *Second query.*
 
@@ -228,9 +232,9 @@ GROUP BY specialty ORDER BY children DESC
 
 > Second query, different question. Not who got flagged — who did not, and which clinics they are sitting in.
 
-*Results: General Paediatrics 801 · Cardiology 794 · ENT 785 · Developmental Paediatrics 776 · Neurology 769 · Orthopaedics 754.*
+*Results: General Paediatrics 778 · Cardiology 771 · ENT 759 · Developmental Paediatrics 755 · Neurology 743 · Orthopaedics 736.*
 
-> Eight hundred patients with no indicators recorded are in General Paediatrics. Nearly eight hundred more across Cardiology and ENT. Most are fine. But the screen does miss patients, and this is where the missed ones sit.
+> Nearly eight hundred patients with no indicators recorded are in General Paediatrics. Around seven hundred and fifty each across Cardiology, ENT and Developmental Paediatrics. Most are fine. But the screen does miss patients, and this is where the missed ones sit.
 
 `— beat —`
 
@@ -514,7 +518,7 @@ qualifying_date = earliest( first sufficient , second contributory )
 latency         = cutoff - qualifying_date
 ```
 
-***Results:** median 8.7 months · mean 10.7 · p90 21.0 · longest 32.9. 83 of 220 — 38% — over a year. Qualified by a sufficient criterion: 144 children, median 8.1 months. By combination: 76 children, median 9.9.*
+***Results:** median 12.0 months · 50% over a year · longest 32.9. 83 of 220 — 38% — over a year. Qualified by a sufficient criterion: 144 children, median 8.1 months. By combination: 76 children, median 9.9.*
 
 **Note.** **The claim it makes, precisely.** The evidence has been **sufficient** since that date. It does **not** say a referral was missed — the synthetic record contains no referral events at all. On real data, qualifying date against actual referral date is the number worth having.
 
@@ -594,7 +598,7 @@ provenance { run_id, reference_source, reference_read_on, note }
 
 ```
 Fabric IQ component   status here
-graph                 USED   referral_graph, 18,731 nodes / 35,216 edges
+graph                 USED   referral_graph, 18,731 nodes / 37,216 edges
 data agent            USED   referral_cohort_agent over gold_cohort_summary
 semantic model        not used -- the graph carries the semantics instead
 ontology              USED   referral_ontology, 6 entity types / 5 relationship types
@@ -644,7 +648,7 @@ encounterWithSpecialty  Encounter -> Specialty    via gold_encounters     encoun
 
 ***Running queries:** a graph model holds the schema and the data; a **graph queryset** is the surface you query from. Bind the queryset to the model once via *Use an existing model*. The portal path is `/graph-queryset/{id}` — hyphenated, which guessed deep links get wrong.*
 
-***Loading:** creating the model fires a Refresh job automatically — 3½ minutes for 18,731 nodes and 35,216 edges. In the portal that is the **Save** button; save and ingest are one operation, so every save reloads the data.*
+***Loading:** creating the model fires a Refresh job automatically — 3½ minutes for 18,731 nodes and 37,216 edges. In the portal that is the **Save** button; save and ingest are one operation, so every save reloads the data.*
 
 **Note.** **Why gold holds copies of silver.** An edge whose two endpoints and its own source table are not all in the same lakehouse is **silently dropped at load** — the refresh reports Completed with a null failure reason and the definition still lists the edge type. Four of five edge types vanished this way before every source was moved into gold. Always count edges by label after a load; never trust Completed.
 
@@ -654,4 +658,4 @@ encounterWithSpecialty  Encounter -> Specialty    via gold_encounters     encoun
 
 ---
 
-2296 spoken words — about 16 minutes of narration at a measured pace, nearer 18 recorded once page loads and query runs are in.
+2362 spoken words — about 17 minutes of narration at a measured pace, nearer 18 recorded once page loads and query runs are in.

@@ -344,8 +344,8 @@ ORDER BY system, feature</pre>
     <p class="say">You cannot ask a table why. This is the graph — the same entities, made traversable. You write GQL against it instead of joining six tables by hand.</p>
     <p class="beat">— if someone asks why both —</p>
     <p class="say">This is one of the forty-four — a patient the coded feed alone would never have surfaced. They were flagged for findings spanning multiple body systems. The query walks patient, to findings, to body systems — so you can check the flag rather than trust it.</p>
-    <p class="do">Results: cardiac · neurodevelopment ×2 · neurology · skeletal.</p>
-    <p class="say">And look at <code class="inl">recordedBy</code> on each edge. Most say <em>Clinician</em>. Some say <em>note extraction</em> — that finding reached the graph from a sentence, not a coded field. Same evidence chain, different origin, both auditable back to a row.</p>
+    <p class="do">Results — five rows. <strong>Small for gestational age</strong> / growth / <em>note extraction</em>. Seizure / neurology, twice: once <em>Clinician</em>, once <em>note extraction</em>. Scoliosis / skeletal, the same pair.</p>
+    <p class="say">Look at <code class="inl">recordedBy</code>. Seizure and scoliosis were both coded <em>and</em> described in a note. But <strong>small for gestational age</strong> only ever appears in prose.</p><p class="say">And that is the one that matters. On coded evidence this patient has findings in two body systems — neurology and skeletal. The criterion needs three. The note adds growth, and that is what takes them over the line.</p><p class="say">So this is not a patient the coded pipeline scored slightly lower. It is a patient it could not see at all — and you can walk exactly why, back to the sentence it came from.</p>
     <p class="do">Second query.</p>
 <pre>MATCH (p:Patient)-[:attendedEncounter]-&gt;(:Encounter)
       -[:encounterWithSpecialty]-&gt;(s:Specialty)
@@ -353,8 +353,8 @@ WHERE p.referralState = 'no_indicators_recorded'
 RETURN s.specialty AS specialty, COUNT(DISTINCT p) AS children
 GROUP BY specialty ORDER BY children DESC</pre>
     <p class="say">Second query, different question. Not who got flagged — who did not, and which clinics they are sitting in.</p>
-    <p class="do">Results: General Paediatrics 801 · Cardiology 794 · ENT 785 · Developmental Paediatrics 776 · Neurology 769 · Orthopaedics 754.</p>
-    <p class="say">Eight hundred patients with no indicators recorded are in General Paediatrics. Nearly eight hundred more across Cardiology and ENT. Most are fine. But the screen does miss patients, and this is where the missed ones sit.</p>
+    <p class="do">Results: General Paediatrics 778 · Cardiology 771 · ENT 759 · Developmental Paediatrics 755 · Neurology 743 · Orthopaedics 736.</p>
+    <p class="say">Nearly eight hundred patients with no indicators recorded are in General Paediatrics. Around seven hundred and fifty each across Cardiology, ENT and Developmental Paediatrics. Most are fine. But the screen does miss patients, and this is where the missed ones sit.</p>
     <p class="beat">— beat —</p>
     <p class="do">If asked how the graph was built — and someone will:</p>
     <p class="beat">— beat —</p>
@@ -536,7 +536,7 @@ cumulative undiagnosed admits   -&gt; the second one            REPEAT_UNDIAGNOS
 
 qualifying_date = earliest( first sufficient , second contributory )
 latency         = cutoff - qualifying_date</pre>
-    <p class="do"><strong>Results:</strong> median 8.7 months · mean 10.7 · p90 21.0 · longest 32.9. 83 of 220 — 38% — over a year. Qualified by a sufficient criterion: 144 children, median 8.1 months. By combination: 76 children, median 9.9.</p>
+    <p class="do"><strong>Results:</strong> median 12.0 months · 50% over a year · longest 32.9. 83 of 220 — 38% — over a year. Qualified by a sufficient criterion: 144 children, median 8.1 months. By combination: 76 children, median 9.9.</p>
     <p class="note"><b>The claim it makes, precisely.</b> The evidence has been <b>sufficient</b> since that date. It does <b>not</b> say a referral was missed — the synthetic record contains no referral events at all. On real data, qualifying date against actual referral date is the number worth having.</p>
   </section>
 
@@ -587,7 +587,7 @@ provenance { run_id, reference_source, reference_read_on, note }</pre>
     <p class="note"><b>The honest seam.</b> Fabric answers "who, and on what evidence". Foundry answers "what may be said about them, and can you prove it stayed inside that". The cohort agent sits awkwardly across the line — it is a Fabric agent with the widest reach and only instructions restraining it, which is precisely why it reads a summary table rather than the raw records.</p>
     <p class="do"><strong>What Fabric IQ is, per Microsoft:</strong> a semantic intelligence layer for Fabric, made of <em>ontologies, semantic models, graphs and data agents</em>, so agents can reason over analytics in OneLake and Power BI.</p>
 <pre>Fabric IQ component   status here
-graph                 USED   referral_graph, 18,731 nodes / 35,216 edges
+graph                 USED   referral_graph, 18,731 nodes / 37,216 edges
 data agent            USED   referral_cohort_agent over gold_cohort_summary
 semantic model        not used -- the graph carries the semantics instead
 ontology              USED   referral_ontology, 6 entity types / 5 relationship types</pre>
@@ -617,7 +617,7 @@ encounterWithSpecialty  Encounter -&gt; Specialty    via gold_encounters     enc
     <p class="do"><code class="inl">gold_hpo_terms</code> and <code class="inl">gold_encounters</code> each appear twice — once as a node table, once as an edge table. A table holding both an entity and its relationship serves both roles.</p>
     <p class="do"><strong>Why body systems and specialties got their own tables:</strong> a node key must be unique. Pointing <code class="inl">BodySystem</code> at <code class="inl">gold_hpo_terms</code> would offer sixteen rows for seven systems.</p>
     <p class="do"><strong>Running queries:</strong> a graph model holds the schema and the data; a <strong>graph queryset</strong> is the surface you query from. Bind the queryset to the model once via <em>Use an existing model</em>. The portal path is <code class="inl">/graph-queryset/{id}</code> — hyphenated, which guessed deep links get wrong.</p>
-    <p class="do"><strong>Loading:</strong> creating the model fires a Refresh job automatically — 3½ minutes for 18,731 nodes and 35,216 edges. In the portal that is the <strong>Save</strong> button; save and ingest are one operation, so every save reloads the data.</p>
+    <p class="do"><strong>Loading:</strong> creating the model fires a Refresh job automatically — 3½ minutes for 18,731 nodes and 37,216 edges. In the portal that is the <strong>Save</strong> button; save and ingest are one operation, so every save reloads the data.</p>
     <p class="note"><b>Why gold holds copies of silver.</b> An edge whose two endpoints and its own source table are not all in the same lakehouse is <b>silently dropped at load</b> — the refresh reports Completed with a null failure reason and the definition still lists the edge type. Four of five edge types vanished this way before every source was moved into gold. Always count edges by label after a load; never trust Completed.</p>
   </section>
 
