@@ -1,28 +1,30 @@
 # Screen recording script — genetic referral case-finding
 
-Generated from the teleprompter, so the two cannot drift.
+Generated from the teleprompter by `scripts/make_recording_script.py`,
+so the two cannot drift. Re-run it after any edit to `docs-teleprompter.html`.
+
 Live: https://claude.ai/code/artifact/6b5e7ad0-e8cd-4567-bae7-fd178dae5846
 
-The use case, in one sentence: **use agentic intelligence to identify patients
-early for genetic consultation or testing.** The script is built around the three
-words that do the work — *identify*, *early*, *agentic* — and is honest about the
-one that does not mean what people assume.
+*Screen recording script · outcome first · about 17 minutes of narration*
 
-Sections marked **ref** are not spoken. They exist so you can answer
-"how does that actually work?" precisely rather than approximately.
+The recording leads with the outcome, demonstrates the Fabric IQ experience,
+and only then explains the machinery underneath. Sections marked **ref** are
+not spoken; they exist so you can answer "how does that actually work?"
+precisely rather than approximately.
 
 > Quoted text is what you say. *Italic* is what you do.
 
 ## Before you hit record
 
 - Capacity `fabdemo85829` **Active 20+ minutes** — item editors lag a resume.
-- Fabric tabs in order: workspace · bronze · silver · gold criteria · **referral_queries** (the queryset — this is where GQL runs) · **latency** · validation · gold lakehouse.
+- **Tab order is outcome-first now:** ontology · **referral_queries** (the queryset — this is where GQL runs) · graph model · latency · gold lakehouse (validation, then Files/contracts) · workspace · bronze · silver · gold criteria · cohort agent · Foundry. Run `tabs_ont.py` and it lands in this order.
 - Foundry tab on `referral-foundry-mcap` → project `genetic-referral`.
 - Terminal in the repo, `az login` done.
 - **Click every tab once** before recording — Fabric lazy-renders background tabs.
 - **Bind the queryset first, once.** Open `referral_queries` → *Use an existing model* → `referral_graph`. Do this before you record; the first time it asks, and after that it remembers. You run GQL in the **queryset**, not in the graph model — the model is only the schema.
 - **Visible but not walked:** `gold_graph_dimensions` (builds the graph's dimension tables), `agent_handoff_publisher` (writes the evidence contracts), `gold_cohort_summary` (the cohort agent's serving table). Know what they are in case someone asks.
 - Gold holds 16 tables, three of which are copies of silver — that is the graph's single-lakehouse requirement, and there is a line for it in the workspace section.
+- **You open on the ontology, not the workspace.** The first two minutes are spoken over the opening screen with no clicking — say the numbers, *then* show the canvas.
 
 ## What is what — nothing here lives inside a lakehouse
 
@@ -39,7 +41,7 @@ Sections marked **ref** are not spoken. They exist so you can answer
 ## Verify — seconds each
 
 
-```bash
+```
 python scripts/fabric/query_graph.py     # 7/7
 python scripts/foundry/test_gates.py     # 13/13
 ```
@@ -54,49 +56,217 @@ python scripts/foundry/test_gates.py     # 13/13
 - **Graph** — 18,731 nodes · 35,216 edges
 - **Knowledge base** — 31 documents
 
----
-
-## 0:00 · Open cold
+## 0:00 · What it produces — before anything is shown
 
 > This is case-finding in Microsoft Fabric, built for **SickKids** — the Hospital for Sick Children.
 
-> One clarification first. **This is not a genomics project.** No genome, no variant, no test result. Nothing here reads genetic data of any kind.
+> The use case, as it was put to us, is one sentence: **use agentic intelligence to identify patients early for genetic consultation or testing.**
 
-> The question comes *before* genetics gets involved: which children, already at SickKids, should somebody be looking at sooner than they currently are.
+> Children with undiagnosed rare conditions spend years in a diagnostic odyssey. Many specialists, many investigations, no unifying answer — because no single clinician ever sees the whole pattern. The signals are already in the chart. They are just scattered across it.
 
-*— — beat · state the use case — —*
+`— beat · the outcome, up front —`
 
-> The use case is one sentence: **use agentic intelligence to identify patients early for genetic consultation or testing.**
+> So before I show you anything, here is what this produces. Out of two thousand four hundred children, it surfaces **two hundred and twenty** for a genetics conversation — each one with a named reason a clinician can read and disagree with.
 
-> Three words do the real work — **identify**, **early** and **agentic** — and I will show you what each one means here.
+> For those children, the evidence had been sitting complete in the record for a median of **nearly nine months**. Thirty-eight per cent of them, for over a year. That is the delay this is trying to close.
 
-*— — beat — —*
+> And it tells you who it misses. It finds **eighty-eight per cent** of affected children whose families do not need an interpreter, and **seventy-five per cent** of those who do. That gap is measured, not estimated, and I will come back to it.
 
-> Children with undiagnosed rare conditions spend years in a diagnostic odyssey. Many specialists, many investigations, no unifying answer — because no single clinician ever sees the whole pattern.
+`— beat —`
 
-> The signals are already in the chart. They are just scattered across it.
+> Two clarifications. **This is not a genomics project** — no genome, no variant, no test result. The question comes *before* genetics gets involved: which children, already at SickKids, should somebody be looking at sooner.
 
----
+> And every child in here is fabricated. **No SickKids data was used.** No record touched, no system connected, and nobody had to give us access to anything to build this.
 
-## 1:00 · The workspace
+> Let me show you the thing itself, and then how it works.
+
+
+## 2:00 · The ontology — where the domain is declared
+
+*Open `referral_ontology`. Let the canvas render — six entity types and the relationships between them.*
+
+> So — this. This is the ontology, and it is where the domain of this problem gets declared. Not in a report, not buried in somebody's SQL. Here, in one place.
+
+> And this is **Fabric IQ** — ontologies, semantic models, graphs and data agents. This is the ontology component, and it is what the rest of this reads from.
+
+`— walk the canvas —`
+
+> Six entity types: a **Patient**, a **Feature** — an observable clinical finding — the **BodySystem** it belongs to, a **Criterion**, an **Encounter**, and the **Specialty** it happened in.
+
+> And five relationships: a patient *has* a feature, a feature is *in* a body system, a patient is *surfaced by* a criterion, *attends* an encounter, an encounter is *with* a specialty. The model of this problem, written down once.
+
+`— the part that matters —`
+
+> And none of it is a copy. Every entity type is bound to a table in gold — nineteen properties, each mapped to a real column. Not a diagram somebody drew in a workshop. Attached to the data.
+
+> That is the difference between a data model and a semantic layer. A data model tells you how the bytes are arranged. This tells you what they *mean* — and it tells the same thing to the query, the agent and the clinician, because there is only one of it.
+
+`— name it —`
+
+> Which means you can ask it about a particular child.
+
+**Note.** **Be accurate about what is new here.** The ontology and the graph declare the *same* six entities and five relationships against the *same* gold tables. That is deliberate — one model, expressed once. Do not claim the ontology found anything the criteria did not; it does not compute the criteria. What it changes is that the meaning now lives in one declared place instead of being implied by a notebook.
+
+**Note.** **Preview.** Ontology is in preview and we enabled it in this tenant for this build. If someone asks how long it took: flip the tenant setting, then about ten minutes before the service honoured it. Worth saying plainly rather than pretending it was instant.
+
+
+## 3:45 · The graph — the criterion, walked
+
+*Switch to `referral_queries` — the **graph queryset**, which is the thing you run queries in. The graph model itself is just the schema. Paste the query and press **Run**.*
+
+
+```
+MATCH (p:Patient)-[:hasFeature]->(f:Feature)-[:inBodySystem]->(b:BodySystem)
+WHERE p.patientId = 'SYN-00017'
+RETURN f.hpoLabel AS feature, b.bodySystem AS system
+ORDER BY system, feature
+```
+
+> You cannot ask a diagram a question. This is the graph — the same six entities and five relationships, made walkable. Eighteen thousand nodes, thirty-five thousand relationships, over the same gold tables.
+
+`— if someone asks why both —`
+
+> The ontology carries *meaning*. The graph carries *reach* — traversal, path finding, questions shaped like relationships rather than joins.
+
+> So when this child was surfaced because their features span multiple body systems, you do not have to take that on trust. You can walk it.
+
+*Results: cardiac · neurodevelopment ×2 · neurology · skeletal.*
+
+> There it is. Abnormal heart morphology — cardiac. Developmental regression and global developmental delay — neurodevelopment. Hypotonia — neurology. Scoliosis — skeletal. The criterion, made of its evidence.
+
+*Now the third query — the one worth the time.*
+
+
+```
+MATCH (p:Patient)-[:attendedEncounter]->(:Encounter)
+      -[:encounterWithSpecialty]->(s:Specialty)
+WHERE p.referralState = 'no_indicators_recorded'
+RETURN s.specialty AS specialty, COUNT(DISTINCT p) AS children
+GROUP BY specialty ORDER BY children DESC
+```
+
+> Now a different question. Not who we found — who we did *not*, and where those children turn up.
+
+*Results: General Paediatrics 801 · Cardiology 794 · ENT 785 · Developmental Paediatrics 776 · Neurology 769 · Orthopaedics 754.*
+
+> Eight hundred children the screen missed are sitting in General Paediatrics. Nearly eight hundred more in Cardiology, ENT and Developmental Paediatrics. Most are fine — but this screen *is* missing children, and in a moment I will show you by how much. That is the list of clinics they are sitting in.
+
+`— beat —`
+
+> That is why a graph rather than a table. Not because the answers are impossible in SQL — because the questions arrive in the shape of relationships.
+
+*If asked how the graph was built — and someone will:*
+
+`— beat —`
+
+**Note.** **Get this exactly right.** Ontology and graph are both **Fabric IQ** components — Microsoft defines Fabric IQ as ontologies, semantic models, graphs and data agents. Both are real here and both are on screen. What you must **not** say is that the ontology found the children — the named criteria in gold do that, deterministically, and that separation is the point of the whole demo.
+
+
+## 6:00 · How long it was already there
+
+*Open the **notebook** `gold_signal_latency`, or just show the figures.*
+
+*Second word: **early**. This is the section that earns it.*
+
+> That child surfaced because their features span multiple body systems. Here is the question that actually matters: *when did that become true?*
+
+> The sixth of March, twenty twenty-four. Twenty-nine months ago. Every feature the criterion needed was already coded, and had been for nearly two and a half years.
+
+`— beat · let it sit —`
+
+> Across all two hundred and twenty children surfaced, the median is nearly nine months. Thirty-eight per cent had complete, sufficient evidence sitting in the record for over a year. The longest is thirty-three months.
+
+> Nobody did anything wrong. Those features were recorded by different clinicians, in different clinics, months apart. No single person ever saw them together — which is exactly what a diagnostic odyssey is.
+
+> That is what the pipeline does. Not new information — the same information, joined up, on the day the pattern completed rather than years later.
+
+> That is what **early** means here, and it is measured rather than asserted.
+
+**Note.** **Be precise about the claim.** The synthetic record contains no referral events, so this says the evidence has been **sufficient** since that date. It does **not** say a referral was missed or late. On real data, comparing the qualifying date against the actual referral date is the number you would want — and the obvious next thing to build.
+
+
+## 7:15 · The finding that matters
+
+*Show the **table** `gold_validation_sensitivity` (inside `gold_lakehouse`), or run the interpreter query on the graph.*
+
+> Now the number I opened with, and where it comes from.
+
+> This cohort was generated so that children whose families need an interpreter have exactly the same underlying rate of clustered presentation as everybody else. Same biology. The only thing that differs is how much of it reached the record.
+
+*Point at the feature counts: 939 across 486 children, versus 766 across 467.*
+
+> Just under two features recorded per child where no interpreter is needed. About one point six where one is. Consultations run shorter, history-taking is harder, and description is less likely to land in a coded field. The screen can only read what somebody wrote down.
+
+*Switch to the sensitivity figures.*
+
+> Here is what that costs. The screen finds **eighty-eight per cent** of affected children in one group and **seventy-five per cent** in the other. A twelve-point gap, from identical planted prevalence.
+
+> And nothing in the criteria reads language or interpreter need. The notebook asserts that and fails the build if it ever stops being true.
+
+> A flag can be blind to a protected attribute and still reproduce the inequity attached to it. Excluding the column proves nothing; measuring the outcome is the only thing that shows it.
+
+`— beat · the most important sentence in the recording —`
+
+> And it points at the actual remedy — interpreter-supported history-taking, not a better model.
+
+**Note.** **If you also show latency by interpreter need, read it carefully.** It appears to say interpreter-needing children are found *sooner* — eight months against ten. That is **survivorship, not good news**: the screen only surfaces children whose evidence crossed the threshold, and fewer of their features reach the record, so the ones that do surface are the more florid cases. The subtler ones are not in that table because the screen never found them. They are in this sensitivity gap instead.
+
+**Note.** **If asked how you know the sensitivity:** the cohort is synthetic and carries an answer key. A real deployment cannot compute this — which is precisely the argument for the synthetic cohort. It measures what production never shows you: not how many flagged children turn out to be affected, but how many affected children were never flagged. Be equally plain that the **absolute** figure is close to circular; the **gap between groups** is not, because both were planted identically.
+
+
+## 8:45 · What a clinician receives, and the four gates
+
+*Terminal. Run it, then open the brief on screen — this section is about the *document*, not the pipeline.*
+
+
+```
+python scripts/foundry/create_referral_agent.py \
+    --evidence cicd/patient-evidence.SYN-00195.json \
+    --output cicd/referral-brief.SYN-00195.json
+```
+
+*While it drafts — about thirty seconds:*
+
+> And this is what a clinician actually receives. One child, one page — drafted by an agent that is handed a fixed envelope of evidence and cannot query anything at all.
+
+> Four gates run on whatever comes back. **Schema** — is it the right shape. **Citations** — does every claim point at evidence actually supplied. **Clinical safety** — no diagnosis, no named condition, no recommendation to refer, and no language that turns *nothing was recorded* into *nothing is wrong*.
+
+> And a fourth: does the brief state its own limitations. That is separate because gate three catches a bad sentence being present, and gate four catches a necessary sentence being absent. Absence is much harder to notice by reading.
+
+*Gates print. Open the brief; read the family history line aloud.*
+
+> This is the child where nobody ever took a family history. The agent writes: *Family history was not recorded, so nothing is known about it.*
+
+> Not *no significant family history*. That would be a different claim about a real child, and it would be false.
+
+**Note.** **If it fails** with `invalid_prompt: Unsupported parameter 'top_p'` — that is a service-side intermittent, not your fault and not a configuration error. Re-run the same command; it works on the retry.
+
+
+## 10:15 · Now — how it works
+
+*Back to the workspace list. Slow the pace here; the demonstration is over and the argument starts.*
+
+> That is the whole of it. Now how it works — because the how is what decides whether you would trust any of it.
+
+> Three things carry the weight: how the record is conformed before anything is counted, how the six criteria are written, and how much each of those agents is allowed to reach.
+
+
+## 10:45 · The workspace — one copy of everything
 
 *Click into the workspace list.*
 
-> One workspace. Three lakehouses — bronze, silver, gold. A pipeline running five notebooks end to end in about nine minutes. An ontology, a graph beneath it, and three agents.
-
-> And every child in here is fabricated — two thousand four hundred of them. **No SickKids data was used.** No record touched, no system connected, and nobody had to give us access to anything to build this.
-
-*Scroll the workspace list slowly while you say this.*
+> One workspace. Three lakehouses — bronze, silver, gold. A pipeline running five notebooks end to end in about nine minutes. The ontology, the graph beneath it, and three agents.
 
 > Bronze fetches the phenotype vocabulary and generates the record. Silver conforms it. Gold applies the criteria, measures how long the evidence sat there, and checks whether the flag lands evenly.
+
+*Scroll the workspace list slowly while you say this.*
 
 > All of it in one workspace. No copies, no exports, nothing leaving OneLake.
 
 *If anyone notices gold holds copies of some silver tables — `gold_encounters`, `gold_observations`, `gold_hpo_terms` — have this ready:*
 
----
 
-## 1:30 · Bronze — the record as it actually arrives
+## 11:15 · Bronze — the record as it actually arrives
 
 *Open the **notebook** `bronze_clinical_record` from the workspace list. Header, then the cohort cell.*
 
@@ -108,9 +278,8 @@ python scripts/foundry/test_gates.py     # 13/13
 
 > A demo on tidy data teaches you nothing. The hard part of this problem is that the record is not tidy.
 
----
 
-## 3:00 · Silver — the distinction everything rests on
+## 11:45 · Silver — the distinction everything rests on
 
 *Open the **notebook** `silver_conformed_record`. The family history cell.*
 
@@ -122,13 +291,14 @@ python scripts/foundry/test_gates.py     # 13/13
 
 *Point at `history_taken`.*
 
-> So `history_taken` is its own column, and the flags stay null — unknown — where nobody asked. Gold refuses to score on an absence.
+> So `history_taken` is its own column, and the flags stay null where nobody asked. Gold refuses to score on an absence.
 
-> The same reasoning gives a third state later: a child whose record is too short to read is *not screened*, which is not screened and clear.
+> A child whose record is too short to read gets a third state — *not screened*, which is not screened and clear.
 
----
+> And this cell is where that twelve-point gap comes from. The screen reads what was written down. Where less gets written down, less gets found.
 
-## 4:30 · Gold — named criteria, two tiers, no score
+
+## 12:45 · Gold — named criteria, two tiers, no score
 
 *Open the **notebook** `gold_referral_signals`. The `CRITERIA` cell.*
 
@@ -148,148 +318,12 @@ python scripts/foundry/test_gates.py     # 13/13
 
 > The middle one gets misread. It does not mean the child has no indication — it means nothing was found in the record. A child whose features were never coded looks exactly like a child who does not have them, and the pipeline does not pretend to tell them apart.
 
-*— — beat — —*
+`— beat —`
 
 > Every threshold is a **placeholder**, pending sign-off by the SickKids genetics service. Written as a table, so that conversation is about something a clinician can mark up.
 
----
 
-## 6:30 · The ontology — where the domain is declared
-
-*Open `referral_ontology`. Let the canvas render — six entity types and the relationships between them.*
-
-> Everything so far has been tables. Useful — but a table does not know what it *is*.
-
-> This does. This is the ontology, and it is where the domain gets declared. Not in a report, not in somebody's SQL — here.
-
-*— — walk the canvas — —*
-
-> Six entity types: a **Patient**, a **Feature** — an observable clinical finding — the **BodySystem** it belongs to, a **Criterion**, an **Encounter**, and the **Specialty** it happened in.
-
-> And five relationships: a patient *has* a feature, a feature is *in* a body system, a patient is *surfaced by* a criterion, *attends* an encounter, an encounter is *with* a specialty. The model of this problem, written down once.
-
-*— — the part that matters — —*
-
-> And none of it is a copy. Every entity type is bound to a table in gold — nineteen properties, each mapped to a real column. So this is not a diagram somebody drew in a workshop. It is attached to the data.
-
-> That is the difference between a data model and a semantic layer. A data model tells you how the bytes are arranged. This tells you what they *mean* — and tells the same thing to the query, the agent and the clinician, because there is only one of it.
-
-*— — name it — —*
-
-> And this is **Fabric IQ**: ontologies, semantic models, graphs and data agents. This is the ontology component.
-
-> **NOTE** — **Be accurate about what is new here.** The ontology and the graph declare the *same* six entities and five relationships against the *same* gold tables. That is deliberate — one model, expressed once. Do not claim the ontology found anything the criteria did not; it does not compute the criteria. What it changes is that the meaning now lives in one declared place instead of being implied by a notebook.
-
-> **NOTE** — **Preview.** Ontology is in preview and we enabled it in this tenant for this build. If someone asks how long it took: flip the tenant setting, then about ten minutes before the service honoured it. Worth saying plainly rather than pretending it was instant.
-
----
-
-## 8:00 · The graph — the criterion, walked
-
-*Switch to `referral_queries` — the **graph queryset**, which is the thing you run queries in. The graph model itself is just the schema. Paste the query and press **Run**.*
-
-```
-MATCH (p:Patient)-[:hasFeature]->(f:Feature)-[:inBodySystem]->(b:BodySystem)
-WHERE p.patientId = 'SYN-00017'
-RETURN f.hpoLabel AS feature, b.bodySystem AS system
-ORDER BY system, feature
-```
-
-> You cannot ask a diagram a question. This is the graph — the same six entities and five relationships, made walkable. Eighteen thousand nodes, thirty-five thousand relationships, over the same gold tables.
-
-*— — if someone asks why both — —*
-
-> The ontology carries *meaning*. The graph carries *reach* — traversal, path finding, questions shaped like relationships rather than joins.
-
-> So when the pipeline says this child surfaced because their features span multiple body systems, you do not have to take it on trust. You can walk it.
-
-*Results: cardiac · neurodevelopment ×2 · neurology · skeletal.*
-
-> There it is. Abnormal heart morphology — cardiac. Developmental regression and global developmental delay — neurodevelopment. Hypotonia — neurology. Scoliosis — skeletal. The criterion, made of its evidence.
-
-*Now the third query — the one worth the time.*
-
-```
-MATCH (p:Patient)-[:attendedEncounter]->(:Encounter)
-      -[:encounterWithSpecialty]->(s:Specialty)
-WHERE p.referralState = 'no_indicators_recorded'
-RETURN s.specialty AS specialty, COUNT(DISTINCT p) AS children
-GROUP BY specialty ORDER BY children DESC
-```
-
-> Now a different question. Not who we found — who we did *not*, and where those children turn up.
-
-*Results: General Paediatrics 801 · Cardiology 794 · ENT 785 · Developmental Paediatrics 776 · Neurology 769 · Orthopaedics 754.*
-
-> Eight hundred children the screen missed are sitting in General Paediatrics. Nearly eight hundred more in Cardiology, ENT and Developmental Paediatrics. Most are fine — but if this screen is missing children, and the next section shows that it is, that is the list of clinics they are sitting in.
-
-*— — beat — —*
-
-> That is why a graph rather than a table. Not because the answers are impossible in SQL — because the questions arrive in the shape of relationships.
-
-*If asked how the graph was built — and someone will:*
-
-*— — beat — —*
-
-> **NOTE** — **Get this exactly right.** Ontology and graph are both **Fabric IQ** components — Microsoft defines Fabric IQ as ontologies, semantic models, graphs and data agents. Both are real here and both are on screen. What you must **not** say is that the ontology found the children — the named criteria in gold do that, deterministically, and that separation is the point of the whole demo.
-
----
-
-## 10:00 · How long it was already there
-
-*Open the **notebook** `gold_signal_latency`, or just show the figures.*
-
-*Second word: **early**. This is the section that earns it.*
-
-> That child surfaced because their features span multiple body systems. Here is the question that actually matters: *when did that become true?*
-
-> The sixth of March, twenty twenty-four. Twenty-nine months ago. Every feature the criterion needed was already coded, and had been for nearly two and a half years.
-
-*— — beat · let it sit — —*
-
-> Across all two hundred and twenty children surfaced, the median is nearly nine months. Thirty-eight per cent had complete, sufficient evidence sitting in the record for over a year. The longest is thirty-three months.
-
-> Nobody did anything wrong. Those features were recorded by different clinicians, in different clinics, months apart. No single person ever saw them together — which is exactly what a diagnostic odyssey is.
-
-> That is what the pipeline does. Not new information — the same information, joined up, on the day the pattern completed rather than years later.
-
-> That is what **early** means here, and it is measured rather than asserted.
-
-> **NOTE** — **Be precise about the claim.** The synthetic record contains no referral events, so this says the evidence has been **sufficient** since that date. It does **not** say a referral was missed or late. On real data, comparing the qualifying date against the actual referral date is the number you would want — and the obvious next thing to build.
-
----
-
-## 12:00 · The finding that matters
-
-*Show the **table** `gold_validation_sensitivity` (inside `gold_lakehouse`), or run the interpreter query on the graph.*
-
-> Now the part I would not want you to miss.
-
-> This cohort was generated so that children whose families need an interpreter have exactly the same underlying rate of clustered presentation as everybody else. Same biology. The only thing that differs is how much of it reached the record.
-
-*Point at the feature counts: 939 across 486 children, versus 766 across 467.*
-
-> Just under two features recorded per child where no interpreter is needed. About one point six where one is. Consultations run shorter, history-taking is harder, and description is less likely to land in a coded field.
-
-*Switch to the sensitivity figures.*
-
-> Here is what that costs. The screen finds **eighty-eight per cent** of affected children in one group and **seventy-five per cent** in the other. A twelve-point gap, from identical planted prevalence.
-
-> And nothing in the criteria reads language or interpreter need. The notebook asserts that and fails the build if it ever stops being true.
-
-> A flag can be blind to a protected attribute and still reproduce the inequity attached to it. Excluding the column proves nothing; measuring the outcome is the only thing that shows it.
-
-*— — beat · the most important sentence in the recording — —*
-
-> And it points at the actual remedy — interpreter-supported history-taking, not a better model.
-
-> **NOTE** — **If you also show latency by interpreter need, read it carefully.** It appears to say interpreter-needing children are found *sooner* — eight months against ten. That is **survivorship, not good news**: the screen only surfaces children whose evidence crossed the threshold, and fewer of their features reach the record, so the ones that do surface are the more florid cases. The subtler ones are not in that table because the screen never found them. They are in this sensitivity gap instead.
-
-> **NOTE** — **If asked how you know the sensitivity:** the cohort is synthetic and carries an answer key. A real deployment cannot compute this — which is precisely the argument for the synthetic cohort. It measures what production never shows you: not how many flagged children turn out to be affected, but how many affected children were never flagged. Be equally plain that the **absolute** figure is close to circular; the **gap between groups** is not, because both were planted identically.
-
----
-
-## 14:30 · Three agents, three different reaches
+## 14:00 · Three agents, three different reaches
 
 *Third word: **agentic**. This is the one that does not mean what you might assume.*
 
@@ -297,107 +331,67 @@ GROUP BY specialty ORDER BY children DESC
 
 > So the agentic part is not the finding. It is everything around it — and what matters about the three agents is how much each one can reach.
 
-*Open a contract: `gold_lakehouse` → Files → `contracts/` → `patient-evidence.SYN-00195.json`.*
+*Open the envelope that brief was written from: `gold_lakehouse` → Files → `contracts/` → `patient-evidence.SYN-00195.json`.*
 
-> The first writes the brief about one child, and never queries anything. It is handed a fixed envelope — the patient's state, the criteria that fired, and evidence items, each with an identifier.
+> The first wrote that brief. It never queries anything — it is handed this envelope and nothing else: the patient's state, the criteria that fired, and the evidence items.
 
 > That is the whole safety argument. It cannot reach a patient it was not handed, because scope is a property of the input, not of the model behaving.
 
-*— — second agent — —*
+`— second agent —`
 
-> The second answers questions about **vocabulary**. It is backed by a Foundry IQ knowledge base: thirty-one documents, and no patients at all.
+> The second answers **vocabulary** questions from a Foundry IQ knowledge base — thirty-one documents, no patients at all. Ask it which children were surfaced and it returns design documentation, because the data is not there to answer with.
 
-> Ask it which patients have been surfaced and it returns design documentation. Not because we told it to refuse — because the data is not there.
+> The third answers cohort questions from Fabric, and it is the one to scrutinise hardest: it can reach every child in gold. Its restraint comes from instructions, and instructions are weaker than structure.
 
-*— — third agent — —*
-
-> The third answers cohort questions straight from Fabric — how many surfaced, which criteria fire most.
-
-> This is the one to scrutinise hardest: it can reach every child in the gold tables. Its restraint comes from instructions, and instructions are weaker than structure.
+`— third agent —`
 
 > So it is pointed at a summary table of precomputed figures, each carrying its caveat as data. Where you can make safety structural, do. Where you cannot, say so out loud.
 
----
 
-## 16:30 · The brief, and the four gates
-
-*Terminal.*
-
-```
-python scripts/foundry/create_referral_agent.py \
-    --evidence cicd/patient-evidence.SYN-00195.json \
-    --output cicd/referral-brief.SYN-00195.json
-```
-
-*While it drafts — about thirty seconds:*
-
-> Four gates run on whatever comes back. **Schema** — is it the right shape. **Citations** — does every claim point at evidence actually supplied. **Clinical safety** — no diagnosis, no named condition, no recommendation to refer, and no language that turns *nothing was recorded* into *nothing is wrong*.
-
-> And a fourth: does the brief state its own limitations. That is separate because gate three catches a bad sentence being present, and gate four catches a necessary sentence being absent. Absence is much harder to notice by reading.
-
-*Gates print. Open the brief; read the family history line aloud.*
-
-> This is the child where nobody ever took a family history. The agent writes: *Family history was not recorded, so nothing is known about it.*
-
-> Not *no significant family history*. That would be a different claim about a real child, and it would be false.
-
-> **NOTE** — **If it fails** with `invalid_prompt: Unsupported parameter 'top_p'` — that is a service-side intermittent, not your fault and not a configuration error. Re-run the same command; it works on the retry.
-
----
-
-## 17:30 · Where Fabric stops and Foundry starts
+## 15:20 · Where Fabric stops and Foundry starts
 
 *No screen needed. Say this over the workspace, or over the brief you just produced.*
 
-> It is worth being explicit about which platform did what, because the seam is not arbitrary — it falls where the nature of the problem changes.
+> One last thing worth being explicit about: which platform did what. The seam is not arbitrary — it falls where the nature of the problem changes.
 
-*— — what fabric did — —*
+`— what Fabric did —`
 
-> Fabric holds the data and decides *who*: one copy in OneLake, six criteria you can read, and a semantic layer over the same tables so the reasoning can be walked. Then it governs all of it — lineage, permissions, refresh.
+> Fabric holds the data and decides *who*: one copy in OneLake, six criteria you can read, a semantic layer so the reasoning can be walked, and governance over all of it.
 
-*— — where it stops — —*
+`— where it stops —`
 
-> But three things this needs before SickKids would run it, Fabric does not do.
+> Three things this needs before SickKids would run it, Fabric does not do. It cannot say *this model may see this envelope and nothing else*. It has no gate that refuses a document because a required sentence is missing. And it has nowhere to keep reference knowledge separately from patient data.
 
-> It cannot say *this model may see this envelope and nothing else*. It has no output contract — no schema the answer must validate against, no gate that refuses a document because a required sentence is missing. And it has no place to keep reference knowledge separately from patient data.
-
-> Those are not gaps in Fabric. They are a different problem: not *what is true of this cohort* but *what may this system say about a child, and how do we prove it stayed inside that*.
-
-*— — what foundry did — —*
-
-> That is the Foundry half — the bounded contract, the four gates as code we own, and the knowledge base with provably no patients in it.
+> Those are not gaps in Fabric. They are a different question: not *what is true of this cohort* but *what may this system say about a child, and how do we prove it stayed inside that*. That is the Foundry half.
 
 > So: Fabric decides *who*. Foundry decides *what may be said* about them, and proves it.
 
-*— — name both layers, accurately — —*
+`— what Foundry did —`
 
-> Both halves have names. **Fabric IQ** is the semantic layer over Fabric data — the ontology, the graph and the cohort agent are all Fabric IQ. **Foundry IQ** is the managed knowledge layer — the vocabulary knowledge base is that.
+> Both halves have names. **Fabric IQ** is the semantic layer over Fabric data — the ontology, the graph and the cohort agent. **Foundry IQ** is the managed knowledge layer, and the vocabulary knowledge base is that. Separate products, built to be used together.
 
-> Separate products, designed to be used together. Fabric IQ for the semantics, Foundry IQ for the knowledge, and gates of our own around whatever gets said about a child.
+`— name both layers, accurately —`
 
-> **NOTE** — **Two things to keep straight.** Graphs and data agents **are** Fabric IQ, so saying this uses Fabric IQ is accurate. The Fabric IQ **ontology** is a separate component of it. It is **enabled in this tenant as of today**, and an ontology item exists but is empty — the graph is what carries the model in this demo. And Foundry IQ does **not** take Fabric IQ as a knowledge source; its sources are Blob, SharePoint, OneLake and the web. The two layers are used together, not plugged into one another.
+**Note.** **Two things to keep straight.** The ontology, the graph and the data agent are all **Fabric IQ** components, and all three are live and populated here — six entity types, five relationship types, nineteen bound properties. And Foundry IQ does **not** take Fabric IQ as a knowledge source; its sources are Blob, SharePoint, OneLake and the web. The two are used together, not plugged into one another.
 
----
 
-## 19:00 · Close
+## 16:45 · Close
 
 > So: named criteria a clinician can argue with. Three states that never collapse. Evidence that can be walked rather than trusted. A measurement of how long it had been sitting there. And equity measured as an output, not promised as a review later.
 
 > None of these thresholds are clinically validated — they are placeholders, and they need the SickKids genetics service to mark them up. No SickKids data has been anywhere near this.
 
-> What it does show is the shape: case-finding that is inspectable, reproducible, and honest about who it misses.
-
-*— — beat · close on the sentence you opened with — —*
-
 > Back to that one sentence. **Identify** — six criteria you can read and disagree with. **Early** — a median of nearly nine months the evidence was already there. **Agentic** — three agents around the finding, the one that writes about a child held to four gates and given no reach at all.
+
+`— beat · close on the sentence you opened with —`
 
 > And the part the sentence does not ask for, which matters most: a measurement of who this misses, and whether it misses the same people the system already misses.
 
----
 
 ## ref · The pipeline, if anyone digs
 
 *Not spoken. `pl_genetic_referral`, five notebook activities, about nine minutes end to end.*
+
 
 ```
 bronze_clinical_record   HPO fetch + synthetic cohort      -> 6 bronze tables
@@ -413,11 +407,11 @@ agent_handoff_publisher  bounded evidence contracts        -> Files/contracts/
 
 ***Gold** applies the criteria, assigns the three states, asserts that language and interpreter need never reached the scoring inputs, and builds the contracts. The generator's answer key is dropped in silver with an assert, so nothing in the scoring path can read it.*
 
----
 
 ## ref · How the criteria are computed
 
 *Not spoken. Plain Spark predicates in one cell of `gold_referral_signals`. No model anywhere near the identification.*
+
 
 ```
 MULTI_SYSTEM        sufficient    systems_involved >= 3
@@ -436,11 +430,11 @@ surfaced = any sufficient  OR  two or more contributory
 
 ***Fire counts:** FAMILY_HISTORY 230 · NEURODEV_PLUS 204 · MULTI_SYSTEM 134 · REPEAT_UNDIAGNOSED 131 · REGRESSION 114 · DIAGNOSTIC_ODYSSEY 106. Weighting them flat surfaced 21% of the cohort; tiering brings it to 9.2%.*
 
----
 
 ## ref · How latency is computed
 
 *Not spoken. `gold_signal_latency` replays each record forward in date order with running windows, and finds the first moment the tier rule was already satisfied.*
+
 
 ```
 running distinct body systems   -> when did it reach 3?      MULTI_SYSTEM
@@ -455,13 +449,13 @@ latency         = cutoff - qualifying_date
 
 ***Results:** median 8.7 months · mean 10.7 · p90 21.0 · longest 32.9. 83 of 220 — 38% — over a year. Qualified by a sufficient criterion: 144 children, median 8.1 months. By combination: 76 children, median 9.9.*
 
-> **NOTE** — **The claim it makes, precisely.** The evidence has been **sufficient** since that date. It does **not** say a referral was missed — the synthetic record contains no referral events at all. On real data, qualifying date against actual referral date is the number worth having.
+**Note.** **The claim it makes, precisely.** The evidence has been **sufficient** since that date. It does **not** say a referral was missed — the synthetic record contains no referral events at all. On real data, qualifying date against actual referral date is the number worth having.
 
----
 
 ## ref · The evidence contract and the four gates
 
 *Not spoken. `agent_handoff_publisher` writes one JSON envelope per surfaced child — 34 of them.*
+
 
 ```
 patient    { patient_id, referral_state, age_years, family_history_status }
@@ -473,6 +467,7 @@ provenance { run_id, reference_source, reference_read_on, note }
 *Only children in state `indicators_present` get one. A child the pipeline did not surface is one the agent must not write about, and the cleanest way to enforce that is never to hand it over.*
 
 ***The four gates** run in `create_referral_agent.py` and exit non-zero if any fails:*
+
 
 ```
 1 schema      validates against referral-brief.schema.json. Hard-fails if the
@@ -488,11 +483,11 @@ provenance { run_id, reference_source, reference_read_on, note }
 
 *There is a lawful escape: an empty envelope returns `{"error": "no-evidence"}`. Without it, a contract demanding a citation leaves no valid document, and a model with no valid output available will invent one — which is exactly how fabricated evidence IDs appeared on an earlier build.*
 
----
 
 ## ref · The Foundry IQ knowledge base
 
 *Not spoken. Azure AI Search `referral-kb-search` on the Free tier → index `referral-vocabulary` → knowledge source → knowledge base `referral-vocabulary-kb`, reached from the agent over MCP.*
+
 
 ```
 31 documents:  16 phenotype terms, definitions fetched from the ontology
@@ -503,9 +498,8 @@ provenance { run_id, reference_source, reference_read_on, note }
 
 *A knowledge base will not retrieve at all without a model attached to it, and that model is called with the **Search** service's managed identity — so that identity needs Cognitive Services User on the Foundry account.*
 
-> **NOTE** — **The scope line is structural, not prompted.** Ask it which patients were surfaced and it returns design documentation, because the corpus contains no patients. The build script refuses to publish if `SYN-`, `OBS:`, `ENC:` or `patient_id` appears anywhere in it.
+**Note.** **The scope line is structural, not prompted.** Ask it which patients were surfaced and it returns design documentation, because the corpus contains no patients. The build script refuses to publish if `SYN-`, `OBS:`, `ENC:` or `patient_id` appears anywhere in it.
 
----
 
 ## ref · The cohort agent
 
@@ -513,9 +507,8 @@ provenance { run_id, reference_source, reference_read_on, note }
 
 *It reads a summary rather than the raw tables for two reasons. An agent answering from raw tables has to do arithmetic, and arithmetic is where it invents. And `gold_referral_state` carries an `array` column, which the SQL analytics endpoint cannot surface at all — the agent could only ever discover three of the nine gold tables.*
 
-> **NOTE** — **This is the agent to scrutinise hardest, and say so.** It can reach every child in gold. Its restraint comes from instructions, not from the shape of its input, and instructions are weaker than structure. Where you can make safety structural, do. Where you cannot, say it out loud.
+**Note.** **This is the agent to scrutinise hardest, and say so.** It can reach every child in gold. Its restraint comes from instructions, not from the shape of its input, and instructions are weaker than structure. Where you can make safety structural, do. Where you cannot, say it out loud.
 
----
 
 ## ref · The capability split, for the follow-up
 
@@ -527,9 +520,10 @@ provenance { run_id, reference_source, reference_read_on, note }
 
 ***Foundry carries those:** the evidence contract, making scope structural rather than instructed · four gates as code, exiting non-zero, provable by 13 offline test cases · a Foundry IQ knowledge base whose corpus is vocabulary only, enforced at build time · model deployment and versioning.*
 
-> **NOTE** — **The honest seam.** Fabric answers "who, and on what evidence". Foundry answers "what may be said about them, and can you prove it stayed inside that". The cohort agent sits awkwardly across the line — it is a Fabric agent with the widest reach and only instructions restraining it, which is precisely why it reads a summary table rather than the raw records.
+**Note.** **The honest seam.** Fabric answers "who, and on what evidence". Foundry answers "what may be said about them, and can you prove it stayed inside that". The cohort agent sits awkwardly across the line — it is a Fabric agent with the widest reach and only instructions restraining it, which is precisely why it reads a summary table rather than the raw records.
 
 ***What Fabric IQ is, per Microsoft:** a semantic intelligence layer for Fabric, made of *ontologies, semantic models, graphs and data agents*, so agents can reason over analytics in OneLake and Power BI.*
+
 
 ```
 Fabric IQ component   status here
@@ -541,9 +535,8 @@ ontology              USED   referral_ontology, 6 entity types / 5 relationship 
 
 ***What Foundry IQ is:** a managed knowledge layer — knowledge bases over Azure Blob, SharePoint, OneLake and the web, with agentic retrieval, permission enforcement and citations. Used here for the vocabulary knowledge base, 31 documents.*
 
-> **NOTE** — **Do not claim they plug into each other.** Foundry IQ does not list Fabric IQ among its knowledge sources. Microsoft says each IQ workload is standalone and they can be used together — which is what this is. Ontology is enabled here (tenant setting `OntologyPreview`; Canada Central supports it — the only region that does not is South Central US) and is built out: six entity types bound to gold, five relationship types. It sits above the graph rather than replacing it.
+**Note.** **Do not claim they plug into each other.** Foundry IQ does not list Fabric IQ among its knowledge sources. Microsoft says each IQ workload is standalone and they can be used together — which is what this is. Ontology is enabled here (tenant setting `OntologyPreview`; Canada Central supports it — the only region that does not is South Central US) and is built out: six entity types bound to gold, five relationship types. It sits above the graph rather than replacing it.
 
----
 
 ## ref · The graph model, if anyone digs
 
@@ -557,6 +550,7 @@ ontology              USED   referral_ontology, 6 entity types / 5 relationship 
 
 ***Node type = table + unique key column.** One row, one node.*
 
+
 ```
 Patient      <- gold_referral_state        key patientId
 Feature      <- gold_hpo_terms             key hpoId
@@ -567,6 +561,7 @@ Specialty    <- gold_specialties           key specialty
 ```
 
 ***Edge type = a table holding both endpoint keys.** The foreign key becomes the relationship.*
+
 
 ```
 hasFeature              Patient   -> Feature      via gold_observations   patient_id  -> hpo_id
@@ -584,35 +579,12 @@ encounterWithSpecialty  Encounter -> Specialty    via gold_encounters     encoun
 
 ***Loading:** creating the model fires a Refresh job automatically — 3½ minutes for 18,731 nodes and 35,216 edges. In the portal that is the **Save** button; save and ingest are one operation, so every save reloads the data.*
 
-> **NOTE** — **Why gold holds copies of silver.** An edge whose two endpoints and its own source table are not all in the same lakehouse is **silently dropped at load** — the refresh reports Completed with a null failure reason and the definition still lists the edge type. Four of five edge types vanished this way before every source was moved into gold. Always count edges by label after a load; never trust Completed.
+**Note.** **Why gold holds copies of silver.** An edge whose two endpoints and its own source table are not all in the same lakehouse is **silently dropped at load** — the refresh reports Completed with a null failure reason and the definition still lists the edge type. Four of five edge types vanished this way before every source was moved into gold. Always count edges by label after a load; never trust Completed.
 
----
 
 ## — · Have an answer ready
 
-**“So is the AI actually identifying the patients?”**
-Be exact; this is the question that catches people out. The children are identified by **deterministic criteria, not by a model** — deliberately, because criteria can be inspected, argued with and measured for bias, and a model deciding who surfaces could not be. The agentic parts are the ones that exercise no judgement over a child.
 
-**“Would this work on our data?”**
-Unknown, and say so. What transfers is the shape — inspectable criteria, three states, evidence contracts, gates, equity measured as an output.
+---
 
-**“What is the false positive rate?”**
-On synthetic data that is an artefact of the generator. The useful question is the one the validation notebook answers: who gets missed, and is it the same people who already get missed.
-
-**“Why not just let a model read the chart?”**
-Then the model decides who surfaces, and you cannot inspect the criteria, reproduce the run next month, or measure the flag for bias — because there is no flag, only an opinion.
-
-**“Is the graph your ontology?”**
-No — they are two items and you saw both. `referral_ontology` is the Fabric IQ ontology: six entity types and five relationship types, each bound to a gold table, declaring what the things *are*. `referral_graph` is the property graph over the same gold tables, which is what makes the model traversable in GQL. Microsoft’s own framing is that ontology works together with graph, and that is how it is used here — declare it once, walk it when you need to.
-
-**“Why declare the same model twice?”**
-Fair challenge, and the honest answer is that today they are separate declarations of one model, because the graph was built first. The direction of travel is that the ontology is the place the domain is defined and everything else reads from it. What you should not hear me claim is that the ontology is computing anything — the named criteria in gold do the identifying, deterministically, and that separation is deliberate.
-
-**“Is this Fabric IQ, or is it Foundry?”**
-Both, and they are different layers. Fabric IQ is the semantic layer over Fabric data — ontologies, semantic models, graphs, data agents. We use the graph and a data agent. Foundry IQ is the managed knowledge layer for agents; we use a knowledge base for clinical vocabulary. We use the ontology, the graph and a data agent — three of the four Fabric IQ components. The two IQs are standalone products designed to be used together, not plugged into one another.
-
-**“Is any of this genomic?”**
-No. Nothing reads a genome, a variant, or a test result.
-
-**If something breaks**
-Graph query fails → may be mid-refresh; skip it. Agent errors → re-run, it is intermittent. Anything Spark → do not wait on it; nothing here needs a session. Blank tab → Fabric lazy-loads; click it and keep talking.
+2352 spoken words — about 17 minutes of narration at a measured pace, nearer 18 recorded once page loads and query runs are in.

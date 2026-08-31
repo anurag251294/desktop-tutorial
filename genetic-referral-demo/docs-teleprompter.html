@@ -164,7 +164,7 @@
 
 <div class="wrap">
   <header class="masthead">
-    <p class="eyebrow">Screen recording script · about 19 minutes</p>
+    <p class="eyebrow">Screen recording script · outcome first · about 17 minutes of narration</p>
     <h1>Genetic referral case-finding</h1>
     <p class="sub">Large serif is what you say. Dotted italic is what you do. Nothing here needs a Spark session.</p>
   </header>
@@ -177,11 +177,14 @@
     <button type="button" data-scale="1.55">XL</button>
     <button type="button" id="readmode" style="margin-left:.75rem">Read aloud</button>
     <span class="label" style="margin-left:.75rem">Jump</span>
-    <button type="button" data-go="s0">Open</button>
-    <button type="button" data-go="s4">Criteria</button>
+    <button type="button" data-go="s0">Outcome</button>
+    <button type="button" data-go="s4b">Ontology</button>
     <button type="button" data-go="s5">Graph</button>
     <button type="button" data-go="s6">Latency</button>
     <button type="button" data-go="s7">Equity</button>
+    <button type="button" data-go="s9">Brief</button>
+    <button type="button" data-go="showhow">How it works</button>
+    <button type="button" data-go="s4">Criteria</button>
     <button type="button" data-go="s8">Agents</button>
     <button type="button" data-go="s9b">Fabric + Foundry</button>
     <button type="button" data-go="refpipe">Reference</button>
@@ -195,13 +198,14 @@
     <h2>Before you hit record</h2>
     <ul>
       <li>Capacity <code class="inl">fabdemo85829</code> <strong>Active 20+ minutes</strong> — item editors lag a resume.</li>
-      <li>Fabric tabs in order: workspace · bronze · silver · gold criteria · <strong>referral_queries</strong> (the queryset — this is where GQL runs) · <strong>latency</strong> · validation · gold lakehouse.</li>
+      <li><strong>Tab order is outcome-first now:</strong> ontology · <strong>referral_queries</strong> (the queryset — this is where GQL runs) · graph model · latency · gold lakehouse (validation, then Files/contracts) · workspace · bronze · silver · gold criteria · cohort agent · Foundry. Run <code class="inl">tabs_ont.py</code> and it lands in this order.</li>
       <li>Foundry tab on <code class="inl">referral-foundry-mcap</code> → project <code class="inl">genetic-referral</code>.</li>
       <li>Terminal in the repo, <code class="inl">az login</code> done.</li>
       <li><strong>Click every tab once</strong> before recording — Fabric lazy-renders background tabs.</li>
       <li><strong>Bind the queryset first, once.</strong> Open <code class="inl">referral_queries</code> → <em>Use an existing model</em> → <code class="inl">referral_graph</code>. Do this before you record; the first time it asks, and after that it remembers. You run GQL in the <strong>queryset</strong>, not in the graph model — the model is only the schema.</li>
       <li><strong>Visible but not walked:</strong> <code class="inl">gold_graph_dimensions</code> (builds the graph's dimension tables), <code class="inl">agent_handoff_publisher</code> (writes the evidence contracts), <code class="inl">gold_cohort_summary</code> (the cohort agent's serving table). Know what they are in case someone asks.</li>
       <li>Gold holds 16 tables, three of which are copies of silver — that is the graph's single-lakehouse requirement, and there is a line for it in the workspace section.</li>
+      <li><strong>You open on the ontology, not the workspace.</strong> The first two minutes are spoken over the opening screen with no clicking — say the numbers, <em>then</em> show the canvas.</li>
     </ul>
   </div>
 
@@ -209,6 +213,7 @@
     <h2>What is what — nothing here lives inside a lakehouse</h2>
     <table class="nums">
       <tr><td>NOTEBOOK</td><td><code class="inl">bronze_clinical_record</code> · <code class="inl">silver_conformed_record</code> · <code class="inl">gold_referral_signals</code> · <code class="inl">gold_signal_latency</code> · <code class="inl">validation_sensitivity</code></td></tr>
+      <tr><td>ONTOLOGY</td><td><code class="inl">referral_ontology</code> — the semantic layer. Six entity types, five relationship types, bound to gold. <strong>Open this before the graph.</strong></td></tr>
       <tr><td>GRAPH MODEL</td><td><code class="inl">referral_graph</code> — the schema. You do <em>not</em> run queries here.</td></tr>
       <tr><td>GRAPH QUERYSET</td><td><code class="inl">referral_queries</code> — where GQL is written and run. Bind it to the model once.</td></tr>
       <tr><td>DATA AGENT</td><td><code class="inl">referral_cohort_agent</code></td></tr>
@@ -234,6 +239,7 @@ python scripts/foundry/test_gates.py     # 13/13</pre>
       <tr><td>Latency</td><td>median <strong>8.7 months</strong> · <strong>38%</strong> over a year · longest 32.9</td></tr>
       <tr><td>The one patient</td><td><code class="inl">SYN-00017</code> qualified <strong>2024-03-06</strong> — <strong>29.7 months</strong> ago</td></tr>
       <tr><td>Sensitivity</td><td><strong>87.8%</strong> no interpreter vs <strong>75.2%</strong> interpreter needed</td></tr>
+      <tr><td>Ontology</td><td>6 entity types · 5 relationship types · 19 bound properties</td></tr>
       <tr><td>Graph</td><td>18,731 nodes · 35,216 edges</td></tr>
       <tr><td>Knowledge base</td><td>31 documents</td></tr>
     </table>
@@ -250,212 +256,200 @@ python scripts/foundry/test_gates.py     # 13/13</pre>
   </div>
 
   <section id="s0">
-    <div class="stamp"><span class="time">0:00</span><h2>Open cold</h2></div>
-    <p class="say">This is a demonstration of case-finding in Microsoft Fabric, for a children's hospital.</p>
-    <p class="say">Before anything else, one clarification, because it has already been misunderstood once. <strong>This is not a genomics project.</strong> There is no genome here, no variant, no test result. Nothing in this system reads genetic data of any kind.</p>
-    <p class="say">The question is the one that comes <em>before</em> genetics gets involved: which children, already in this hospital, should somebody be looking at — sooner than they currently are.</p>
-    <p class="beat">— beat · state the use case —</p>
-    <p class="say">The use case we were given is one sentence: <strong>use agentic intelligence to identify patients early for genetic consultation or testing.</strong></p>
-    <p class="say">Three words in that sentence do real work — <strong>identify</strong>, <strong>early</strong>, and <strong>agentic</strong> — and I am going to show you exactly what each one means here. Including one place where it does not mean what you might assume.</p>
+    <div class="stamp"><span class="time">0:00</span><h2>What it produces — before anything is shown</h2></div>
+    <p class="say">This is case-finding in Microsoft Fabric, built for <strong>SickKids</strong> — the Hospital for Sick Children.</p>
+    <p class="say">The use case, as it was put to us, is one sentence: <strong>use agentic intelligence to identify patients early for genetic consultation or testing.</strong></p>
+    <p class="say">Children with undiagnosed rare conditions spend years in a diagnostic odyssey. Many specialists, many investigations, no unifying answer — because no single clinician ever sees the whole pattern. The signals are already in the chart. They are just scattered across it.</p>
+        <p class="beat">— beat · the outcome, up front —</p><p class="say">So before I show you anything, here is what this produces. Out of two thousand four hundred children, it surfaces <strong>two hundred and twenty</strong> for a genetics conversation — each one with a named reason a clinician can read and disagree with.</p><p class="say">For those children, the evidence had been sitting complete in the record for a median of <strong>nearly nine months</strong>. Thirty-eight per cent of them, for over a year. That is the delay this is trying to close.</p>
+    <p class="say">And it tells you who it misses. It finds <strong>eighty-eight per cent</strong> of affected children whose families do not need an interpreter, and <strong>seventy-five per cent</strong> of those who do. That gap is measured, not estimated, and I will come back to it.</p>
     <p class="beat">— beat —</p>
-    <p class="say">Children with undiagnosed rare conditions often spend years in what clinicians call a diagnostic odyssey. Many specialists. Many investigations. No unifying answer. And often no genetics referral, because no single clinician ever sees the whole pattern.</p>
-    <p class="say">The signals are usually already in the chart. They are just scattered across it.</p>
+    <p class="say">Two clarifications. <strong>This is not a genomics project</strong> — no genome, no variant, no test result. The question comes <em>before</em> genetics gets involved: which children, already at SickKids, should somebody be looking at sooner.</p><p class="say">And every child in here is fabricated. <strong>No SickKids data was used.</strong> No record touched, no system connected, and nobody had to give us access to anything to build this.</p>
+    <p class="say">Let me show you the thing itself, and then how it works.</p>
   </section>
 
-  <section id="s1">
-    <div class="stamp"><span class="time">1:00</span><h2>The workspace</h2></div>
-    <p class="do">Click into the workspace list.</p>
-    <p class="say">One Fabric workspace. Three lakehouses in a medallion — bronze, silver, gold. A pipeline. A graph. And three agents, which I will come back to, because the differences between them are the point.</p>
-    <p class="say">Every child in here is fabricated. Two thousand four hundred of them. No real record was touched, and nothing was connected to a hospital system.</p>
-    <p class="do">Scroll the workspace list slowly while you say this.</p>
-    <p class="say">Let me name what is actually in here, because every piece earns its place.</p>
-    <p class="say">Three lakehouses — bronze, silver and gold — and one pipeline that runs five notebooks end to end in about nine minutes. Bronze fetches the phenotype vocabulary and generates the record. Silver conforms it. Gold applies the criteria, measures how long the evidence has been sitting there, and checks whether the flag lands evenly.</p>
-    <p class="say">Then a graph over those gold tables, and a queryset to ask it questions. And three agents — one that answers questions across the cohort, one that explains clinical vocabulary, and one that writes the brief about a single child.</p>
-    <p class="say">Twelve items. No copies of the data, no exports, nothing leaving OneLake.</p>
-    <p class="do">If anyone notices gold holds copies of some silver tables — <code class="inl">gold_encounters</code>, <code class="inl">gold_observations</code>, <code class="inl">gold_hpo_terms</code> — have this ready:</p>
-    <p class="say">Gold carries copies of a few silver tables, and that is deliberate. The graph needs every table it reads to sit in one lakehouse — an edge whose two ends and its own source are spread across two lakehouses is silently dropped at load, which cost us four of five relationship types before we found it. Gold is the serving layer, so gold is where the graph reads.</p>
-  </section>
-
-  <section id="s2">
-    <div class="stamp"><span class="time">1:30</span><h2>Bronze — the record as it actually arrives</h2></div>
-    <p class="do">Open the <strong>notebook</strong> <code class="inl">bronze_clinical_record</code> from the workspace list. Header, then the cohort cell.</p>
-    <p class="say">Bronze does two things. It pulls the Human Phenotype Ontology from its public API — a vocabulary of <em>observable clinical features</em>: developmental delay, hypotonia, short stature. It is used by genetics services, which is not the same thing as being genetic information.</p>
-    <p class="say">And it generates the clinical record deliberately untidy.</p>
-    <p class="do">Point at the comments in the cohort cell.</p>
-    <p class="say">Two date formats, because the encounter feed and the observation feed were built by different teams a decade apart. Five spellings of three services. Family history recorded for only about six children in ten.</p>
-    <p class="say">A demo built on tidy data teaches you nothing, because the hard part of this problem is that the record is not tidy.</p>
-  </section>
-
-  <section id="s3">
-    <div class="stamp"><span class="time">3:00</span><h2>Silver — the distinction everything rests on</h2></div>
-    <p class="do">Open the <strong>notebook</strong> <code class="inl">silver_conformed_record</code>. The family history cell.</p>
-    <p class="say">This is the cell I would ask you to remember.</p>
-    <p class="say">Family history is missing for four children in ten. The obvious engineering move is to fill the gap with <code class="inl">false</code> and get a clean boolean column.</p>
-    <p class="say">That would be wrong, and it would be dangerous. <strong>Asked, and the answer was no</strong> is not the same as <strong>nobody asked.</strong> Filling that gap invents a negative finding for forty per cent of the cohort, and every count downstream becomes a lie.</p>
-    <p class="do">Point at <code class="inl">history_taken</code>.</p>
-    <p class="say">So <code class="inl">history_taken</code> is its own column, and the three flags stay null — unknown — where nobody asked. Gold refuses to score on an absence.</p>
-    <p class="say">The same reasoning gives us a third state later: a child whose record is too short to read is <em>not screened</em>, which is not the same as screened and clear.</p>
-  </section>
-
-  <section id="s4">
-    <div class="stamp"><span class="time">4:30</span><h2>Gold — named criteria, two tiers, no score</h2></div>
-    <p class="do">Open the <strong>notebook</strong> <code class="inl">gold_referral_signals</code>. The <code class="inl">CRITERIA</code> cell.</p>
-    <p class="do">First of the three words: <strong>identify</strong>.</p>
-    <p class="say">Six criteria. Each one named, each carrying its own threshold, all in one place a clinician can read. This is the identifying, and I want you to see that it is arithmetic rather than judgement.</p>
-    <p class="say">There is deliberately <strong>no risk score.</strong> A clinician reading “surfaced because features span four body systems” can disagree with the threshold and tell you why. A clinician reading “risk zero point eight one” can only defer to it or ignore it. One of those is a conversation. The other is not.</p>
-    <p class="do">Point at the tiers.</p>
-    <p class="say">Two tiers. A <em>sufficient</em> criterion surfaces a child on its own — developmental regression does that. A <em>contributory</em> one counts only in combination. Weight them equally and you surface a fifth of the clinic, which is a list nobody reads.</p>
-    <p class="do">Scroll to the three-states table.</p>
-    <p class="say">Three states, and they must never collapse into each other. Indicators present. No indicators recorded. Not screened.</p>
-    <p class="say">The middle one is the one that gets misread. It does <strong>not</strong> mean the child has no indication. It means nothing was found <em>in the record</em>. A child whose features were never coded looks exactly like a child who does not have them. The pipeline cannot tell those apart, so it does not pretend to.</p>
-    <p class="beat">— beat —</p>
-    <p class="say">And every threshold in that cell is a <strong>placeholder</strong>, pending sign-off by the genetics service. They are written out as a table so that conversation is about something a clinician can mark up, not a number buried in code.</p>
+  <section id="s4b">
+    <div class="stamp"><span class="time">2:00</span><h2>The ontology — where the domain is declared</h2></div>
+    <p class="do">Open <code class="inl">referral_ontology</code>. Let the canvas render — six entity types and the relationships between them.</p>
+    <p class="say">So — this. This is the ontology, and it is where the domain of this problem gets declared. Not in a report, not buried in somebody's SQL. Here, in one place.</p>
+    <p class="say">And this is <strong>Fabric IQ</strong> — ontologies, semantic models, graphs and data agents. This is the ontology component, and it is what the rest of this reads from.</p>
+    <p class="beat">— walk the canvas —</p>
+    <p class="say">Six entity types: a <strong>Patient</strong>, a <strong>Feature</strong> — an observable clinical finding — the <strong>BodySystem</strong> it belongs to, a <strong>Criterion</strong>, an <strong>Encounter</strong>, and the <strong>Specialty</strong> it happened in.</p>
+    <p class="say">And five relationships: a patient <em>has</em> a feature, a feature is <em>in</em> a body system, a patient is <em>surfaced by</em> a criterion, <em>attends</em> an encounter, an encounter is <em>with</em> a specialty. The model of this problem, written down once.</p>
+    <p class="beat">— the part that matters —</p>
+    <p class="say">And none of it is a copy. Every entity type is bound to a table in gold — nineteen properties, each mapped to a real column. Not a diagram somebody drew in a workshop. Attached to the data.</p>
+    <p class="say">That is the difference between a data model and a semantic layer. A data model tells you how the bytes are arranged. This tells you what they <em>mean</em> — and it tells the same thing to the query, the agent and the clinician, because there is only one of it.</p>
+    <p class="beat">— name it —</p>
+    <p class="say">Which means you can ask it about a particular child.</p>
+    <p class="note"><b>Be accurate about what is new here.</b> The ontology and the graph declare the <em>same</em> six entities and five relationships against the <em>same</em> gold tables. That is deliberate — one model, expressed once. Do not claim the ontology found anything the criteria did not; it does not compute the criteria. What it changes is that the meaning now lives in one declared place instead of being implied by a notebook.</p>
+    <p class="note"><b>Preview.</b> Ontology is in preview and we enabled it in this tenant for this build. If someone asks how long it took: flip the tenant setting, then about ten minutes before the service honoured it. Worth saying plainly rather than pretending it was instant.</p>
   </section>
 
   <section id="s5">
-    <div class="stamp"><span class="time">7:00</span><h2>The graph — the criterion, walked</h2></div>
+    <div class="stamp"><span class="time">3:45</span><h2>The graph — the criterion, walked</h2></div>
     <p class="do">Switch to <code class="inl">referral_queries</code> — the <strong>graph queryset</strong>, which is the thing you run queries in. The graph model itself is just the schema. Paste the query and press <strong>Run</strong>.</p>
 <pre>MATCH (p:Patient)-[:hasFeature]-&gt;(f:Feature)-[:inBodySystem]-&gt;(b:BodySystem)
 WHERE p.patientId = 'SYN-00017'
 RETURN f.hpoLabel AS feature, b.bodySystem AS system
 ORDER BY system, feature</pre>
-    <p class="say">This is the referral graph, and it is worth saying what it is before I run anything against it. It is not a visualisation. It is a semantic model of the domain — the same gold tables, expressed as the things they actually are and the relationships between them.</p>
-    <p class="say">Six kinds of thing: patients, the features observed on them, the body systems those features belong to, encounters, specialties, and the criteria that surfaced each child. Five kinds of relationship between them. Eighteen thousand nodes, thirty-five thousand relationships.</p>
-    <p class="say">And this is a <strong>Fabric IQ</strong> component. Fabric IQ is Microsoft's semantic layer over Fabric data — ontologies, semantic models, graphs and data agents. This is the graph part of it, and the cohort agent is the data agent part.</p>
-    <p class="beat">— what this actually is —</p>
-    <p class="say">This is where the domain gets defined. Not in a report, not in somebody's SQL — here. Six entities and five relationships, declared once, in one file, that everything downstream reads.</p>
-    <p class="say">A patient <em>has</em> a feature. A feature <em>belongs to</em> a body system. A patient is <em>surfaced by</em> a criterion, <em>attends</em> an encounter, and an encounter is <em>with</em> a specialty. That is the model of this problem, written down, and it is the same model the query, the agent and the clinician are all working from.</p>
-    <p class="beat">— and the boundary, said plainly —</p>
-    <p class="say">People will ask whether this is the ontology. It is worth being precise. This declares the <strong>entities and the relationships</strong> — so in the ordinary sense of the word, yes, it is a domain model.</p>
-    <p class="say">But Fabric IQ has a component actually named Ontology, and it is a different thing. An ontology adds the layer above this: hierarchies, so a thing can be a kind of another thing. Constraints, so the model knows what cannot be true. Business definitions that live independently of any particular table, and can be reused across models and agents.</p>
-    <p class="say">A property graph gives you structure — entities, relationships, traversal. An ontology gives you <em>meaning</em>, and lets a system infer things nobody wrote down.</p>
-    <p class="say">We do not have that component in this tenant. It is not enabled. So this is the graph doing the semantic layer's job, and doing it well enough for what you have just seen — and if ontology becomes available, it sits above this rather than replacing it.</p>
-    <p class="say">So when the pipeline says this child surfaced because their features span multiple body systems, you do not have to take that on trust. You can walk it.</p>
+    <p class="say">You cannot ask a diagram a question. This is the graph — the same six entities and five relationships, made walkable. Eighteen thousand nodes, thirty-five thousand relationships, over the same gold tables.</p>
+    <p class="beat">— if someone asks why both —</p>
+    <p class="say">The ontology carries <em>meaning</em>. The graph carries <em>reach</em> — traversal, path finding, questions shaped like relationships rather than joins.</p>
+    <p class="say">So when this child was surfaced because their features span multiple body systems, you do not have to take that on trust. You can walk it.</p>
     <p class="do">Results: cardiac · neurodevelopment ×2 · neurology · skeletal.</p>
-    <p class="say">There it is. Abnormal heart morphology — cardiac. Developmental regression and global developmental delay — neurodevelopment. Hypotonia — neurology. Scoliosis — skeletal. That is the criterion, made of its evidence.</p>
-    <p class="do">Run the co-occurrence query.</p>
-<pre>MATCH (p:Patient)-[:hasFeature]-&gt;(:Feature)-[:inBodySystem]-&gt;(b:BodySystem)
-WHERE p.referralState = 'indicators_present'
-RETURN b.bodySystem AS system, COUNT(DISTINCT p) AS children
-GROUP BY system ORDER BY children DESC</pre>
-    <p class="say">And because it is a graph, a question that is awkward in SQL becomes one pattern: which body systems actually co-occur in the children we surfaced. In SQL that is a self-join over a bridge table. Here it is one line.</p>
+    <p class="say">There it is. Abnormal heart morphology — cardiac. Developmental regression and global developmental delay — neurodevelopment. Hypotonia — neurology. Scoliosis — skeletal. The criterion, made of its evidence.</p>
     <p class="do">Now the third query — the one worth the time.</p>
 <pre>MATCH (p:Patient)-[:attendedEncounter]-&gt;(:Encounter)
       -[:encounterWithSpecialty]-&gt;(s:Specialty)
 WHERE p.referralState = 'no_indicators_recorded'
 RETURN s.specialty AS specialty, COUNT(DISTINCT p) AS children
 GROUP BY specialty ORDER BY children DESC</pre>
-    <p class="say">This one asks something different. Not who we found — who we did <em>not</em>, and where those children actually turn up.</p>
+    <p class="say">Now a different question. Not who we found — who we did <em>not</em>, and where those children turn up.</p>
     <p class="do">Results: General Paediatrics 801 · Cardiology 794 · ENT 785 · Developmental Paediatrics 776 · Neurology 769 · Orthopaedics 754.</p>
-    <p class="say">Eight hundred children the screen did not surface are sitting in General Paediatrics. Nearly eight hundred more in Cardiology, in ENT, in Developmental Paediatrics.</p>
-    <p class="say">Most of them are fine. But if this screen is missing children — and the next section shows that it is — that is the list of clinics they are sitting in. Two hops from a patient to a specialty, and you have turned a limitation into something operational.</p>
+    <p class="say">Eight hundred children the screen missed are sitting in General Paediatrics. Nearly eight hundred more in Cardiology, ENT and Developmental Paediatrics. Most are fine — but this screen <em>is</em> missing children, and in a moment I will show you by how much. That is the list of clinics they are sitting in.</p>
     <p class="beat">— beat —</p>
-    <p class="say">That is why a graph rather than a table. Not because the answers are impossible in SQL — they are not. Because the questions arrive in the shape of relationships, and a graph lets you ask them in that shape.</p>
+    <p class="say">That is why a graph rather than a table. Not because the answers are impossible in SQL — because the questions arrive in the shape of relationships.</p>
     <p class="do">If asked how the graph was built — and someone will:</p>
-    <p class="say">Nothing was copied to build this. The graph is <em>declared</em> over Delta tables that already exist in OneLake.</p>
-    <p class="say">A node type is a table plus a key column: one row becomes one node. Patients come from the referral state table, features from the phenotype terms, criteria from the criteria definitions.</p>
-    <p class="say">And an edge type is just a table that happens to contain <strong>both</strong> endpoint keys. The observations table already has a patient id and an HPO id sitting side by side — so the foreign key you already had becomes the relationship. No ETL, no pipeline, no second copy.</p>
-    <p class="say">Fabric matches those column values against the node keys and materialises the graph. Eighteen thousand nodes and thirty-five thousand edges took about three and a half minutes to load. The report, the agent and the graph are all reading the same tables.</p>
     <p class="beat">— beat —</p>
-    <p class="say">One honest caveat: the schema is fixed once it loads. Fabric graph has no schema evolution, so adding a property or changing a key means building a new model and reloading everything. That is why the properties here are minimal and there are no dates on them.</p>
-    <p class="note"><b>Get this exactly right.</b> A graph is one of the things <b>Fabric IQ</b> is made of — Microsoft defines Fabric IQ as ontologies, semantic models, graphs and data agents. So this <b>is</b> a Fabric IQ component and you can say so. What it is <b>not</b> is a Fabric IQ <b>ontology</b>: that is a different component of the same layer, and it is not enabled in this tenant.</p>
+    <p class="note"><b>Get this exactly right.</b> Ontology and graph are both <b>Fabric IQ</b> components — Microsoft defines Fabric IQ as ontologies, semantic models, graphs and data agents. Both are real here and both are on screen. What you must <b>not</b> say is that the ontology found the children — the named criteria in gold do that, deterministically, and that separation is the point of the whole demo.</p>
   </section>
 
   <section id="s6">
-    <div class="stamp"><span class="time">9:00</span><h2>How long it was already there</h2></div>
+    <div class="stamp"><span class="time">6:00</span><h2>How long it was already there</h2></div>
     <p class="do">Open the <strong>notebook</strong> <code class="inl">gold_signal_latency</code>, or just show the figures.</p>
     <p class="do">Second word: <strong>early</strong>. This is the section that earns it.</p>
-    <p class="say">That child surfaced because their features span multiple body systems. Here is the question that actually matters, and the one the use case turns on: <strong>when did that become true?</strong></p>
-    <p class="say">The sixth of March, twenty twenty-four. <strong>Twenty-nine months ago.</strong> Every feature the criterion needed was already coded, and had been for nearly two and a half years.</p>
+    <p class="say">That child surfaced because their features span multiple body systems. Here is the question that actually matters: <em>when did that become true?</em></p>
+    <p class="say">The sixth of March, twenty twenty-four. Twenty-nine months ago. Every feature the criterion needed was already coded, and had been for nearly two and a half years.</p>
     <p class="beat">— beat · let it sit —</p>
-    <p class="say">Across all two hundred and twenty children the screen surfaced, the median is nearly nine months. <strong>Thirty-eight per cent</strong> have had complete, sufficient evidence sitting in the record for over a year. The longest is thirty-three months.</p>
-    <p class="say">Nobody did anything wrong here. Those features were recorded by different clinicians, in different clinics, months apart. No single person ever saw them together — which is exactly what a diagnostic odyssey is.</p>
-    <p class="say">This is what the pipeline actually does. Not new information. The same information, joined up, on the day the pattern completed rather than years later.</p>
-    <p class="say">That is what <em>early</em> means here, and it is measured rather than asserted. Nine months at the median. Thirty-eight per cent of them over a year.</p>
+    <p class="say">Across all two hundred and twenty children surfaced, the median is nearly nine months. Thirty-eight per cent had complete, sufficient evidence sitting in the record for over a year. The longest is thirty-three months.</p>
+    <p class="say">Nobody did anything wrong. Those features were recorded by different clinicians, in different clinics, months apart. No single person ever saw them together — which is exactly what a diagnostic odyssey is.</p>
+    <p class="say">That is what the pipeline does. Not new information — the same information, joined up, on the day the pattern completed rather than years later.</p>
+    <p class="say">That is what <strong>early</strong> means here, and it is measured rather than asserted.</p>
     <p class="note"><b>Be precise about the claim.</b> The synthetic record contains no referral events, so this says the evidence has been <b>sufficient</b> since that date. It does <b>not</b> say a referral was missed or late. On real data, comparing the qualifying date against the actual referral date is the number you would want — and the obvious next thing to build.</p>
   </section>
 
   <section id="s7">
-    <div class="stamp"><span class="time">11:00</span><h2>The finding that matters</h2></div>
+    <div class="stamp"><span class="time">7:15</span><h2>The finding that matters</h2></div>
     <p class="do">Show the <strong>table</strong> <code class="inl">gold_validation_sensitivity</code> (inside <code class="inl">gold_lakehouse</code>), or run the interpreter query on the graph.</p>
-    <p class="say">Now the part I would not want you to miss.</p>
-    <p class="say">This cohort was generated so that children whose families need an interpreter have <strong>exactly the same underlying rate</strong> of clustered presentation as everybody else. Same biology. The only thing that differs is how much of it reached the record.</p>
+    <p class="say">Now the number I opened with, and where it comes from.</p>
+    <p class="say">This cohort was generated so that children whose families need an interpreter have exactly the same underlying rate of clustered presentation as everybody else. Same biology. The only thing that differs is how much of it reached the record.</p>
     <p class="do">Point at the feature counts: 939 across 486 children, versus 766 across 467.</p>
-    <p class="say">Just under two features recorded per child where no interpreter is needed. About one point six where one is. Consultations run shorter through an interpreter, history-taking is harder, and description is less likely to land in a coded field.</p>
-    <p class="say">Here is what that costs.</p>
+    <p class="say">Just under two features recorded per child where no interpreter is needed. About one point six where one is. Consultations run shorter, history-taking is harder, and description is less likely to land in a coded field. The screen can only read what somebody wrote down.</p>
     <p class="do">Switch to the sensitivity figures.</p>
-    <p class="say">The screen finds <strong>eighty-eight per cent</strong> of affected children in one group, and <strong>seventy-five per cent</strong> in the other. A twelve-point gap, from identical planted prevalence.</p>
-    <p class="say">And nothing in the criteria reads language, or interpreter need. The notebook asserts that and fails the build if it ever stops being true.</p>
-    <p class="say"><strong>A flag can be blind to a protected attribute and still reproduce the inequity attached to it.</strong> Excluding the column proves nothing. Measuring the outcome is the only thing that shows it.</p>
+    <p class="say">Here is what that costs. The screen finds <strong>eighty-eight per cent</strong> of affected children in one group and <strong>seventy-five per cent</strong> in the other. A twelve-point gap, from identical planted prevalence.</p>
+    <p class="say">And nothing in the criteria reads language or interpreter need. The notebook asserts that and fails the build if it ever stops being true.</p>
+    <p class="say">A flag can be blind to a protected attribute and still reproduce the inequity attached to it. Excluding the column proves nothing; measuring the outcome is the only thing that shows it.</p>
     <p class="beat">— beat · the most important sentence in the recording —</p>
-    <p class="say">Measuring it does not fix it. What it does is point at the actual remedy — which is interpreter-supported history-taking, not a better model.</p>
+    <p class="say">And it points at the actual remedy — interpreter-supported history-taking, not a better model.</p>
     <p class="note"><b>If you also show latency by interpreter need, read it carefully.</b> It appears to say interpreter-needing children are found <em>sooner</em> — eight months against ten. That is <b>survivorship, not good news</b>: the screen only surfaces children whose evidence crossed the threshold, and fewer of their features reach the record, so the ones that do surface are the more florid cases. The subtler ones are not in that table because the screen never found them. They are in this sensitivity gap instead.</p>
     <p class="note"><b>If asked how you know the sensitivity:</b> the cohort is synthetic and carries an answer key. A real deployment cannot compute this — which is precisely the argument for the synthetic cohort. It measures what production never shows you: not how many flagged children turn out to be affected, but how many affected children were never flagged. Be equally plain that the <b>absolute</b> figure is close to circular; the <b>gap between groups</b> is not, because both were planted identically.</p>
   </section>
 
-  <section id="s8">
-    <div class="stamp"><span class="time">13:30</span><h2>Three agents, three different reaches</h2></div>
-    <p class="do">Third word: <strong>agentic</strong>. This is the one that does not mean what you might assume.</p>
-    <p class="say">Here is the honest version. The children are identified by those deterministic criteria — not by a model. That is deliberate. Criteria can be inspected, argued with, reproduced next month and measured for bias. A model deciding who surfaces could do none of those things, and in a hospital that is not a trade worth making.</p>
-    <p class="say">So the agentic part is not the finding. It is everything around the finding: making it readable, making it queryable, and making it safe. There are three agents, and the interesting thing is not what they do — it is how much each one can reach, and where the safety comes from in each case.</p>
-    <p class="do">Open a contract: <code class="inl">gold_lakehouse</code> → Files → <code class="inl">contracts/</code> → <code class="inl">patient-evidence.SYN-00195.json</code>.</p>
-    <p class="say">The first writes the brief about one child. It never queries anything. It is handed a fixed envelope — the patient's state, the criteria that fired, and a list of evidence items, each with an identifier.</p>
-    <p class="say">That is the whole safety argument. It cannot reach a patient it was not handed, because scope is a property of the input, not of the model behaving. And every value it can state already carries a citation, so a claim with no citation is a claim about something that was never supplied.</p>
-    <p class="beat">— second agent —</p>
-    <p class="say">The second answers questions about <strong>vocabulary</strong>. What developmental regression means. What makes a criterion sufficient rather than contributory. It is backed by a Foundry IQ knowledge base — thirty-one documents: phenotype definitions pulled from the ontology, the six criteria, the three states.</p>
-    <p class="say">It can retrieve freely, because there is nothing in that corpus that identifies anybody. Ask it which patients have been surfaced and it returns design documentation — because <strong>there are no patients in it.</strong> Not because we told it to refuse. Because the data is not there.</p>
-    <p class="say">A knowledge layer answers what a word means. It must not become a way to ask who a child is. That line is enforced by what we indexed, not by a prompt.</p>
-    <p class="beat">— third agent —</p>
-    <p class="say">The third answers cohort questions straight from Fabric — how many surfaced, which criteria fire most, how long the evidence has been sitting there.</p>
-    <p class="say">And this is the one to scrutinise hardest, so I want to be honest about it. It <em>can</em> reach every child in the gold tables. Its restraint does not come from the shape of its input the way the first agent's does. It comes from instructions — and instructions are weaker than structure.</p>
-    <p class="say">That is why it is pointed at a summary table of precomputed figures rather than the raw records, and why every figure carries its caveat as data travelling alongside it. Where you can make safety structural, do. Where you cannot, say so out loud.</p>
-  </section>
-
   <section id="s9">
-    <div class="stamp"><span class="time">15:30</span><h2>The brief, and the four gates</h2></div>
-    <p class="do">Terminal.</p>
+    <div class="stamp"><span class="time">8:45</span><h2>What a clinician receives, and the four gates</h2></div>
+    <p class="do">Terminal. Run it, then open the brief on screen — this section is about the <em>document</em>, not the pipeline.</p>
 <pre>python scripts/foundry/create_referral_agent.py \
     --evidence cicd/patient-evidence.SYN-00195.json \
     --output cicd/referral-brief.SYN-00195.json</pre>
     <p class="do">While it drafts — about thirty seconds:</p>
-    <p class="say">Four gates run on whatever comes back. Schema — is it the right shape. Citations — does every claim point at evidence actually supplied. Clinical safety — no diagnosis, no named condition, no recommendation to refer or not refer, and no language that turns “nothing was recorded” into “nothing is wrong”.</p>
-    <p class="say">And separately, a fourth: does the brief state its own limitations. That is its own gate because gate three catches a bad sentence being <em>present</em>, and gate four catches a necessary sentence being <em>absent</em>. Absence is much harder to notice by reading.</p>
+    <p class="say">And this is what a clinician actually receives. One child, one page — drafted by an agent that is handed a fixed envelope of evidence and cannot query anything at all.</p><p class="say">Four gates run on whatever comes back. <strong>Schema</strong> — is it the right shape. <strong>Citations</strong> — does every claim point at evidence actually supplied. <strong>Clinical safety</strong> — no diagnosis, no named condition, no recommendation to refer, and no language that turns <em>nothing was recorded</em> into <em>nothing is wrong</em>.</p>
+    <p class="say">And a fourth: does the brief state its own limitations. That is separate because gate three catches a bad sentence being present, and gate four catches a necessary sentence being absent. Absence is much harder to notice by reading.</p>
     <p class="do">Gates print. Open the brief; read the family history line aloud.</p>
-    <p class="say">This is the child where nobody ever took a family history. The agent writes: <em>“Family history was not recorded, so nothing is known about it.”</em></p>
-    <p class="say">Not “no significant family history”. That would be a different claim about a real child, and it would be false.</p>
+    <p class="say">This is the child where nobody ever took a family history. The agent writes: <em>Family history was not recorded, so nothing is known about it.</em></p>
+    <p class="say">Not <em>no significant family history</em>. That would be a different claim about a real child, and it would be false.</p>
     <p class="note"><b>If it fails</b> with <code class="inl">invalid_prompt: Unsupported parameter 'top_p'</code> — that is a service-side intermittent, not your fault and not a configuration error. Re-run the same command; it works on the retry.</p>
   </section>
 
+  <section id="showhow">
+    <div class="stamp"><span class="time">10:15</span><h2>Now — how it works</h2></div>
+    <p class="do">Back to the workspace list. Slow the pace here; the demonstration is over and the argument starts.</p>
+    <p class="say">That is the whole of it. Now how it works — because the how is what decides whether you would trust any of it.</p>
+    <p class="say">Three things carry the weight: how the record is conformed before anything is counted, how the six criteria are written, and how much each of those agents is allowed to reach.</p>
+  </section>
+
+  <section id="s1">
+    <div class="stamp"><span class="time">10:45</span><h2>The workspace — one copy of everything</h2></div>
+    <p class="do">Click into the workspace list.</p>
+    <p class="say">One workspace. Three lakehouses — bronze, silver, gold. A pipeline running five notebooks end to end in about nine minutes. The ontology, the graph beneath it, and three agents.</p>
+    <p class="say">Bronze fetches the phenotype vocabulary and generates the record. Silver conforms it. Gold applies the criteria, measures how long the evidence sat there, and checks whether the flag lands evenly.</p>
+    <p class="do">Scroll the workspace list slowly while you say this.</p>
+    <p class="say">All of it in one workspace. No copies, no exports, nothing leaving OneLake.</p>
+    
+    <p class="do">If anyone notices gold holds copies of some silver tables — <code class="inl">gold_encounters</code>, <code class="inl">gold_observations</code>, <code class="inl">gold_hpo_terms</code> — have this ready:</p>
+  </section>
+
+  <section id="s2">
+    <div class="stamp"><span class="time">11:15</span><h2>Bronze — the record as it actually arrives</h2></div>
+    <p class="do">Open the <strong>notebook</strong> <code class="inl">bronze_clinical_record</code> from the workspace list. Header, then the cohort cell.</p>
+    <p class="say">Bronze pulls the Human Phenotype Ontology from its public API — a vocabulary of <em>observable clinical features</em>: developmental delay, hypotonia, short stature. Used by genetics services, which is not the same as being genetic information.</p>
+    <p class="say">Then it generates the clinical record deliberately untidy. Two date formats, because the encounter feed and the observation feed were built a decade apart. Five spellings of three services. Family history recorded for about six children in ten.</p>
+    <p class="do">Point at the comments in the cohort cell.</p>
+    <p class="say">A demo on tidy data teaches you nothing. The hard part of this problem is that the record is not tidy.</p>
+  </section>
+
+  <section id="s3">
+    <div class="stamp"><span class="time">11:45</span><h2>Silver — the distinction everything rests on</h2></div>
+    <p class="do">Open the <strong>notebook</strong> <code class="inl">silver_conformed_record</code>. The family history cell.</p>
+    <p class="say">This is the cell I would ask you to remember.</p>
+    <p class="say">Family history is missing for four children in ten. The obvious move is to fill the gap with false and get a clean boolean column.</p>
+    <p class="say">That would be dangerous. <em>Asked, and the answer was no</em> is not <em>nobody asked</em>. Filling that gap invents a negative finding for forty per cent of the cohort, and every count downstream becomes a lie.</p>
+    <p class="do">Point at <code class="inl">history_taken</code>.</p>
+    <p class="say">So <code class="inl">history_taken</code> is its own column, and the flags stay null where nobody asked. Gold refuses to score on an absence.</p>
+    <p class="say">A child whose record is too short to read gets a third state — <em>not screened</em>, which is not screened and clear.</p><p class="say">And this cell is where that twelve-point gap comes from. The screen reads what was written down. Where less gets written down, less gets found.</p>
+  </section>
+
+  <section id="s4">
+    <div class="stamp"><span class="time">12:45</span><h2>Gold — named criteria, two tiers, no score</h2></div>
+    <p class="do">Open the <strong>notebook</strong> <code class="inl">gold_referral_signals</code>. The <code class="inl">CRITERIA</code> cell.</p>
+    <p class="do">First of the three words: <strong>identify</strong>.</p>
+    <p class="say">Six criteria, each named, each carrying its own threshold, in one place a clinician can read. This is the identifying — and it is arithmetic, not judgement.</p>
+    <p class="say">There is deliberately no risk score. A clinician reading <em>surfaced because features span four body systems</em> can disagree and tell you why. A clinician reading <em>risk zero point eight one</em> can only defer or ignore. One of those is a conversation.</p>
+    <p class="do">Point at the tiers.</p>
+    <p class="say">Two tiers. A <strong>sufficient</strong> criterion surfaces a child on its own. A <strong>contributory</strong> one counts only in combination. Weight them equally and you surface a fifth of the clinic — a list nobody reads.</p>
+    <p class="do">Scroll to the three-states table.</p>
+    <p class="say">Three states that must never collapse: indicators present, no indicators recorded, not screened.</p>
+    <p class="say">The middle one gets misread. It does not mean the child has no indication — it means nothing was found in the record. A child whose features were never coded looks exactly like a child who does not have them, and the pipeline does not pretend to tell them apart.</p>
+    <p class="beat">— beat —</p>
+    <p class="say">Every threshold is a <strong>placeholder</strong>, pending sign-off by the SickKids genetics service. Written as a table, so that conversation is about something a clinician can mark up.</p>
+  </section>
+
+  <section id="s8">
+    <div class="stamp"><span class="time">14:00</span><h2>Three agents, three different reaches</h2></div>
+    <p class="do">Third word: <strong>agentic</strong>. This is the one that does not mean what you might assume.</p>
+    <p class="say">The children are identified by deterministic criteria — not by a model. Criteria can be inspected, argued with, reproduced next month and measured for bias. A model deciding who surfaces could do none of those things.</p>
+    <p class="say">So the agentic part is not the finding. It is everything around it — and what matters about the three agents is how much each one can reach.</p>
+    <p class="do">Open the envelope that brief was written from: <code class="inl">gold_lakehouse</code> → Files → <code class="inl">contracts/</code> → <code class="inl">patient-evidence.SYN-00195.json</code>.</p>
+    <p class="say">The first wrote that brief. It never queries anything — it is handed this envelope and nothing else: the patient's state, the criteria that fired, and the evidence items.</p>
+    <p class="say">That is the whole safety argument. It cannot reach a patient it was not handed, because scope is a property of the input, not of the model behaving.</p>
+    <p class="beat">— second agent —</p>
+    <p class="say">The second answers <strong>vocabulary</strong> questions from a Foundry IQ knowledge base — thirty-one documents, no patients at all. Ask it which children were surfaced and it returns design documentation, because the data is not there to answer with.</p>
+    <p class="say">The third answers cohort questions from Fabric, and it is the one to scrutinise hardest: it can reach every child in gold. Its restraint comes from instructions, and instructions are weaker than structure.</p>
+    <p class="beat">— third agent —</p>
+    <p class="say">So it is pointed at a summary table of precomputed figures, each carrying its caveat as data. Where you can make safety structural, do. Where you cannot, say so out loud.</p>
+  </section>
+
   <section id="s9b">
-    <div class="stamp"><span class="time">16:30</span><h2>Where Fabric stops and Foundry starts</h2></div>
+    <div class="stamp"><span class="time">15:20</span><h2>Where Fabric stops and Foundry starts</h2></div>
     <p class="do">No screen needed. Say this over the workspace, or over the brief you just produced.</p>
-    <p class="say">It is worth being explicit about which platform did what here, because the seam between them is not arbitrary — it falls exactly where the nature of the problem changes.</p>
+    <p class="say">One last thing worth being explicit about: which platform did what. The seam is not arbitrary — it falls where the nature of the problem changes.</p>
     <p class="beat">— what Fabric did —</p>
-    <p class="say">Fabric holds the data and decides <strong>who</strong>. One copy in OneLake, three layers of treatment, six criteria you can read, and a graph over the same tables so the reasoning can be walked rather than trusted. Then it governs all of that — lineage, permissions, capacity, and a refresh you can schedule.</p>
-    <p class="say">That is a lot, and it is the right home for it. Identification should be arithmetic on governed data, and Fabric is very good at governed data.</p>
+    <p class="say">Fabric holds the data and decides <em>who</em>: one copy in OneLake, six criteria you can read, a semantic layer so the reasoning can be walked, and governance over all of it.</p>
     <p class="beat">— where it stops —</p>
-    <p class="say">But three things this needs before a hospital would run it, Fabric does not do.</p>
-    <p class="say">It has no way to say <em>this model may see this envelope and nothing else</em>. It has no mechanism for an output contract — no schema the answer must validate against, no gate that refuses a document because a required sentence is missing. And it has no place to keep the reference knowledge a clinician needs, the definitions and the guidance, separately from the patient data.</p>
-    <p class="say">Those are not gaps in Fabric. They are simply a different kind of problem: not "what is true of this cohort" but "what may this system say about a child, and how do we prove it stayed inside that".</p>
+    <p class="say">Three things this needs before SickKids would run it, Fabric does not do. It cannot say <em>this model may see this envelope and nothing else</em>. It has no gate that refuses a document because a required sentence is missing. And it has nowhere to keep reference knowledge separately from patient data.</p>
+    <p class="say">Those are not gaps in Fabric. They are a different question: not <em>what is true of this cohort</em> but <em>what may this system say about a child, and how do we prove it stayed inside that</em>. That is the Foundry half.</p>
+    <p class="say">So: Fabric decides <em>who</em>. Foundry decides <em>what may be said</em> about them, and proves it.</p>
     <p class="beat">— what Foundry did —</p>
-    <p class="say">That is the Foundry half. The bounded contract, so scope is structural. The four gates, which are code we own rather than a setting we toggled. The knowledge base that holds vocabulary and provably no patients. And the model choice and versioning underneath it.</p>
-    <p class="say">So: <strong>Fabric decides who. Foundry decides what may be said about them, and proves it.</strong> Neither half is sufficient alone, and the reason is not commercial — it is that identification and disclosure are genuinely different problems with different failure modes.</p>
+    <p class="say">Both halves have names. <strong>Fabric IQ</strong> is the semantic layer over Fabric data — the ontology, the graph and the cohort agent. <strong>Foundry IQ</strong> is the managed knowledge layer, and the vocabulary knowledge base is that. Separate products, built to be used together.</p>
     <p class="beat">— name both layers, accurately —</p>
-    <p class="say">And both halves have names. Microsoft calls the semantic layer over Fabric data <strong>Fabric IQ</strong> — ontologies, semantic models, graphs and data agents, so agents can reason over what is in OneLake. The graph you just saw and the cohort agent are both Fabric IQ components.</p>
-    <p class="say">The managed knowledge layer on the Foundry side is <strong>Foundry IQ</strong> — knowledge bases that give an agent permission-aware, cited retrieval. The vocabulary knowledge base is that.</p>
-    <p class="say">They are separate products, deliberately, and Microsoft is explicit that each stands alone and they are meant to be used together. That is what this is: <strong>Fabric IQ for the semantics, Foundry IQ for the knowledge, and gates of our own around whatever gets said about a child.</strong></p>
-    <p class="note"><b>Two things to keep straight.</b> Graphs and data agents <b>are</b> Fabric IQ, so saying this uses Fabric IQ is accurate. The Fabric IQ <b>ontology</b> is a separate component of it and is <b>not enabled in this tenant</b> — verified, it returns FeatureNotAvailable from two workspaces. And Foundry IQ does <b>not</b> take Fabric IQ as a knowledge source; its sources are Blob, SharePoint, OneLake and the web. The two layers are used together, not plugged into one another.</p>
+    <p class="note"><b>Two things to keep straight.</b> The ontology, the graph and the data agent are all <b>Fabric IQ</b> components, and all three are live and populated here — six entity types, five relationship types, nineteen bound properties. And Foundry IQ does <b>not</b> take Fabric IQ as a knowledge source; its sources are Blob, SharePoint, OneLake and the web. The two are used together, not plugged into one another.</p>
   </section>
 
   <section id="s10">
-    <div class="stamp"><span class="time">18:00</span><h2>Close</h2></div>
-    <p class="say">So: named criteria a clinician can argue with. Three states that never collapse. Evidence that can be walked rather than trusted. A measurement of how long that evidence had been sitting there. Agents whose reach is deliberately different, with four gates on the one that writes about a child. And equity measured as an output, not as a review somebody promises to do later.</p>
-    <p class="say">None of these thresholds are clinically validated — they are placeholders, and they need the genetics service to mark them up. No real data has been anywhere near this.</p>
-    <p class="say">What it does show is the shape: case-finding that is inspectable, reproducible, and honest about who it misses.</p>
+    <div class="stamp"><span class="time">16:45</span><h2>Close</h2></div>
+    <p class="say">So: named criteria a clinician can argue with. Three states that never collapse. Evidence that can be walked rather than trusted. A measurement of how long it had been sitting there. And equity measured as an output, not promised as a review later.</p>
+    <p class="say">None of these thresholds are clinically validated — they are placeholders, and they need the SickKids genetics service to mark them up. No SickKids data has been anywhere near this.</p>
+    <p class="say">Back to that one sentence. <strong>Identify</strong> — six criteria you can read and disagree with. <strong>Early</strong> — a median of nearly nine months the evidence was already there. <strong>Agentic</strong> — three agents around the finding, the one that writes about a child held to four gates and given no reach at all.</p>
     <p class="beat">— beat · close on the sentence you opened with —</p>
-    <p class="say">Back to that one sentence. <strong>Identify</strong> — six named criteria you can read and disagree with. <strong>Early</strong> — a median of nearly nine months that the evidence was already sitting there, and thirty-eight per cent of them over a year. <strong>Agentic</strong> — three agents around the finding, with the one that writes about a child held to four gates and given no reach at all.</p>
-    <p class="say">And the part the sentence does not ask for, which I would argue matters most: a measurement of who this misses, and whether it misses the same people the system already misses.</p>
-    <p class="say">And it takes both platforms to do it. Fabric to find the children on governed data you can audit. Foundry to make sure what gets said about them is bounded, cited, and provably inside the line.</p>
+    <p class="say">And the part the sentence does not ask for, which matters most: a measurement of who this misses, and whether it misses the same people the system already misses.</p>
   </section>
 
   <section id="refpipe">
@@ -553,9 +547,9 @@ provenance { run_id, reference_source, reference_read_on, note }</pre>
 graph                 USED   referral_graph, 18,731 nodes / 35,216 edges
 data agent            USED   referral_cohort_agent over gold_cohort_summary
 semantic model        not used -- the graph carries the semantics instead
-ontology              403 FeatureNotAvailable in this tenant and region</pre>
+ontology              USED   referral_ontology, 6 entity types / 5 relationship types</pre>
     <p class="do"><strong>What Foundry IQ is:</strong> a managed knowledge layer — knowledge bases over Azure Blob, SharePoint, OneLake and the web, with agentic retrieval, permission enforcement and citations. Used here for the vocabulary knowledge base, 31 documents.</p>
-    <p class="note"><b>Do not claim they plug into each other.</b> Foundry IQ does not list Fabric IQ among its knowledge sources. Microsoft says each IQ workload is standalone and they can be used together — which is what this is. If ontology becomes available it would absorb part of what the graph does here; worth asking the tenant admin whether it can be enabled in Canada Central.</p>
+    <p class="note"><b>Do not claim they plug into each other.</b> Foundry IQ does not list Fabric IQ among its knowledge sources. Microsoft says each IQ workload is standalone and they can be used together — which is what this is. Ontology is enabled here (tenant setting <code class="inl">OntologyPreview</code>; Canada Central supports it — the only region that does not is South Central US) and is built out: six entity types bound to gold, five relationship types. It sits above the graph rather than replacing it.</p>
   </section>
 
   <section id="sref">
@@ -596,9 +590,11 @@ encounterWithSpecialty  Encounter -&gt; Specialty    via gold_encounters     enc
       <dt>“Why not just let a model read the chart?”</dt>
       <dd>Then the model decides who surfaces, and you cannot inspect the criteria, reproduce the run next month, or measure the flag for bias — because there is no flag, only an opinion.</dd>
       <dt>“Is the graph your ontology?”</dt>
-      <dd>In the ordinary sense — a declared model of entities and their relationships — yes, and <code class="inl">graphType.json</code> is where that lives. In the product sense, no: Fabric IQ has a separate component called Ontology which adds hierarchies, constraints, and business definitions decoupled from tables, and it is not enabled in this tenant. The graph gives structure; an ontology would add meaning and inference on top of it.</dd>
+      <dd>No — they are two items and you saw both. <code class="inl">referral_ontology</code> is the Fabric IQ ontology: six entity types and five relationship types, each bound to a gold table, declaring what the things <em>are</em>. <code class="inl">referral_graph</code> is the property graph over the same gold tables, which is what makes the model traversable in GQL. Microsoft’s own framing is that ontology works together with graph, and that is how it is used here — declare it once, walk it when you need to.</dd>
+      <dt>“Why declare the same model twice?”</dt>
+      <dd>Fair challenge, and the honest answer is that today they are separate declarations of one model, because the graph was built first. The direction of travel is that the ontology is the place the domain is defined and everything else reads from it. What you should not hear me claim is that the ontology is computing anything — the named criteria in gold do the identifying, deterministically, and that separation is deliberate.</dd>
       <dt>“Is this Fabric IQ, or is it Foundry?”</dt>
-      <dd>Both, and they are different layers. Fabric IQ is the semantic layer over Fabric data — ontologies, semantic models, graphs, data agents. We use the graph and a data agent. Foundry IQ is the managed knowledge layer for agents; we use a knowledge base for clinical vocabulary. The ontology component of Fabric IQ is not enabled in this tenant. The two IQs are standalone products designed to be used together, not plugged into one another.</dd>
+      <dd>Both, and they are different layers. Fabric IQ is the semantic layer over Fabric data — ontologies, semantic models, graphs, data agents. We use the graph and a data agent. Foundry IQ is the managed knowledge layer for agents; we use a knowledge base for clinical vocabulary. We use the ontology, the graph and a data agent — three of the four Fabric IQ components. The two IQs are standalone products designed to be used together, not plugged into one another.</dd>
       <dt>“Is any of this genomic?”</dt>
       <dd>No. Nothing reads a genome, a variant, or a test result.</dd>
       <dt>If something breaks</dt>
@@ -610,6 +606,10 @@ encounterWithSpecialty  Encounter -&gt; Specialty    via gold_encounters     enc
 <script>
   const root = document.documentElement;
   const readBtn = document.getElementById("readmode");
+  // Default to read-aloud: this is a script to be spoken, not a document to be studied.
+  document.body.classList.add("reading");
+  readBtn.setAttribute("aria-pressed", "true");
+  readBtn.textContent = "Show all";
   readBtn.addEventListener("click", function () {
     const on = document.body.classList.toggle("reading");
     readBtn.setAttribute("aria-pressed", String(on));

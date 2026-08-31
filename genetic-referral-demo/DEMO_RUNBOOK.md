@@ -4,6 +4,26 @@ For the recording. Roughly 15 minutes of material. If you run short, the equity
 section is the part worth protecting and the graph section is the part to cut —
 it is the most impressive and the least load-bearing.
 
+## Running order — read this before the walkthrough below
+
+The recording **leads with the outcome, not the architecture**. An earlier cut
+explained the pipeline for ten minutes before anyone saw what it produced, and the
+feedback was blunt: the value has to land first.
+
+So the spoken order is:
+
+| | | |
+|---|---|---|
+| **Act 1** | 0:00 | What it produces — 220 of 2,400, a median 8.7 months of latency, and the 88/75 sensitivity gap. Nothing on screen but the opening slide. |
+| **Act 2** | 2:00 | The Fabric IQ experience — ontology, the graph walked for one child, latency, the equity finding, the brief a clinician receives. |
+| **Act 3** | 10:15 | How it works — workspace, bronze, silver, gold criteria, the three agents' reach, and the Fabric/Foundry seam. |
+
+**The numbered sections below are in build order, not running order.** They are
+reference depth for "how does that actually work?" — section 5 (ontology) and section 6
+(graph) are spoken early; sections 1–3 (bronze, silver, gold) are spoken late. The
+authoritative running order is `RECORDING_SCRIPT.md`, generated from the teleprompter
+by `scripts/make_recording_script.py`.
+
 ## Say this first, before anything is on screen
 
 > This is **not** a genomics project. No genome, no variant, no test result appears
