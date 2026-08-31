@@ -18,6 +18,20 @@ grown to 3,559.
 The ontology is queried through the companion graph Fabric provisions for it
 (`<name>_graph_<ontology id without dashes>`), so refreshing the ontology item is not
 a thing you can do -- you refresh that graph.
+
+Two behaviours observed on 2026-08-31 that this script cannot paper over:
+
+  * **It took several RefreshGraph runs before the graph served the new rows.** Runs
+    reported `Completed` while queries still returned the previous snapshot. The root
+    cause was never established -- a SQL analytics endpoint metadata sync in between
+    is the suspect, but a refresh after that sync also failed to take. Treat a green
+    refresh as necessary and not sufficient, and always re-run query_graph.py.
+  * **Refreshing an already-current companion graph can return `Failed` with a bare
+    HTTP 500 `UnknownError`.** That is not evidence the graph is broken; verify with
+    query_ontology.py before acting on it.
+
+Because of both, this script's exit status is a hint, not a verdict. Note that piping
+it (`| tail`) replaces its exit code with the pipe's, so a failure looks like success.
 """
 import argparse
 import json
