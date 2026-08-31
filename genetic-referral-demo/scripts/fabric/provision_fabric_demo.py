@@ -319,13 +319,24 @@ def main():
             print(f"Created data pipeline: {name} ({item_id})")
         pipeline_result = {"displayName": name, "id": item_id}
 
-    output = {
+    # Merge rather than replace. build_graph_model.py, build_ontology.py and the agent
+    # scripts record their own ids in this same file, and none of them is described by
+    # --config -- so writing a fresh dict here silently deletes them, and the next
+    # query_graph.py fails with "no graphModel in the output file" long after the
+    # provision run that actually caused it.
+    output = {}
+    if Path(args.output).exists():
+        try:
+            output = json.loads(Path(args.output).read_text(encoding="utf-8"))
+        except ValueError:
+            print(f"warning: {args.output} is not valid JSON; rewriting it")
+    output.update({
         "workspace": {"displayName": workspace_name, "id": workspace_id,
                       "capacityId": capacity_id},
         "lakehouses": [{"displayName": n, "id": i} for n, i in lakehouse_ids.items()],
         "notebooks": [{"displayName": n, "id": i} for n, i in notebook_ids.items()],
         "dataPipeline": pipeline_result,
-    }
+    })
     Path(args.output).write_text(json.dumps(output, indent=2) + "\n", encoding="utf-8")
     print(f"\nWrote {args.output}")
     print(f"Workspace URL: https://app.fabric.microsoft.com/groups/{workspace_id}")

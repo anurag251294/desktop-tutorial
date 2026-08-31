@@ -1,244 +1,277 @@
 {
-  "properties": {
-    "description": "Genetic referral case-finding: HPO reference and a synthetic clinical record through conformance, tiered criteria, the equity check, and a validated evidence contract. No genomic data.",
-    "activities": [
-      {
-        "name": "Bronze_Clinical_Record",
-        "type": "TridentNotebook",
-        "description": "Fetch HPO terms from the public ontology API and generate the synthetic paediatric cohort, deliberately untidy.",
-        "dependsOn": [],
-        "policy": {
-          "timeout": "0.02:00:00",
-          "retry": 1,
-          "retryIntervalInSeconds": 60,
-          "secureOutput": false,
-          "secureInput": false
-        },
-        "typeProperties": {
-          "notebookId": "{{NOTEBOOK_ID:bronze_clinical_record}}",
-          "workspaceId": "{{WORKSPACE_ID}}",
-          "parameters": {
-            "PIPELINE_RUN_ID": {
-              "value": {
-                "value": "@pipeline().RunId",
-                "type": "Expression"
-              },
-              "type": "string"
-            },
-            "COHORT_SIZE": {
-              "value": {
-                "value": "@pipeline().parameters.COHORT_SIZE",
-                "type": "Expression"
-              },
-              "type": "int"
-            },
-            "MONTHS_OF_HISTORY": {
-              "value": {
-                "value": "@pipeline().parameters.MONTHS_OF_HISTORY",
-                "type": "Expression"
-              },
-              "type": "int"
-            },
-            "COHORT_SEED": {
-              "value": {
-                "value": "@pipeline().parameters.COHORT_SEED",
-                "type": "Expression"
-              },
-              "type": "int"
-            }
-          }
-        }
+ "properties": {
+  "description": "Genetic referral case-finding: HPO reference and a synthetic clinical record through conformance, tiered criteria, the equity check, and a validated evidence contract. No genomic data.",
+  "activities": [
+   {
+    "name": "Bronze_Clinical_Record",
+    "type": "TridentNotebook",
+    "description": "Fetch HPO terms from the public ontology API and generate the synthetic paediatric cohort, deliberately untidy.",
+    "dependsOn": [],
+    "policy": {
+     "timeout": "0.02:00:00",
+     "retry": 1,
+     "retryIntervalInSeconds": 60,
+     "secureOutput": false,
+     "secureInput": false
+    },
+    "typeProperties": {
+     "notebookId": "{{NOTEBOOK_ID:bronze_clinical_record}}",
+     "workspaceId": "{{WORKSPACE_ID}}",
+     "parameters": {
+      "PIPELINE_RUN_ID": {
+       "value": {
+        "value": "@pipeline().RunId",
+        "type": "Expression"
+       },
+       "type": "string"
       },
-      {
-        "name": "Silver_Conformed_Record",
-        "type": "TridentNotebook",
-        "description": "Type both feeds, resolve specialty spellings, attach HPO labels and body systems, and keep 'never asked' distinct from 'no'.",
-        "dependsOn": [
-          {
-            "activity": "Bronze_Clinical_Record",
-            "dependencyConditions": [
-              "Succeeded"
-            ]
-          }
-        ],
-        "policy": {
-          "timeout": "0.02:00:00",
-          "retry": 0,
-          "retryIntervalInSeconds": 60,
-          "secureOutput": false,
-          "secureInput": false
-        },
-        "typeProperties": {
-          "notebookId": "{{NOTEBOOK_ID:silver_conformed_record}}",
-          "workspaceId": "{{WORKSPACE_ID}}",
-          "parameters": {
-            "PIPELINE_RUN_ID": {
-              "value": {
-                "value": "@pipeline().RunId",
-                "type": "Expression"
-              },
-              "type": "string"
-            },
-            "MIN_RECORD_DAYS": {
-              "value": {
-                "value": "@pipeline().parameters.MIN_RECORD_DAYS",
-                "type": "Expression"
-              },
-              "type": "int"
-            }
-          }
-        }
-      },
-      {
-        "name": "Gold_Referral_Signals",
-        "type": "TridentNotebook",
-        "description": "Apply the tiered criteria, assign the three states, run the equity check, and build the evidence contracts.",
-        "dependsOn": [
-          {
-            "activity": "Silver_Conformed_Record",
-            "dependencyConditions": [
-              "Succeeded"
-            ]
-          }
-        ],
-        "policy": {
-          "timeout": "0.02:00:00",
-          "retry": 0,
-          "retryIntervalInSeconds": 60,
-          "secureOutput": false,
-          "secureInput": false
-        },
-        "typeProperties": {
-          "notebookId": "{{NOTEBOOK_ID:gold_referral_signals}}",
-          "workspaceId": "{{WORKSPACE_ID}}",
-          "parameters": {
-            "PIPELINE_RUN_ID": {
-              "value": {
-                "value": "@pipeline().RunId",
-                "type": "Expression"
-              },
-              "type": "string"
-            },
-            "MIN_SYSTEMS_MULTI": {
-              "value": {
-                "value": "@pipeline().parameters.MIN_SYSTEMS_MULTI",
-                "type": "Expression"
-              },
-              "type": "int"
-            },
-            "MIN_CONTRIBUTORY": {
-              "value": {
-                "value": "@pipeline().parameters.MIN_CONTRIBUTORY",
-                "type": "Expression"
-              },
-              "type": "int"
-            }
-          }
-        }
-      },
-      {
-        "name": "Validation_Sensitivity",
-        "type": "TridentNotebook",
-        "description": "Measure sensitivity by group against the generator's answer key. Reads Bronze only; the answer key never touches the scoring path.",
-        "dependsOn": [
-          {
-            "activity": "Gold_Referral_Signals",
-            "dependencyConditions": [
-              "Succeeded"
-            ]
-          }
-        ],
-        "policy": {
-          "timeout": "0.02:00:00",
-          "retry": 0,
-          "retryIntervalInSeconds": 60,
-          "secureOutput": false,
-          "secureInput": false
-        },
-        "typeProperties": {
-          "notebookId": "{{NOTEBOOK_ID:validation_sensitivity}}",
-          "workspaceId": "{{WORKSPACE_ID}}",
-          "parameters": {
-            "PIPELINE_RUN_ID": {
-              "value": {
-                "value": "@pipeline().RunId",
-                "type": "Expression"
-              },
-              "type": "string"
-            }
-          }
-        }
-      },
-      {
-        "name": "Agent_Handoff_Publisher",
-        "type": "TridentNotebook",
-        "description": "Publish one bounded evidence contract per surfaced patient. Depends on Gold only -- it does not need the validation notebook, and making it wait would serialise two independent steps for no reason.",
-        "dependsOn": [
-          {
-            "activity": "Gold_Referral_Signals",
-            "dependencyConditions": [
-              "Succeeded"
-            ]
-          }
-        ],
-        "policy": {
-          "timeout": "0.02:00:00",
-          "retry": 0,
-          "retryIntervalInSeconds": 60,
-          "secureOutput": false,
-          "secureInput": false
-        },
-        "typeProperties": {
-          "notebookId": "{{NOTEBOOK_ID:agent_handoff_publisher}}",
-          "workspaceId": "{{WORKSPACE_ID}}",
-          "parameters": {
-            "PIPELINE_RUN_ID": {
-              "value": {
-                "value": "@pipeline().RunId",
-                "type": "Expression"
-              },
-              "type": "string"
-            },
-            "MAX_CONTRACTS": {
-              "value": {
-                "value": "@pipeline().parameters.MAX_CONTRACTS",
-                "type": "Expression"
-              },
-              "type": "int"
-            }
-          }
-        }
-      }
-    ],
-    "parameters": {
       "COHORT_SIZE": {
-        "type": "int",
-        "defaultValue": 2400
+       "value": {
+        "value": "@pipeline().parameters.COHORT_SIZE",
+        "type": "Expression"
+       },
+       "type": "int"
       },
       "MONTHS_OF_HISTORY": {
-        "type": "int",
-        "defaultValue": 36
+       "value": {
+        "value": "@pipeline().parameters.MONTHS_OF_HISTORY",
+        "type": "Expression"
+       },
+       "type": "int"
       },
       "COHORT_SEED": {
-        "type": "int",
-        "defaultValue": 20260827
+       "value": {
+        "value": "@pipeline().parameters.COHORT_SEED",
+        "type": "Expression"
+       },
+       "type": "int"
+      }
+     }
+    }
+   },
+   {
+    "name": "Silver_Conformed_Record",
+    "type": "TridentNotebook",
+    "description": "Type both feeds, resolve specialty spellings, attach HPO labels and body systems, and keep 'never asked' distinct from 'no'.",
+    "dependsOn": [
+     {
+      "activity": "Bronze_Clinical_Record",
+      "dependencyConditions": [
+       "Succeeded"
+      ]
+     }
+    ],
+    "policy": {
+     "timeout": "0.02:00:00",
+     "retry": 0,
+     "retryIntervalInSeconds": 60,
+     "secureOutput": false,
+     "secureInput": false
+    },
+    "typeProperties": {
+     "notebookId": "{{NOTEBOOK_ID:silver_conformed_record}}",
+     "workspaceId": "{{WORKSPACE_ID}}",
+     "parameters": {
+      "PIPELINE_RUN_ID": {
+       "value": {
+        "value": "@pipeline().RunId",
+        "type": "Expression"
+       },
+       "type": "string"
       },
       "MIN_RECORD_DAYS": {
-        "type": "int",
-        "defaultValue": 180
+       "value": {
+        "value": "@pipeline().parameters.MIN_RECORD_DAYS",
+        "type": "Expression"
+       },
+       "type": "int"
+      }
+     }
+    }
+   },
+   {
+    "name": "Silver_Note_Extraction",
+    "type": "TridentNotebook",
+    "description": "Extract phenotype findings from the free-text notes, with the note and character span each one came from, and an assertion so negated and family-history mentions never reach Gold.",
+    "dependsOn": [
+     {
+      "activity": "Silver_Conformed_Record",
+      "dependencyConditions": [
+       "Succeeded"
+      ]
+     }
+    ],
+    "policy": {
+     "timeout": "0.02:00:00",
+     "retry": 0,
+     "retryIntervalInSeconds": 60,
+     "secureOutput": false,
+     "secureInput": false
+    },
+    "typeProperties": {
+     "notebookId": "{{NOTEBOOK_ID:silver_note_extraction}}",
+     "workspaceId": "{{WORKSPACE_ID}}",
+     "parameters": {
+      "PIPELINE_RUN_ID": {
+       "value": {
+        "value": "@pipeline().RunId",
+        "type": "Expression"
+       },
+       "type": "string"
+      }
+     }
+    }
+   },
+   {
+    "name": "Gold_Referral_Signals",
+    "type": "TridentNotebook",
+    "description": "Apply the tiered criteria, assign the three states, run the equity check, and build the evidence contracts.",
+    "dependsOn": [
+     {
+      "activity": "Silver_Note_Extraction",
+      "dependencyConditions": [
+       "Succeeded"
+      ]
+     }
+    ],
+    "policy": {
+     "timeout": "0.02:00:00",
+     "retry": 0,
+     "retryIntervalInSeconds": 60,
+     "secureOutput": false,
+     "secureInput": false
+    },
+    "typeProperties": {
+     "notebookId": "{{NOTEBOOK_ID:gold_referral_signals}}",
+     "workspaceId": "{{WORKSPACE_ID}}",
+     "parameters": {
+      "PIPELINE_RUN_ID": {
+       "value": {
+        "value": "@pipeline().RunId",
+        "type": "Expression"
+       },
+       "type": "string"
       },
       "MIN_SYSTEMS_MULTI": {
-        "type": "int",
-        "defaultValue": 3
+       "value": {
+        "value": "@pipeline().parameters.MIN_SYSTEMS_MULTI",
+        "type": "Expression"
+       },
+       "type": "int"
       },
       "MIN_CONTRIBUTORY": {
-        "type": "int",
-        "defaultValue": 2
+       "value": {
+        "value": "@pipeline().parameters.MIN_CONTRIBUTORY",
+        "type": "Expression"
+       },
+       "type": "int"
+      }
+     }
+    }
+   },
+   {
+    "name": "Validation_Sensitivity",
+    "type": "TridentNotebook",
+    "description": "Measure sensitivity by group against the generator's answer key. Reads Bronze only; the answer key never touches the scoring path.",
+    "dependsOn": [
+     {
+      "activity": "Gold_Referral_Signals",
+      "dependencyConditions": [
+       "Succeeded"
+      ]
+     }
+    ],
+    "policy": {
+     "timeout": "0.02:00:00",
+     "retry": 0,
+     "retryIntervalInSeconds": 60,
+     "secureOutput": false,
+     "secureInput": false
+    },
+    "typeProperties": {
+     "notebookId": "{{NOTEBOOK_ID:validation_sensitivity}}",
+     "workspaceId": "{{WORKSPACE_ID}}",
+     "parameters": {
+      "PIPELINE_RUN_ID": {
+       "value": {
+        "value": "@pipeline().RunId",
+        "type": "Expression"
+       },
+       "type": "string"
+      }
+     }
+    }
+   },
+   {
+    "name": "Agent_Handoff_Publisher",
+    "type": "TridentNotebook",
+    "description": "Publish one bounded evidence contract per surfaced patient. Depends on Gold only -- it does not need the validation notebook, and making it wait would serialise two independent steps for no reason.",
+    "dependsOn": [
+     {
+      "activity": "Gold_Referral_Signals",
+      "dependencyConditions": [
+       "Succeeded"
+      ]
+     }
+    ],
+    "policy": {
+     "timeout": "0.02:00:00",
+     "retry": 0,
+     "retryIntervalInSeconds": 60,
+     "secureOutput": false,
+     "secureInput": false
+    },
+    "typeProperties": {
+     "notebookId": "{{NOTEBOOK_ID:agent_handoff_publisher}}",
+     "workspaceId": "{{WORKSPACE_ID}}",
+     "parameters": {
+      "PIPELINE_RUN_ID": {
+       "value": {
+        "value": "@pipeline().RunId",
+        "type": "Expression"
+       },
+       "type": "string"
       },
       "MAX_CONTRACTS": {
-        "type": "int",
-        "defaultValue": 40
+       "value": {
+        "value": "@pipeline().parameters.MAX_CONTRACTS",
+        "type": "Expression"
+       },
+       "type": "int"
       }
+     }
     }
+   }
+  ],
+  "parameters": {
+   "COHORT_SIZE": {
+    "type": "int",
+    "defaultValue": 2400
+   },
+   "MONTHS_OF_HISTORY": {
+    "type": "int",
+    "defaultValue": 36
+   },
+   "COHORT_SEED": {
+    "type": "int",
+    "defaultValue": 20260827
+   },
+   "MIN_RECORD_DAYS": {
+    "type": "int",
+    "defaultValue": 180
+   },
+   "MIN_SYSTEMS_MULTI": {
+    "type": "int",
+    "defaultValue": 3
+   },
+   "MIN_CONTRIBUTORY": {
+    "type": "int",
+    "defaultValue": 2
+   },
+   "MAX_CONTRACTS": {
+    "type": "int",
+    "defaultValue": 40
+   }
   }
+ }
 }

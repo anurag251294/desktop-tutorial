@@ -28,6 +28,11 @@
       "lakehouse": "silver_lakehouse"
     },
     {
+      "displayName": "silver_note_extraction",
+      "localPath": "fabric/notebooks/silver_note_extraction.ipynb",
+      "lakehouse": "silver_lakehouse"
+    },
+    {
       "displayName": "gold_referral_signals",
       "localPath": "fabric/notebooks/gold_referral_signals.ipynb",
       "lakehouse": "gold_lakehouse"
@@ -55,6 +60,11 @@
     {
       "displayName": "gold_cohort_summary",
       "localPath": "fabric/notebooks/gold_cohort_summary.ipynb",
+      "lakehouse": "gold_lakehouse"
+    },
+    {
+      "displayName": "report_numbers",
+      "localPath": "fabric/notebooks/report_numbers.ipynb",
       "lakehouse": "gold_lakehouse"
     }
   ],

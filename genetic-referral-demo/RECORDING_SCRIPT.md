@@ -5,7 +5,7 @@ so the two cannot drift. Re-run it after any edit to `docs-teleprompter.html`.
 
 Live: https://claude.ai/code/artifact/6b5e7ad0-e8cd-4567-bae7-fd178dae5846
 
-*Screen recording script · outcome first · about 16 minutes of narration*
+*Screen recording script · outcome first · notes · about 16 minutes of narration*
 
 The recording leads with the outcome, demonstrates the Fabric IQ experience,
 and only then explains the machinery underneath. Sections marked **ref** are
@@ -17,7 +17,7 @@ precisely rather than approximately.
 ## Before you hit record
 
 - Capacity `fabdemo85829` **Active 20+ minutes** — item editors lag a resume.
-- **Tab order is outcome-first now:** **cohort agent** (0:00) · ontology (1:50) · **referral_queries** (3:10 — the queryset, this is where GQL runs) · graph model · latency (5:20) · gold lakehouse (6:20 validation, then 7:45 Files/contracts) · workspace (9:45) · bronze · silver · gold criteria · cohort agent (13:15) · Foundry (15:00). Run `tabs_ont.py` and it lands in this order.
+- **Tab order is outcome-first now:** **cohort agent** (0:00) · **bronze_clinical_notes** (2:00) · **silver_extracted_findings** (2:40) · ontology (5:05) · **referral_queries** (6:15 — the queryset, where GQL runs) · latency (7:35) · **gold_validation_evidence_uplift** (8:20 — the finding) · gold lakehouse Files/contracts (10:35) · workspace (12:25) · bronze · silver · gold criteria · Foundry (16:35). Run `tabs_ont.py` and it lands in this order.
 - Foundry tab on `referral-foundry-mcap` → project `genetic-referral`.
 - Terminal in the repo, `az login` done.
 - **Click every tab once** before recording — Fabric lazy-renders background tabs.
@@ -25,6 +25,7 @@ precisely rather than approximately.
 - **Visible but not walked:** `gold_graph_dimensions` (builds the graph's dimension tables), `agent_handoff_publisher` (writes the evidence contracts), `gold_cohort_summary` (the cohort agent's serving table). Know what they are in case someone asks.
 - Gold holds 16 tables, three of which are copies of silver — that is the graph's single-lakehouse requirement, and there is a line for it in the workspace section.
 - **You open on the cohort agent, not the workspace.** Say the three numbers first, then ask the agent for the state breakdown and let it corroborate. The narration never depends on its answer — if it stalls, carry on.
+- **The finding is that the gap got WIDER.** Reading the notes found 44 more patients and moved the interpreter sensitivity gap from 12.6 points to 14.3. Do not present the uplift as the headline and the widening as a footnote — it is the other way round.
 - **Warm the agent before you record.** Ask it `How many patients are in each referral state?` once and discard the answer. First call after a capacity resume is slow, and the model intermittently returns `invalid_prompt` — you want that to happen in rehearsal, not in the take.
 
 ## What is what — nothing here lives inside a lakehouse
@@ -49,12 +50,15 @@ python scripts/foundry/test_gates.py     # 13/13
 
 ## Numbers you will say
 
-- **Cohort** — 2,400 children · **220 surfaced (9.2%)** · 1,766 no indicators · 414 not screened
-- **Latency** — median **8.7 months** · **38%** over a year · longest 32.9
-- **The one patient** — `SYN-00017` qualified **2024-03-06** — **29.7 months** ago
-- **Sensitivity** — **87.8%** no interpreter vs **75.2%** interpreter needed
-- **Ontology** — 6 entity types · 5 relationship types · 19 bound properties
-- **Graph** — 18,731 nodes · 35,216 edges
+- **Cohort** — 2,400 patients · **264 flagged** · 1,722 no indicators · 414 not screened
+- **Notes uplift** — coded only **220** → with notes **264** · **44 flagged only via notes**
+- **Notes** — 5,079 notes · 573 findings only in prose · **472 recovered (82%)**
+- **Extraction** — precision **100%** · recall **91.7%** · present 1,854 / negated 1,736 / family 1,075
+- **Sensitivity** — coded only **87.8** vs **75.2** (gap 12.6)
+- **… with notes** — **96.9** vs **82.6** — gap **14.3, WIDER**
+- **Latency** — median **12.0 months** · 50% over a year · longest 33.2
+- **Observations** — gold 3,559 = 1,705 coded + **1,854 from notes**
+- **Ontology / graph** — 6 entity types · 5 relationship types · 19 bound properties
 - **Knowledge base** — 31 documents
 
 ## 0:00 · What it produces
@@ -63,13 +67,17 @@ python scripts/foundry/test_gates.py     # 13/13
 
 > This is a case-finding pipeline in Microsoft Fabric, built for **SickKids**.
 
-> The ask was one line: **use agentic intelligence to identify patients early for genetic consultation or testing.**
+> The ask: **use agentic intelligence to identify patients early for genetic consultation or testing** — by reading historical clinical notes and patient history.
 
-> Children with undiagnosed rare conditions get referred late because their findings are spread across different clinics and different visits. No single clinician sees all of them. The data is in the chart already; it is just not in one place.
+> Children with undiagnosed rare conditions get referred late because their findings are scattered. Across clinics, across visits, and across different *kinds* of record. Some of it is coded. A lot is only ever written in a note.
 
-`— beat · say the numbers, then ask for them —`
+`— beat · the numbers, before any screen —`
 
-> Two thousand four hundred patients in. **Two hundred and twenty** flagged for genetics review — nine point two per cent. One thousand seven hundred and sixty-six where the record was read and nothing fired. Four hundred and fourteen with too little record to read at all.
+> Two thousand four hundred patients in. **Two hundred and sixty-four** flagged for genetics review.
+
+> **Forty-four of those were flagged only because the pipeline read the notes.** Nothing in any coded field would have surfaced them.
+
+> For everyone flagged, the qualifying evidence had been in the record a median of **twelve months**. Half of them, over a year.
 
 *Now type it and send. Keep talking while it runs — about fifteen seconds.*
 
@@ -80,22 +88,83 @@ How many patients are in each referral state?
 
 `— TYPE NOW: “How many patients are in each referral state?” · send · keep talking —`
 
-> That is the cohort agent answering off the gold tables, not me reading a slide. And notice it returns the caveat with each figure — the middle state does not mean the patient is clear, it means nothing was found in the record.
+> That is the cohort agent answering off the gold tables, not me reading a slide. And it returns the caveat with each figure — the middle state does not mean the patient is clear, it means nothing was found in the record.
 
-> Two more numbers I will come back to. The findings that triggered each flag had been sitting in the record for a median of **eight point seven months**, thirty-eight per cent of them over a year. And the screen catches **eighty-seven point eight per cent** of affected patients where no interpreter is needed, **seventy-five point two** where one is.
+`— the finding —`
 
-`— beat —`
+> And reading the notes did something I did not build it to do. It found forty-four more children, *and it widened the gap between who gets found and who does not*. That is the most important thing in here.
 
-> Two things to be clear about up front. **This is not genomics.** No genome, no variant, no test result — nothing here reads genetic data. It runs on phenotype codes and encounter records.
+> Two clarifications. **This is not genomics** — no genome, no variant, no test result. And the data is synthetic: two thousand four hundred generated patients, notes included. **No SickKids data**, no connection to any SickKids system.
 
-> And the data is synthetic. Two thousand four hundred generated patients. **No SickKids data**, and no connection to any SickKids system.
-
-> That agent is one of three, and it is the least constrained of them — I will come back to why that matters. First, where the definitions it just used are declared.
-
-**Note.** **If the agent stalls or returns `invalid_prompt`.** Keep going — you have already said the numbers, so nothing in the narration depends on it. Say "that one is intermittent, I will come back to it" and pick up at the ontology. Do not re-send mid-take; the retry lands in the middle of the next section.
+> Output first, then the code.
 
 
-## 2:05 · The ontology
+## 2:00 · The notes — what the coded feed could not see
+
+*Open `bronze_clinical_notes`. Show one row, then widen `note_text`.*
+
+> This is the part a coded pipeline walks straight past.
+
+> A note says *low tone*. It never says *H P colon zero zero zero one two five two*. So a pipeline reading coded observations does not see that patient has hypotonia — because in this record, nobody ever coded it.
+
+> There are 5,079 notes across the cohort. 573 findings are described in one of them and coded nowhere at all.
+
+*Switch to `silver_extracted_findings`.*
+
+> So silver reads the notes and produces findings from them. Each one carries the note it came from, the character span it matched, and an assertion.
+
+`— the assertion column is the whole thing —`
+
+> Matching is the easy half. These three sentences all contain the word scoliosis, and only one is a finding about this patient.
+
+
+```
+Scoliosis noted, unchanged since the last review.   -> present
+No evidence of scoliosis.                           -> negated
+An older sibling was investigated for scoliosis.    -> family_history
+```
+
+> Only *present* reaches gold. Count the other two and you flag patients for findings their notes say they do not have — and you inflate the body-system count that the strongest criterion reads.
+
+*Show the assertion breakdown: present 1,854 · negated 1,736 · family history 1,075.*
+
+> Of 4,665 mentions found, only 1,854 are findings about the patient in front of you. Nearly three in five are a negation or somebody else's history.
+
+`— how well does it work —`
+
+> Extraction recovered **472 of the 573** findings that existed only in prose — about eighty-two per cent — with no false positives.
+
+> What it missed is all shorthand the dictionary does not carry. *G D D.* *C H D.* *Failure to thrive.* *Floppy.* That is where a clinical NLP model goes in production, and the contract would not change: every finding still names the note and the span.
+
+**Note.** **Why a dictionary and not a model.** The argument of this pipeline is that the criteria decide who surfaces and the criteria are inspectable. Put a model in the extraction path and a model decides which findings a patient has — the same problem one step earlier, no longer reproducible or measurable for bias. Production should use clinical NLP. The only reason extraction can be *measured* here at all is that the cohort is synthetic and carries an answer key; a real deployment cannot compute this number.
+
+**Note.** **If asked why precision is 100%.** Because the extractor only claims phrases it knows and the assertion logic handles negation and family history. Recall is the honest number — eighty-two per cent of note-only findings — and it is below 100 because eighteen per cent of mentions were deliberately written in shorthand the lexicon was never given.
+
+
+## 3:55 · Where the notes live — not here
+
+*No screen needed. Say this straight after the notes section; it is the first question reading notes raises.*
+
+> One thing to be clear about, because a demo that reads clinical notes raises it immediately.
+
+> In this build the notes are synthetic and generated in the workspace. In your environment they would not move at all.
+
+`— the mechanism —`
+
+> OneLake shortcuts read data where it already is. Cloudera ships **Apache Ozone**, which exposes an S3-compatible API, so Fabric points an S3-compatible shortcut at it and reads in place. No copy, no ingest, no second home for a clinical note.
+
+> And for an endpoint that is not on the public internet — which yours would not be — the same shortcut runs through an **on-premises data gateway** you host. Microsoft supports that for S3, S3-compatible and Google Cloud Storage shortcuts.
+
+`— the honest half —`
+
+> What Fabric does write is the derived output. The extracted findings, the criteria results, the evidence contracts. Coded findings and pointers back to the note — not the note text.
+
+> So **Expedition stays the source of truth.** One copy of the notes, where they already are, under your governance. Fabric reads them and writes back something much smaller.
+
+**Note.** **Specifics, if pushed.** Ozone is on CDP runtimes and speaks S3, so it is an `S3 compatible` shortcut — not a bespoke Cloudera connector. The gateway is a standard OPDG on a Windows host with network line of sight to the Ozone endpoint; a self-signed certificate must be trusted on that host. OPDG shortcuts support caching, which cuts repeated egress. Use the service endpoint, not a bucket URL. If they cannot expose Ozone's S3 gateway at all, Data Factory has Impala and Hive connectors over the same gateway — but that is a **pipeline copy**, the thing we are trying not to do, so do not lead with it.
+
+
+## 5:05 · The ontology
 
 *Open `referral_ontology`. Let the canvas render — six entity types and the relationships between them.*
 
@@ -124,29 +193,27 @@ How many patients are in each referral state?
 **Note.** **Preview.** Ontology is in preview and we enabled it in this tenant for this build. If someone asks how long it took: flip the tenant setting, then about ten minutes before the service honoured it. Worth saying plainly rather than pretending it was instant.
 
 
-## 3:25 · The graph — checking a flag
+## 6:15 · The graph — checking a flag
 
 *Switch to `referral_queries` — the **graph queryset**, which is the thing you run queries in. The graph model itself is just the schema. Paste the query and press **Run**.*
 
 
 ```
-MATCH (p:Patient)-[:hasFeature]->(f:Feature)-[:inBodySystem]->(b:BodySystem)
-WHERE p.patientId = 'SYN-00017'
-RETURN f.hpoLabel AS feature, b.bodySystem AS system
+MATCH (p:Patient)-[r:hasFeature]->(f:Feature)-[:inBodySystem]->(b:BodySystem)
+WHERE p.patientId = 'SYN-00096'
+RETURN f.hpoLabel AS feature, b.bodySystem AS system, r.recordedBy AS source
 ORDER BY system, feature
 ```
 
-> This is the graph model over those same six entity types. Eighteen thousand seven hundred nodes, thirty-five thousand relationships, built from the same gold tables.
+> You cannot ask a table why. This is the graph — the same entities, made traversable. You write GQL against it instead of joining six tables by hand.
 
 `— if someone asks why both —`
 
-> The ontology defines the model. The graph makes it traversable — you write GQL against it instead of joining six tables by hand.
-
-> Patient `SYN-00017` was flagged for findings spanning multiple body systems. This query walks patient, to features, to body systems. So you can check the flag rather than trust it.
+> This is one of the forty-four — a patient the coded feed alone would never have surfaced. They were flagged for findings spanning multiple body systems. The query walks patient, to findings, to body systems — so you can check the flag rather than trust it.
 
 *Results: cardiac · neurodevelopment ×2 · neurology · skeletal.*
 
-> Five features across four systems. Abnormal heart morphology, cardiac. Developmental regression and global developmental delay, neurodevelopment. Hypotonia, neurology. Scoliosis, skeletal. That is the criterion, expanded into the rows it was computed from.
+> And look at `recordedBy` on each edge. Most say *Clinician*. Some say *note extraction* — that finding reached the graph from a sentence, not a coded field. Same evidence chain, different origin, both auditable back to a row.
 
 *Second query.*
 
@@ -163,11 +230,9 @@ GROUP BY specialty ORDER BY children DESC
 
 *Results: General Paediatrics 801 · Cardiology 794 · ENT 785 · Developmental Paediatrics 776 · Neurology 769 · Orthopaedics 754.*
 
-> Eight hundred and one patients with `no_indicators_recorded` are in General Paediatrics. Seven hundred and ninety-four in Cardiology, seven hundred and eighty-five in ENT. Most of those are fine. But the screen does miss patients, and this is where the missed ones are.
+> Eight hundred patients with no indicators recorded are in General Paediatrics. Nearly eight hundred more across Cardiology and ENT. Most are fine. But the screen does miss patients, and this is where the missed ones sit.
 
 `— beat —`
-
-> You could write both of these in SQL. The graph is easier because the questions are about relationships — patient to feature to body system is three joins in SQL and one MATCH here.
 
 *If asked how the graph was built — and someone will:*
 
@@ -176,59 +241,61 @@ GROUP BY specialty ORDER BY children DESC
 **Note.** **Get this exactly right.** Ontology and graph are both **Fabric IQ** components — Microsoft defines Fabric IQ as ontologies, semantic models, graphs and data agents. Both are real here and both are on screen. What you must **not** say is that the ontology found the children — the named criteria in gold do that, deterministically, and that separation is the point of the whole demo.
 
 
-## 5:35 · Latency — how long the data sat there
+## 7:35 · Latency — how long the evidence sat there
 
 *Open the **notebook** `gold_signal_latency`, or just show the figures.*
 
-*Second word: **early**.*
+> Next question: for each patient, when did their criteria first become true?
 
-> Same patient. Next question: when did that criterion first become true?
+> Across all 264 flagged, the median is **twelve months**. Half are over a year. The longest is 33.2 months.
 
-> Sixth of March, twenty twenty-four. Twenty-nine point seven months ago. Every feature the criterion needed was already coded by that date.
+> This is not anyone making a mistake. The findings were recorded by different clinicians, in different clinics, months apart — some coded, some only written down. Nothing joined them up.
 
-`— beat · let it sit —`
+> That is what the pipeline does. It joins them up, and it computes the date the pattern completed.
 
-> Across all two hundred and twenty, the median is eight point seven months. Thirty-eight per cent are over a year. The longest is thirty-two point nine months.
+> So **early** is a measured number here, not a claim.
 
-> This is not anyone making a mistake. The features were recorded by different clinicians, in different clinics, months apart. Nothing joined them up.
+**Note.** **Be precise about the claim.** The synthetic record contains no referral events, so this says the evidence has been **sufficient** since that date. It does **not** say a referral was missed or late. On real data, comparing the qualifying date against the actual referral date is the number you would want, and the obvious next thing to build.
 
-> That is all the pipeline does here. It joins them up, and it computes the date the pattern completed.
-
-> So **early** is a measured number in this build, not a claim.
-
-**Note.** **Be precise about the claim.** The synthetic record contains no referral events, so this says the evidence has been **sufficient** since that date. It does **not** say a referral was missed or late. On real data, comparing the qualifying date against the actual referral date is the number you would want — and the obvious next thing to build.
+**Note.** **If you show latency by interpreter need,** it reads 10.9 months against 12.9 — apparently *better* for interpreter-needing patients. That is **survivorship**, not good news: the screen only surfaces patients whose evidence crossed the threshold, and fewer of their findings reach any field, so the ones that do surface are the more florid cases. The subtler ones are not in this table because the screen never found them. They are in the sensitivity gap instead.
 
 
-## 6:35 · Sensitivity, split by interpreter need
+## 8:20 · The finding — reading the notes made the gap worse
 
-*Show the **table** `gold_validation_sensitivity` (inside `gold_lakehouse`), or run the interpreter query on the graph.*
+*Show `gold_validation_evidence_uplift` in the gold lakehouse. Four rows. Slow right down here.*
 
-> This is the number I opened with, and where it comes from.
+> This is the number I opened with, and it is the one I would most want you to take away.
 
-> The generator plants the same underlying rate of clustered presentation in both groups. Patients whose families need an interpreter get the same simulated biology as everyone else. What differs is how much of it gets recorded.
+> The cohort plants the same rate of clustered presentation in both groups. Same simulated biology. What differs is how much of it gets written down — and now, which field it gets written in.
 
-*Point at the feature counts: 939 across 486 children, versus 766 across 467.*
+`— coded only —`
 
-> One point nine three features recorded per patient where no interpreter is needed. One point six four where one is. Shorter consultations, harder history-taking, less of it lands in a coded field.
+> On coded observations alone, the screen finds **87.8 per cent** of affected patients where no interpreter is needed, and **75.2** where one is. A gap of **12.6 points**.
 
-*Switch to the sensitivity figures.*
+`— now add the notes —`
 
-> So the screen catches **eighty-seven point eight per cent** in one group and **seventy-five point two** in the other. Twelve point six points of difference, off identical planted prevalence.
+> Both go up. **96.9** and **82.6**. Forty-four more children found, which is the headline anyone would want.
 
-> The criteria never read language or interpreter status. There is an assert in the notebook that fails the build if that stops being true.
+> And the gap goes from 12.6 points to **14.3**. Reading the notes found more patients *and made the disparity worse*.
 
-> Which is the point: excluding the column does not make the output even. The only way to see this is to measure the outcome by group, which is what this table does.
+`— beat · let that sit —`
 
-`— beat —`
+> Which is not a paradox. A new reading channel helps most where there is most to read. Shorter consultations produce shorter notes, so the group that was already under-documented gained the least from reading them.
 
-> And it tells you what to fix — interpreter-supported history-taking, not the model.
+> I want to be precise about the status of that number. This is a synthetic cohort and I planted the documentation behaviour, so the direction follows from how it was built. Whether it goes the same way in your data is an empirical question, and I do not know the answer.
 
-**Note.** **If you also show latency by interpreter need, read it carefully.** It appears to say interpreter-needing children are found *sooner* — eight months against ten. That is **survivorship, not good news**: the screen only surfaces children whose evidence crossed the threshold, and fewer of their features reach the record, so the ones that do surface are the more florid cases. The subtler ones are not in that table because the screen never found them. They are in this sensitivity gap instead.
+> The point is not the number. The point is that the pipeline *measures* it — so you find out before you deploy the capability, not after.
 
-**Note.** **If asked how you know the sensitivity:** the cohort is synthetic and carries an answer key. A real deployment cannot compute this — which is precisely the argument for the synthetic cohort. It measures what production never shows you: not how many flagged children turn out to be affected, but how many affected children were never flagged. Be equally plain that the **absolute** figure is close to circular; the **gap between groups** is not, because both were planted identically.
+> A team that shipped notes extraction on *we found forty-four more children* would have shipped a widened disparity and never known it was there.
+
+> And nothing in the criteria reads language or interpreter status. There is an assert in the notebook that fails the build if that ever stops being true. Excluding the column is not what makes this visible — measuring the outcome by group is.
+
+**Note.** **Do not soften this into a win.** The instinct is to present the uplift and mention the gap. It has to be the other way round: the uplift is expected, the widening is the finding. If someone pushes back that the demo is "negative", the answer is that a screen you cannot audit for this is a screen you cannot deploy in a paediatric hospital.
+
+**Note.** **If asked how you know sensitivity at all:** the cohort is synthetic and carries an answer key. A real deployment cannot compute this, which is precisely the argument for the synthetic cohort — it measures what production never shows you: not how many flagged patients turn out to be affected, but how many affected patients were never flagged. The **absolute** level is close to circular against a planted pattern. The **gap**, and the change in the gap, are not.
 
 
-## 8:00 · The brief, and the four checks
+## 10:35 · The brief, and the four checks
 
 *Terminal. Run it, then open the brief on screen — this section is about the *document*, not the pipeline.*
 
@@ -256,7 +323,7 @@ python scripts/foundry/create_referral_agent.py \
 **Note.** **If it fails** with `invalid_prompt: Unsupported parameter 'top_p'` — that is a service-side intermittent, not your fault and not a configuration error. Re-run the same command; it works on the retry.
 
 
-## 9:40 · How it works
+## 12:10 · How it works
 
 *Back to the workspace list.*
 
@@ -265,7 +332,7 @@ python scripts/foundry/create_referral_agent.py \
 > Three parts worth looking at: how the record gets conformed, how the criteria are written, and what each agent can reach.
 
 
-## 10:00 · The workspace
+## 12:25 · The workspace
 
 *Click into the workspace list.*
 
@@ -280,103 +347,91 @@ python scripts/foundry/create_referral_agent.py \
 *If anyone notices gold holds copies of some silver tables — `gold_encounters`, `gold_observations`, `gold_hpo_terms` — have this ready:*
 
 
-## 10:30 · Bronze — the raw record
+## 12:55 · Bronze — the raw record
 
 *Open the **notebook** `bronze_clinical_record` from the workspace list. Header, then the cohort cell.*
 
-> Bronze pulls the Human Phenotype Ontology from its public API. It is a coded vocabulary of observable clinical findings — developmental delay, hypotonia, short stature. Genetics services use it; it is not genetic data.
+> Bronze pulls the Human Phenotype Ontology from its public API — a coded vocabulary of observable findings. Genetics services use it; it is not genetic data.
 
-> Then it generates the record with realistic mess in it. Two date formats, because the encounter feed and the observation feed are simulated as different-era systems. Five spellings across three service names. Family history present for about sixty per cent of patients.
+> Then it generates the record with realistic mess in it. Two date formats, five spellings across three service names, family history present for about sixty per cent of patients — and notes that describe things the coded fields never captured.
 
 *Point at the comments in the cohort cell.*
 
-> That is deliberate. If the input is clean, the pipeline never exercises the parts that matter.
 
-
-## 11:15 · Silver — null is not false
+## 13:25 · Silver — null is not false
 
 *Open the **notebook** `silver_conformed_record`. The family history cell.*
 
 > This is the cell that matters most.
 
-> Family history is missing for forty per cent of patients. The easy fix is `fillna(False)` and you get a clean boolean column.
-
-> That is wrong. *Asked, answer was no* and *nobody asked* are different facts. `fillna(False)` turns the second into the first for forty per cent of the cohort, and every downstream count is off.
+> Family history is missing for forty per cent of patients. The easy fix is `fillna(False)`, which turns *nobody asked* into *asked, answer was no* for forty per cent of the cohort. Every downstream count is then wrong.
 
 *Point at `history_taken`.*
 
-> So `history_taken` is its own boolean, and the finding flags stay null where nobody asked. The criteria in gold skip nulls rather than counting them as negative.
+> So `history_taken` is its own boolean and the flags stay null where nobody asked. The criteria skip nulls rather than counting them as negative.
 
-> Same logic gives the third state. If a patient's record is too sparse to evaluate, they come out `not_screened`, not clear.
-
-> This is also where that twelve-point gap comes from. The criteria read recorded findings. Fewer findings recorded means fewer patients flagged.
+> Same logic gives the third state: too sparse to evaluate comes out `not_screened`, not clear.
 
 
-## 12:15 · Gold — the criteria
+## 14:10 · Gold — the criteria
 
 *Open the **notebook** `gold_referral_signals`. The `CRITERIA` cell.*
 
 *First of the three words: **identify**.*
 
-> Six criteria. Each named, each with its own threshold, all in one `CRITERIA` dict at the top of the notebook.
+> Six criteria. Each named, each with its own threshold, all in one dict at the top of the notebook.
 
 > No risk score, on purpose. *Flagged because findings span four body systems* is something a clinician can check and push back on. *Risk zero point eight one* is not.
 
 *Point at the tiers.*
 
-> Two tiers. **Sufficient** criteria flag a patient on their own. **Contributory** ones only count in combination. Weight them the same and you flag about a fifth of the cohort, which is not usable.
+> Two tiers. **Sufficient** criteria flag on their own; **contributory** ones only count in combination. Weight them the same and you flag a fifth of the cohort.
 
 *Scroll to the three-states table.*
 
-> Three output states in `gold_referral_state`: `indicators_present`, `no_indicators_recorded`, `not_screened`.
-
-> The middle one is the one people misread. It means nothing was found in the record, not that the patient has no indication. An uncoded patient and an unaffected patient look identical here, and the pipeline does not guess between them.
+> And the criteria did not change when we added notes. They read findings — it does not matter to them whether a finding came from a coded field or a sentence. That is the whole reason the comparison is clean.
 
 `— beat —`
 
-> Every threshold in that dict is a placeholder. They need sign-off from the SickKids genetics service. They are in a table so that is a concrete review rather than a conversation about the code.
+> Every threshold is a placeholder pending sign-off from the SickKids genetics service.
 
 
-## 13:30 · Three agents, and what each can reach
+## 15:15 · Three agents, and what each can reach
 
 *Third word: **agentic**. This is the one that does not mean what you might assume.*
 
-> Patients are flagged by the criteria in gold, not by a model. That is deliberate: you can read the criteria, version them, re-run them next month and measure them for bias. You cannot do any of that with a model that decides who surfaces.
+> Patients are flagged by the criteria in gold, not by a model. You can read them, version them, re-run them and measure them for bias. You cannot do any of that with a model that decides who surfaces.
 
-> So the agents are not doing the finding. They do everything around it, and what matters about each one is what it can reach.
+> So the agents are not doing the finding. What matters about each one is what it can reach.
 
 *Open the envelope that brief was written from: `gold_lakehouse` → Files → `contracts/` → `patient-evidence.SYN-00195.json`.*
 
-> First agent wrote that brief. No tools, no query access. It gets this JSON file and nothing else: the patient's state, which criteria fired, and the evidence items.
-
-> So its scope is whatever is in the file. It cannot reach a patient it was not given, whatever you prompt it with.
+> The first wrote that brief. No tools, no query access — it gets a JSON file and nothing else, so its scope is whatever is in the file.
 
 `— second agent —`
 
-> Second agent answers vocabulary questions from a Foundry IQ knowledge base — thirty-one documents, no patient data indexed. Ask it which patients were flagged and it returns design docs, because there is nothing else in there to return.
+> The second answers vocabulary questions from a Foundry IQ knowledge base: thirty-one documents, no patient data indexed. Ask it which patients were flagged and it returns design docs, because there is nothing else in there.
 
-> Third is the agent I opened with — a Fabric data agent over the gold lakehouse. This is the one to look at hardest, because it can reach every patient row. Its limits are prompt instructions, and instructions are weaker than not having access.
+> The third is a Fabric data agent over gold — the one to scrutinise hardest, because it can reach every patient row. Its limits are prompt instructions, and instructions are weaker than not having access.
 
 `— third agent —`
 
-> So it is pointed at `gold_cohort_summary` — precomputed aggregates with the caveats stored as columns. Where you can enforce scope structurally, do that. Where you cannot, be explicit that you have not.
+> So it is pointed at a summary table of precomputed figures with the caveats stored as columns. Where you can enforce scope structurally, do. Where you cannot, say so.
 
 
-## 15:15 · Fabric and Foundry — which does what
+## 16:35 · Fabric and Foundry — which does what
 
 *No screen needed. Say this over the workspace, or over the brief you just produced.*
 
-> Quick note on which platform does what, because it comes up.
+> Quickly, on which platform does what.
 
 `— what Fabric did —`
 
-> Fabric does the data and the selection. One copy in OneLake, the criteria, the ontology and graph over the same tables, plus lineage and permissions.
+> Fabric does the data and the selection: one copy in OneLake or shortcut to where it already lives, the criteria, the ontology and graph, plus lineage and permissions.
 
 `— where it stops —`
 
-> Three things it does not do. There is no way to scope a model to a single payload. There is no output contract — no schema validation, no check that refuses a document because a required sentence is missing. And there is nowhere to hold reference documents separately from patient data.
-
-> Those are not gaps in Fabric. They are a different job: constraining and validating what gets generated about a patient.
+> What it does not do is scope a model to a single payload, validate an output against a schema, or hold reference documents apart from patient data. That is a different job — constraining and checking what gets generated about a patient.
 
 > So Fabric selects the patients. Foundry constrains and checks what gets written about them.
 
@@ -389,17 +444,15 @@ python scripts/foundry/create_referral_agent.py \
 **Note.** **Two things to keep straight.** The ontology, the graph and the data agent are all **Fabric IQ** components, and all three are live and populated here — six entity types, five relationship types, nineteen bound properties. And Foundry IQ does **not** take Fabric IQ as a knowledge source; its sources are Blob, SharePoint, OneLake and the web. The two are used together, not plugged into one another.
 
 
-## 16:20 · Close
+## 17:30 · Close
 
-> Recap. Criteria you can read in a table. Three states kept separate. Evidence you can walk in the graph. Latency computed per patient. And a sensitivity check split by interpreter need.
+> Recap. Criteria you can read. Three states kept separate. Findings extracted from notes, each one traceable to a sentence. Latency measured per patient. And sensitivity measured by group.
 
-> The thresholds are not clinically validated. They are placeholders for the SickKids genetics service to review. And the data is synthetic — no SickKids data was used.
-
-> Back to the original ask. **Identify**: six named criteria. **Early**: a median of eight point seven months, measured. **Agentic**: three agents around the pipeline, and the one that writes about a patient has no query access and four output checks.
+> The thresholds are not clinically validated — placeholders for the SickKids genetics service to review. The data is synthetic; no SickKids data was used.
 
 `— beat · close on the sentence you opened with —`
 
-> And the part that was not asked for: a measurement of who the screen misses, and whether it misses the same people the system already misses.
+> And the part nobody asked for, which is the reason to build it this way: reading the notes found forty-four more children and widened the gap. You only know that if you measure it.
 
 
 ## ref · The pipeline, if anyone digs
@@ -601,4 +654,4 @@ encounterWithSpecialty  Encounter -> Specialty    via gold_encounters     encoun
 
 ---
 
-2101 spoken words — about 15 minutes of narration at a measured pace, nearer 18 recorded once page loads and query runs are in.
+2296 spoken words — about 16 minutes of narration at a measured pace, nearer 18 recorded once page loads and query runs are in.
