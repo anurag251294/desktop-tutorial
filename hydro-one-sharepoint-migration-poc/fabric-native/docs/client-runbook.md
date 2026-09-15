@@ -33,12 +33,14 @@ no external storage account to provision or pay for.
                                               Tables/migration_watermark      ← delta resume point
 ```
 
-**Two engines, by design:**
-- **Inventory** uses the native **SharePoint Online connector** (no code) to list
-  what exists.
-- **Content** uses a **Spark notebook** that downloads binaries via Graph and
-  writes them to OneLake — reliable for large/binary document libraries and
+**One engine does the work:**
+- **Content and inventory** come from a **Spark notebook** that enumerates the
+  library over Graph, downloads binaries into OneLake in their SharePoint folder
+  structure, and writes `sharepoint_inventory` from the same enumeration. It
   supports **incremental** re-runs via Graph delta links.
+- **Optional connector inventory.** `PL_SharePoint_Inventory` can list the
+  library with the SharePoint Online connector instead. It writes its own table,
+  `sharepoint_list_inventory`, and is not needed for the migration.
 
 ---
 
@@ -105,7 +107,8 @@ az role assignment create --assignee "$appId" --role "Key Vault Secrets User" \
 `sharepoint_inventory` table itself, from the same Graph enumeration it uses to
 move content — so no Fabric SharePoint connection is required. Leave
 `sharePointConnectionId` blank; `PL_SharePoint_Inventory` deploys as a harmless
-empty skeleton and is simply unused.
+empty skeleton and is simply unused. If you do bind it, it writes its own table,
+`sharepoint_list_inventory`, and never touches the notebook's `sharepoint_inventory`.
 
 > Only if you specifically want the low-code **SharePoint Online list** connector
 > instead: Fabric portal → **Settings → Manage connections and gateways → New** →
@@ -143,6 +146,10 @@ Edit `fabric-native.json`:
 
 > The secret itself is **never** placed in this file — only the Key Vault name and
 > secret name. The notebook fetches the secret at run time.
+
+> `sites` drives **Option C** in section 5: `Start-FabricMigration.ps1` runs the
+> master pipeline once per entry, one after another. A run started any other way
+> migrates the single library passed as `SiteUrl` / `LibraryName` / `Mode`.
 
 ---
 
@@ -225,6 +232,19 @@ az rest --method post \
 
 | Parameter | Example | Meaning |
 |-----------|---------|---------|
+### Option C — every library in the config (PowerShell)
+
+```powershell
+.\fabric-native\scripts\Start-FabricMigration.ps1 -WorkspaceId "<workspace-guid>" -ConfigPath .\fabric-native\config\fabric-native.json
+```
+
+Runs `PL_Migrate_Master` once per `sites` entry, sequentially (concurrent runs
+would write the same Delta tables at once), waits for each, and prints a summary.
+It stops at the first failed run unless you add `-ContinueOnError`. Add `-WhatIf`
+to validate the config and see the planned runs without starting anything.
+
+| Parameter | Example | Meaning |
+|-----------|---------|---------|
 | `site_url` / `SiteUrl` | `https://contoso.sharepoint.com/sites/Eng` | The SharePoint site. |
 | `library_name` / `LibraryName` | `Documents` | The document library. |
 | `mode` / `Mode` | `full` or `incremental` | `full` copies everything; `incremental` resumes from the saved Graph delta link. |
@@ -239,14 +259,16 @@ then schedule it with `mode=incremental` — each run only transfers what change
 ## 6. Verify & monitor
 
 **In the Lakehouse (OneLake):**
-- `Files/<site>/<library>/…` — the migrated documents (browse in the Lakehouse explorer).
+- `Files/<site>/<library>/…` — the migrated documents, in their SharePoint folder
+  structure (browse in the Lakehouse explorer).
 - `Tables/migration_audit` — one row per file: `name`, `size`, `status`
   (`copied` or `error: …`), `dest`, `ts_utc`.
 - `Tables/migration_watermark` — the Graph delta link per `site::library`
   (the incremental resume point).
 - `Tables/sharepoint_inventory` — the full library listing (files + folders with
   `relative_path`, `size`, `web_url`, `last_modified`), built by the notebook over
-  Graph and upserted by `item_id` on every run. No SharePoint connection needed.
+  Graph. A clean `full` run rebuilds the rows for that library; `incremental` runs
+  apply changes and deletions by `item_id`. No SharePoint connection needed.
 
 **Quick checks (SQL analytics endpoint of the Lakehouse):**
 
@@ -275,6 +297,9 @@ WHERE status LIKE 'error:%' ORDER BY ts_utc DESC;
 | Notebook job fails immediately | Missing Graph permission or secret. | Confirm `Sites.Read.All`/`Files.Read.All` + admin consent, and that the Key Vault secret exists and the run identity has **Secrets User**. |
 | `migration_audit` rows show `error: 403` | App lacks access to that site/library. | Grant the app access to the site collection (or use sites-selected consent). |
 | Want to re-copy everything | Watermark already advanced. | Run with `Mode = full` (ignores the watermark). |
+| Pipeline succeeds but nothing is migrated | `SiteUrl` was blank, so the notebook ran its smoke test. | Use `Start-FabricMigration.ps1` (Option C), or pass `SiteUrl`, `LibraryName` and `Mode`. |
+| A file deleted in SharePoint is still in OneLake | Deliberate: a deletion removes the inventory row but keeps the migrated copy. | Delete it from the Lakehouse by hand if it should go. |
+| `migration_audit` is clean but `errors` > 0 in the run output | A renamed or moved item could not be relocated in OneLake. The notebook prints `could not relocate ...`. | Nothing is lost; the watermark is held and the next run retries the move. |
 
 ---
 

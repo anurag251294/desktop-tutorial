@@ -1,6 +1,6 @@
 {
   "properties": {
-    "description": "Master orchestrator: refresh SharePoint inventory (connector), then migrate document content to OneLake (Spark). Deploy-time placeholders __WORKSPACE_ID__/__LAKEHOUSE_ID__/__ITEM:..__ are resolved by Deploy-FabricNative.ps1.",
+    "description": "Master orchestrator: refresh the optional SharePoint connector inventory, then migrate document content to OneLake (Spark). Workspace, Lakehouse and item references are resolved to GUIDs by Deploy-FabricNative.ps1.",
     "activities": [
       {
         "name": "Refresh_Inventory",
@@ -12,7 +12,11 @@
             "referenceName": "PL_SharePoint_Inventory",
             "type": "PipelineReference"
           },
-          "waitOnCompletion": true
+          "waitOnCompletion": true,
+          "parameters": {
+            "SiteUrl": { "value": "@pipeline().parameters.SiteUrl", "type": "Expression" },
+            "LibraryName": { "value": "@pipeline().parameters.LibraryName", "type": "Expression" }
+          }
         }
       },
       {

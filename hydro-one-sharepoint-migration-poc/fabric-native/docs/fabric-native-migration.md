@@ -29,9 +29,10 @@ ADLS Gen2, and the file content never leaves the Fabric workspace boundary.
                             Files/<site>/<library>/...     (binary documents)
 ```
 
-- **Inventory (SharePoint connector).** `PL_SharePoint_Inventory` uses Fabric's
-  native **SharePoint Online** connector to copy document-library metadata into
-  the Lakehouse Delta table `sharepoint_inventory`.
+- **Inventory.** The notebook writes `sharepoint_inventory` from the same Graph
+  enumeration it uses to move content. `PL_SharePoint_Inventory` is an optional
+  alternative using the **SharePoint Online** connector; it writes its own table,
+  `sharepoint_list_inventory`, so the two never overwrite each other.
 - **Content (Spark).** `Migrate_SharePoint_Content` authenticates to Microsoft
   Graph with a service principal, enumerates files (full, or **delta/incremental**
   via Graph delta links), streams each binary into the Lakehouse **Files** area,
@@ -46,9 +47,8 @@ ADLS Gen2, and the file content never leaves the Fabric workspace boundary.
 - Azure CLI signed in (`az login`) with **Contributor** on the target workspace.
 - An Entra **app registration** (service principal) with Graph
   `Sites.Read.All` + `Files.Read.All`, and its secret stored in **Key Vault**.
-- A Fabric **SharePoint Online connection** in the workspace (for the inventory
-  pipeline). The Spark content path uses the service principal above, not this
-  connection.
+- *Optional:* a Fabric **SharePoint Online connection**, only for the connector
+  inventory pipeline. The notebook uses the service principal above.
 
 ## Deploy
 
@@ -76,7 +76,7 @@ the notebook/pipeline assembly locally.
 
 ### SharePoint connection
 
-`PL_SharePoint_Inventory` needs a real SharePoint connection GUID
+`PL_SharePoint_Inventory` is optional, and needs a real SharePoint connection GUID
 (`sharePointConnectionId` in the config). Until one is supplied the deploy creates
 it as an empty **skeleton** and prints a warning — the rest of the stack still
 deploys, and the master pipeline's reference to it still resolves. Set the GUID
@@ -85,10 +85,13 @@ and re-run to bind it.
 ## Run
 
 Run `PL_Migrate_Master` from the Fabric UI (or via the Jobs REST API), passing
-`SiteUrl`, `LibraryName`, and `Mode` (`full` or `incremental`). It refreshes the
+`SiteUrl`, `LibraryName`, and `Mode` (`full` or `incremental`). To migrate every
+library in the config's `sites` list, run `scripts/Start-FabricMigration.ps1`,
+which starts one run per entry in sequence. It refreshes the
 inventory, then runs the notebook to copy content into OneLake. Re-runs are
 incremental: the notebook resumes from the stored Graph delta link per
-site/library.
+site/library. Folder structure is preserved, and renamed or moved folders and
+files are relocated in OneLake rather than left behind at their old paths.
 
 ## Notebook parameters
 
@@ -98,7 +101,7 @@ site/library.
 | `tenant_id`, `client_id` | Graph service principal. |
 | `key_vault_uri`, `client_secret_name` | Where the notebook reads the SP secret at run time. |
 | `site_url`, `library_name` | SharePoint document library to migrate. |
-| `mode` | `full` (enumerate children) or `incremental` (Graph delta). |
+| `mode` | `full` (fresh, recursive Graph delta enumeration; ignores the watermark) or `incremental` (resume from the saved delta link). |
 
 With no `site_url`, the notebook runs a **smoke test** that writes a sample file
 to `Files/_smoketest` and a `migration_smoke` Delta table — used to validate the

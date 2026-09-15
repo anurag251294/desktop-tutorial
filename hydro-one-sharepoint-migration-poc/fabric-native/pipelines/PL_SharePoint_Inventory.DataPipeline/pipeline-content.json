@@ -1,6 +1,6 @@
 {
   "properties": {
-    "description": "Copies SharePoint document-library metadata into the Lakehouse Delta table 'sharepoint_inventory' using the native SharePoint Online connector. Bind __SHAREPOINT_CONNECTION__ to a Fabric SharePoint connection (Deploy-FabricNative.ps1 substitutes it from config). Workspace/Lakehouse placeholders are resolved at deploy time.",
+    "description": "Optional: copies SharePoint list metadata into the Lakehouse Delta table 'sharepoint_list_inventory' using the SharePoint Online connector. It deliberately does not write 'sharepoint_inventory', which the migration notebook owns: this Copy overwrites its table's schema, and sharing one table made the notebook's MERGE on item_id fail. Bind __SHAREPOINT_CONNECTION__ to a Fabric SharePoint connection (Deploy-FabricNative.ps1 substitutes it from config). Workspace/Lakehouse placeholders are resolved at deploy time.",
     "activities": [
       {
         "name": "Copy_SharePoint_Inventory",
@@ -44,7 +44,7 @@
               "type": "LakehouseTable",
               "schema": [],
               "typeProperties": {
-                "table": "sharepoint_inventory"
+                "table": "sharepoint_list_inventory"
               },
               "linkedService": {
                 "name": "HydroOneMigration",
