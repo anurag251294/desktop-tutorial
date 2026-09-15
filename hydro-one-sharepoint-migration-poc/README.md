@@ -9,19 +9,28 @@ All file access is handled through the **Microsoft Graph API** with cross-tenant
 > ### ⭐ Recommended: Fabric-native → OneLake
 >
 > A **Fabric-native** migration path supersedes the ADF/ADLS design below. It lands
-> content directly in **OneLake** (no external storage account) using the native
-> **SharePoint Online connector** for inventory and a **Spark notebook** for content,
-> orchestrated by one master pipeline. One idempotent command deploys the whole stack:
+> content directly in **OneLake** (no external storage account). A **Spark notebook**
+> enumerates each document library over Microsoft Graph, copies files into OneLake in
+> their SharePoint folder structure, and builds the `sharepoint_inventory` table from
+> the same pass. One master pipeline orchestrates it; the SharePoint Online connector
+> pipeline is optional. Deploy the stack, then run every library listed in the config:
 >
 > ```powershell
-> .\fabric-native\scripts\Deploy-FabricNative.ps1 -WorkspaceId "<workspace-guid>" -ConfigPath .\fabric-native\config\fabric-native.json
+> .\fabric-native\scripts\Deploy-FabricNative.ps1  -WorkspaceId "<workspace-guid>" -ConfigPath .\fabric-native\config\fabric-native.json
+> .\fabric-native\scripts\Start-FabricMigration.ps1 -WorkspaceId "<workspace-guid>" -ConfigPath .\fabric-native\config\fabric-native.json
 > ```
+>
+> Both scripts accept `-WhatIf` for an offline dry run. Re-runs are incremental via
+> Graph delta links. Renamed or moved folders and files are relocated in OneLake, long
+> runs refresh their Graph token, and throttled requests are retried.
 >
 > Everything lives under **`fabric-native/`** — see the
 > **[client runbook](fabric-native/docs/client-runbook.md)** (az-CLI deploy guide)
 > and the **[architecture deep-dive](fabric-native/docs/fabric-native-migration.md)**.
 > This path was deployed and a real SharePoint→OneLake migration verified end to end
-> on a live Fabric workspace.
+> on a live Fabric workspace. The September 2026 fixes (folder structure, relocation of
+> renamed items, retries, deploy hardening, the multi-library runner) pass offline
+> tests but have not yet been re-run against a live tenant.
 
 ### Why This Migration?
 
@@ -118,6 +127,22 @@ hydro-one-sharepoint-migration-poc/
 ├── fdf-templates/                  # Generated Fabric Data Factory item definitions
 │   ├── conversion-report.json      # Conversion warnings and summary
 │   └── pipelines/                  # One Fabric DataPipeline folder per pipeline
+├── fabric-native/                  # ⭐ Recommended path: SharePoint → OneLake on Microsoft Fabric
+│   ├── config/
+│   │   └── fabric-native.sample.json      # Lakehouse, Graph identity, libraries to migrate
+│   ├── notebooks/
+│   │   └── Migrate_SharePoint_Content/    # Spark notebook: Graph → OneLake files, audit, watermark, inventory
+│   ├── pipelines/
+│   │   ├── PL_Migrate_Master.DataPipeline/        # Optional inventory, then the content notebook
+│   │   └── PL_SharePoint_Inventory.DataPipeline/  # Optional connector inventory → sharepoint_list_inventory
+│   ├── scripts/
+│   │   ├── Deploy-FabricNative.ps1        # Idempotent deploy of the Lakehouse, notebook and pipelines
+│   │   ├── Start-FabricMigration.ps1      # Runs the master pipeline once per configured library
+│   │   └── Assign-WorkspaceCapacity.ps1   # Assigns, switches or unassigns the workspace capacity
+│   └── docs/
+│       ├── client-runbook.md              # Step-by-step deploy and operate guide
+│       ├── fabric-native-migration.md     # Architecture deep-dive
+│       └── deployment-targets.md          # Known workspace and item IDs
 ├── sql/                            # SQL DDL and operational queries
 │   ├── create_control_table.sql    # MigrationControl, IncrementalWatermark, BatchLog, SyncLog tables
 │   ├── create_audit_log_table.sql  # MigrationAuditLog, ValidationLog tables + stored procedures
