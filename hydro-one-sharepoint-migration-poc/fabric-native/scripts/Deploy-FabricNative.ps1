@@ -31,7 +31,8 @@
     Optional Fabric bearer token. If omitted, obtained from Azure CLI.
 
 .PARAMETER WhatIf
-    Offline dry-run: no token, no Fabric calls. Validates assembly locally.
+    Offline dry-run: no token, no Fabric calls. Assembles the notebook and resolves
+    every pipeline against stand-in GUIDs, failing on anything that would not deploy.
 
 .EXAMPLE
     .\scripts\Deploy-FabricNative.ps1 -WorkspaceId "<guid>" -ConfigPath .\config\fabric-native.json
@@ -61,6 +62,13 @@ function ConvertTo-Base64Utf8 {
     return [Convert]::ToBase64String((New-Object System.Text.UTF8Encoding($false)).GetBytes($Text))
 }
 
+function Read-Utf8 {
+    # Windows PowerShell 5.1 reads BOM-less files with Get-Content as the ANSI code
+    # page, which corrupts any non-ASCII character in notebook.py or a description.
+    param([Parameter(Mandatory = $true)][string]$Path)
+    return [System.IO.File]::ReadAllText((Resolve-Path -LiteralPath $Path).Path, (New-Object System.Text.UTF8Encoding($false)))
+}
+
 function Invoke-FabricRequest {
     param(
         [Parameter(Mandatory = $true)][ValidateSet("GET", "POST")] [string]$Method,
@@ -79,24 +87,37 @@ function Invoke-FabricRequest {
         return [pscustomobject]@{ StatusCode = [int]$response.StatusCode; Headers = $response.Headers; Data = $data }
     }
     catch {
+        $status = $null
+        $detail = $null
         $r = $_.Exception.Response
-        if ($r) {
-            $reader = [System.IO.StreamReader]::new($r.GetResponseStream())
-            throw "Fabric API $Method $Path failed with HTTP $([int]$r.StatusCode): $($reader.ReadToEnd())"
+        if ($r) { try { $status = [int]$r.StatusCode } catch { $status = $null } }
+        # PowerShell 7 puts the response body in ErrorDetails, and its Response is an
+        # HttpResponseMessage with no GetResponseStream(). Calling that here used to
+        # throw inside this handler and hide the real Fabric error message.
+        if ($_.ErrorDetails -and $_.ErrorDetails.Message) {
+            $detail = $_.ErrorDetails.Message
         }
+        elseif ($r -and ($r | Get-Member -Name GetResponseStream -MemberType Method)) {
+            try { $detail = ([System.IO.StreamReader]::new($r.GetResponseStream())).ReadToEnd() } catch { $detail = $null }
+        }
+        if ($status -or $detail) { throw "Fabric API $Method $Path failed with HTTP ${status}: $detail" }
         throw
     }
 }
 
 function Wait-FabricOperation {
-    param([Parameter(Mandatory = $true)]$Response)
+    param([Parameter(Mandatory = $true)]$Response, [int]$TimeoutSeconds = 1800)
     if ($Response.StatusCode -ne 202) { return }
     $operationUrl = @($Response.Headers["Operation-Location"])[0]
     if (-not $operationUrl) { $operationUrl = @($Response.Headers["Location"])[0] }
     if (-not $operationUrl) { return }
     $headers = @{ Authorization = "Bearer $script:AccessToken" }
     $retryAfter = @($Response.Headers["Retry-After"])[0]
+    # A deadline, because a status that never turns terminal (or a response that is
+    # not JSON) used to keep this loop polling forever.
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     while ($true) {
+        if ((Get-Date) -gt $deadline) { throw "Fabric operation did not finish within $TimeoutSeconds seconds: $operationUrl" }
         Start-Sleep -Seconds ([int]$(if ($retryAfter) { $retryAfter } else { 5 }))
         $op = Invoke-WebRequest -Method GET -Uri $operationUrl -Headers $headers -UseBasicParsing -ErrorAction Stop
         $status = $null
@@ -123,6 +144,21 @@ function Get-FabricWorkspaceItems {
     return $items
 }
 
+function Set-NotebookDefault {
+    # Set the default of one parameter assignment in notebook.py, e.g. workspace_id = "".
+    # Whitespace-tolerant, and the value is inserted literally. The previous -replace
+    # needed the exact column alignment of the '=' signs (so reformatting the file
+    # silently skipped the injection) and treated '$' in a value as a regex group.
+    param([string]$Text, [string]$Name, [string]$Value)
+    $regex = [regex]('(?m)^(' + [regex]::Escape($Name) + '\s*=\s*)"[^"\r\n]*"')
+    if (-not $regex.IsMatch($Text)) {
+        throw "notebook.py has no '$Name = ""...""' assignment for the deploy to set."
+    }
+    $literal = $Value.Replace('\', '\\').Replace('"', '\"')
+    $evaluator = [System.Text.RegularExpressions.MatchEvaluator] { param($m) $m.Groups[1].Value + '"' + $literal + '"' }.GetNewClosure()
+    return $regex.Replace($Text, $evaluator, 1)
+}
+
 function Build-NotebookIpynb {
     # Assemble an .ipynb from notebook.py: split on the "# CELL" markers, inject
     # the default-lakehouse metadata, and set the workspace/lakehouse parameter
@@ -133,24 +169,25 @@ function Build-NotebookIpynb {
         [string]$LakehouseName,
         $Graph
     )
-    $raw = Get-Content -Raw -Path $NotebookPyPath
-    $raw = $raw -replace 'workspace_id     = ""', "workspace_id     = ""$WorkspaceId"""
-    if ($LakehouseId) { $raw = $raw -replace 'lakehouse_id     = ""', "lakehouse_id     = ""$LakehouseId""" }
+    $raw = Read-Utf8 $NotebookPyPath
+    $raw = Set-NotebookDefault -Text $raw -Name "workspace_id" -Value "$WorkspaceId"
+    if ($LakehouseId) { $raw = Set-NotebookDefault -Text $raw -Name "lakehouse_id" -Value $LakehouseId }
 
     # Bake the Graph identity from config into the notebook defaults so the
     # deployed notebook can authenticate on its own (run from the pipeline, a
     # schedule, or az rest) without re-supplying tenant/client/vault every time.
     # The client secret is NEVER baked in -- it is read from Key Vault at run time.
     if ($Graph) {
-        if ($Graph.tenantId)         { $raw = $raw -replace 'tenant_id        = ""', "tenant_id        = ""$($Graph.tenantId)""" }
-        if ($Graph.clientId)         { $raw = $raw -replace 'client_id        = ""', "client_id        = ""$($Graph.clientId)""" }
-        if ($Graph.keyVaultUri)      { $raw = $raw -replace 'key_vault_uri    = ""', "key_vault_uri    = ""$($Graph.keyVaultUri)""" }
-        if ($Graph.clientSecretName) { $raw = $raw -replace 'client_secret_name = "graph-client-secret"', "client_secret_name = ""$($Graph.clientSecretName)""" }
+        if ($Graph.tenantId)         { $raw = Set-NotebookDefault -Text $raw -Name "tenant_id" -Value ([string]$Graph.tenantId) }
+        if ($Graph.clientId)         { $raw = Set-NotebookDefault -Text $raw -Name "client_id" -Value ([string]$Graph.clientId) }
+        if ($Graph.keyVaultUri)      { $raw = Set-NotebookDefault -Text $raw -Name "key_vault_uri" -Value ([string]$Graph.keyVaultUri) }
+        if ($Graph.clientSecretName) { $raw = Set-NotebookDefault -Text $raw -Name "client_secret_name" -Value ([string]$Graph.clientSecretName) }
     }
 
     # Split into cells on the marker; drop the file header before the first marker.
     $parts = [regex]::Split($raw, '(?m)^# CELL .*$')
     $cellTexts = @($parts | Select-Object -Skip 1)
+    if ($cellTexts.Count -eq 0) { throw "$NotebookPyPath has no '# CELL' markers, so there is nothing to deploy." }
     $cellIndex = 0
     $cells = foreach ($text in $cellTexts) {
         $body = $text.Trim("`r", "`n")
@@ -224,13 +261,43 @@ function Resolve-ExecutePipelineRefs {
     }
 }
 
+function Test-PipelineAssembly {
+    # Offline check for -WhatIf: resolve every placeholder against stand-in GUIDs,
+    # confirm the result parses, and fail on anything left unresolved. -WhatIf used to
+    # stop after the notebook and never looked at the pipelines at all.
+    param([Parameter(Mandatory = $true)]$PipelineFolder, [hashtable]$NameToId, [string]$SharePointConnectionId)
+    $pName = $PipelineFolder.Name -replace '\.DataPipeline$', ''
+    $text = Read-Utf8 (Join-Path $PipelineFolder.FullName "pipeline-content.json")
+    $text = Resolve-Placeholders -Text $text -NameToId $NameToId -LakehouseId ([guid]::NewGuid().ToString()) -SharePointConnectionId $SharePointConnectionId
+    try { $parsed = $text | ConvertFrom-Json }
+    catch { throw "[WhatIf] '$pName' pipeline-content.json does not parse: $($_.Exception.Message)" }
+    try { $null = (Read-Utf8 (Join-Path $PipelineFolder.FullName ".platform")) | ConvertFrom-Json }
+    catch { throw "[WhatIf] '$pName' .platform is missing or does not parse: $($_.Exception.Message)" }
+    # Only the activities are checked: a description is free text and may mention a
+    # placeholder by name without using one.
+    $activityText = @($parsed.properties.activities) | ConvertTo-Json -Depth 50
+    $leftover = @([regex]::Matches("$activityText", '__(?:WORKSPACE_ID|LAKEHOUSE_ID|ITEM:[^"]*?)__') | ForEach-Object { $_.Value } | Sort-Object -Unique)
+    if ($leftover.Count -gt 0) { throw "[WhatIf] '$pName' has unresolved placeholders: $($leftover -join ', ')" }
+    $unresolved = [System.Collections.Generic.List[string]]::new()
+    Resolve-ExecutePipelineRefs -Activities $parsed.properties.activities -NameToId $NameToId -Unresolved $unresolved
+    if ($unresolved.Count -gt 0) { throw "[WhatIf] '$pName' calls pipelines that are not part of this deployment: $(($unresolved | Sort-Object -Unique) -join ', ')" }
+    $count = @($parsed.properties.activities).Count
+    if ($text -match '__SHAREPOINT_CONNECTION__') {
+        Write-Step "[WhatIf] pipeline '$pName' is valid; it deploys as a skeleton until sharePointConnectionId is set ($count activities defined)." "WARNING"
+    }
+    else {
+        Write-Step "[WhatIf] pipeline '$pName' is valid and fully resolvable ($count activities)."
+    }
+}
+
 # --- Load config --------------------------------------------------------------
 $config = $null
-if ($ConfigPath -and (Test-Path $ConfigPath)) {
-    $config = Get-Content -Raw -Path $ConfigPath | ConvertFrom-Json
+if ($ConfigPath) {
+    if (-not (Test-Path $ConfigPath)) { throw "Config file '$ConfigPath' not found." }
+    $config = Read-Utf8 $ConfigPath | ConvertFrom-Json
 }
 $lakehouseName = if ($config -and $config.lakehouseName) { [string]$config.lakehouseName } else { "HydroOneMigration" }
-$sharePointConnectionId = if ($config) { [string]$config.sharePointConnectionId } else { "" }
+$sharePointConnectionId = if ($config -and $config.sharePointConnectionId) { [string]$config.sharePointConnectionId } else { "" }
 
 $SourceDir = (Resolve-Path $SourceDir).Path
 $notebookDir = Join-Path $SourceDir "notebooks"
@@ -262,9 +329,16 @@ if (-not $WhatIf) {
         $resp = Invoke-FabricRequest -Method POST -Path "/workspaces/$WorkspaceId/items" -Body @{
             displayName = $lakehouseName; type = "Lakehouse"; description = "OneLake sink for SharePoint migration"
         }
+        if ($resp.Data -and $resp.Data.id) { $lakehouseId = [string]$resp.Data.id }
         Wait-FabricOperation -Response $resp
-        Start-Sleep -Seconds 3
-        $lakehouseId = (@(Get-FabricWorkspaceItems) | Where-Object { $_.type -eq "Lakehouse" -and $_.displayName -eq $lakehouseName } | Select-Object -First 1).id
+        # The item list lags a newly created item. Without a resolved id the notebook
+        # deployed with no default Lakehouse and the pipeline kept the literal
+        # __LAKEHOUSE_ID__, which only failed later, at run time.
+        for ($attempt = 0; -not $lakehouseId -and $attempt -lt 12; $attempt++) {
+            Start-Sleep -Seconds 5
+            $lakehouseId = (@(Get-FabricWorkspaceItems) | Where-Object { $_.type -eq "Lakehouse" -and $_.displayName -eq $lakehouseName } | Select-Object -First 1).id
+        }
+        if (-not $lakehouseId) { throw "Lakehouse '$lakehouseName' was created but its id could not be resolved. Re-run the deploy; it will find the existing Lakehouse." }
         Write-Step "Created Lakehouse ($lakehouseId)." "SUCCESS"
     }
 }
@@ -285,7 +359,13 @@ foreach ($nbFolder in $notebookFolders) {
     $nbPy = Join-Path $nbFolder.FullName "notebook.py"
     if (-not (Test-Path $nbPy)) { continue }
     $ipynb = Build-NotebookIpynb -NotebookPyPath $nbPy -LakehouseId $lakehouseId -LakehouseName $lakehouseName -Graph $(if ($config) { $config.graph } else { $null })
-    if ($WhatIf) { Write-Step "[WhatIf] would deploy Notebook '$nbName' ($([math]::Round($ipynb.Length/1KB)) KB ipynb)."; continue }
+    if ($WhatIf) {
+        $check = $ipynb | ConvertFrom-Json
+        $first = @($check.cells)[0]
+        if (-not $first -or (@($first.metadata.tags) -notcontains "parameters")) { throw "[WhatIf] Notebook '$nbName' has no parameters cell; pipeline parameters would be ignored." }
+        Write-Step "[WhatIf] would deploy Notebook '$nbName' ($(@($check.cells).Count) cells, $([math]::Round($ipynb.Length/1KB)) KB ipynb)."
+        continue
+    }
     $definition = @{ format = "ipynb"; parts = @(@{ path = "notebook-content.ipynb"; payload = (ConvertTo-Base64Utf8 -Text $ipynb); payloadType = "InlineBase64" }) }
     $key = "Notebook/$nbName"
     if ($existingByName.ContainsKey($key)) {
@@ -310,16 +390,26 @@ foreach ($pf in $pipelineFiles) {
     if ($WhatIf) { Write-Step "[WhatIf] would ensure pipeline '$pName'."; continue }
     if ($existingByName.ContainsKey($key)) { continue }
     Write-Step "Creating pipeline skeleton '$pName'..."
-    $platform = Get-Content -Raw -Path (Join-Path $pf.FullName ".platform") | ConvertFrom-Json
+    $platformText = Read-Utf8 (Join-Path $pf.FullName ".platform")
+    $platform = $platformText | ConvertFrom-Json
     $def = @{ parts = @(
         @{ path = "pipeline-content.json"; payload = (ConvertTo-Base64Utf8 -Text $emptyPipeline); payloadType = "InlineBase64" },
-        @{ path = ".platform"; payload = (ConvertTo-Base64Utf8 -Text (Get-Content -Raw -Path (Join-Path $pf.FullName ".platform"))); payloadType = "InlineBase64" }
+        @{ path = ".platform"; payload = (ConvertTo-Base64Utf8 -Text $platformText); payloadType = "InlineBase64" }
     ) }
     $resp = Invoke-FabricRequest -Method POST -Path "/workspaces/$WorkspaceId/items" -Body @{ displayName = $pName; type = "DataPipeline"; description = [string]$platform.metadata.description; definition = $def }
     Wait-FabricOperation -Response $resp
 }
 
-if ($WhatIf) { Write-Step "[WhatIf] assembly validated. No Fabric changes made." "SUCCESS"; return }
+if ($WhatIf) {
+    $standIns = @{}
+    foreach ($nbFolder in $notebookFolders) { $standIns[$nbFolder.Name] = [guid]::NewGuid().ToString() }
+    foreach ($pf in $pipelineFiles) { $standIns[($pf.Name -replace '\.DataPipeline$', '')] = [guid]::NewGuid().ToString() }
+    foreach ($pf in $pipelineFiles) {
+        Test-PipelineAssembly -PipelineFolder $pf -NameToId $standIns -SharePointConnectionId $sharePointConnectionId
+    }
+    Write-Step "[WhatIf] assembly validated. No Fabric changes made." "SUCCESS"
+    return
+}
 
 # --- Build complete name -> GUID map ------------------------------------------
 Start-Sleep -Seconds 2
@@ -332,17 +422,28 @@ foreach ($i in @(Get-FabricWorkspaceItems)) {
 foreach ($pf in $pipelineFiles) {
     $pName = $pf.Name -replace '\.DataPipeline$', ''
     $itemId = $nameToId[$pName]
+    if (-not $itemId) { throw "Pipeline '$pName' was created but is not in the workspace item list yet. Re-run the deploy." }
     Write-Step "Finalizing pipeline '$pName'..."
+    $platformText = Read-Utf8 (Join-Path $pf.FullName ".platform")
 
-    $contentText = Get-Content -Raw -Path (Join-Path $pf.FullName "pipeline-content.json")
+    $contentText = Read-Utf8 (Join-Path $pf.FullName "pipeline-content.json")
     $contentText = Resolve-Placeholders -Text $contentText -NameToId $nameToId -LakehouseId $lakehouseId -SharePointConnectionId $sharePointConnectionId
 
     if ($contentText -match '__SHAREPOINT_CONNECTION__') {
-        # Fabric rejects a pipeline that references a non-existent connection, so
-        # leave this one as the created skeleton until a real SharePoint connection
-        # GUID is supplied (sharePointConnectionId in config). The master pipeline's
-        # ExecutePipeline reference to it still resolves (the item exists).
-        Write-Step "  SKIP: '$pName' needs a SharePoint connection; left as a skeleton." "WARNING"
+        # Fabric rejects a pipeline that references a non-existent connection, so this
+        # one stays activity-free until a real connection GUID is configured. It still
+        # declares its real parameters, because PL_Migrate_Master passes SiteUrl and
+        # LibraryName to it; declaring them keeps that call valid rather than relying
+        # on undeclared parameters being ignored.
+        $declared = ($contentText | ConvertFrom-Json).properties.parameters
+        $skeleton = @{ properties = @{ activities = @(); parameters = $declared } } | ConvertTo-Json -Depth 20
+        $def = @{ parts = @(
+            @{ path = "pipeline-content.json"; payload = (ConvertTo-Base64Utf8 -Text $skeleton); payloadType = "InlineBase64" },
+            @{ path = ".platform"; payload = (ConvertTo-Base64Utf8 -Text $platformText); payloadType = "InlineBase64" }
+        ) }
+        $resp = Invoke-FabricRequest -Method POST -Path "/workspaces/$WorkspaceId/items/$itemId/updateDefinition?updateMetadata=true" -Body @{ definition = $def }
+        Wait-FabricOperation -Response $resp
+        Write-Step "  SKIP: '$pName' needs a SharePoint connection; left as a skeleton with its parameters." "WARNING"
         Write-Step "        Set 'sharePointConnectionId' in the config and re-run to bind it." "WARNING"
         continue
     }
@@ -355,7 +456,7 @@ foreach ($pf in $pipelineFiles) {
     $finalText = $content | ConvertTo-Json -Depth 50
     $def = @{ parts = @(
         @{ path = "pipeline-content.json"; payload = (ConvertTo-Base64Utf8 -Text $finalText); payloadType = "InlineBase64" },
-        @{ path = ".platform"; payload = (ConvertTo-Base64Utf8 -Text (Get-Content -Raw -Path (Join-Path $pf.FullName ".platform"))); payloadType = "InlineBase64" }
+        @{ path = ".platform"; payload = (ConvertTo-Base64Utf8 -Text $platformText); payloadType = "InlineBase64" }
     ) }
     $resp = Invoke-FabricRequest -Method POST -Path "/workspaces/$WorkspaceId/items/$itemId/updateDefinition?updateMetadata=true" -Body @{ definition = $def }
     Wait-FabricOperation -Response $resp

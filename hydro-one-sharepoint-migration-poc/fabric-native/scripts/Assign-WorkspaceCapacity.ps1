@@ -27,6 +27,9 @@
 .PARAMETER Unassign
     Remove the workspace from its current capacity (no -Capacity needed).
 
+.PARAMETER TimeoutSeconds
+    How long to wait for the assign/unassign operation before giving up. Default 600.
+
 .EXAMPLE
     # Assign (or switch to) a capacity
     .\Assign-WorkspaceCapacity.ps1 -Workspace "Hydro_One_Migration" -Capacity "<capacity-name-or-guid>"
@@ -39,7 +42,8 @@
 param(
     [Parameter(Mandatory = $true)][string]$Workspace,
     [string]$Capacity,
-    [switch]$Unassign
+    [switch]$Unassign,
+    [int]$TimeoutSeconds = 600
 )
 
 $ErrorActionPreference = "Stop"
@@ -50,24 +54,53 @@ if (-not $Unassign -and [string]::IsNullOrWhiteSpace($Capacity)) {
     throw "Provide -Capacity to assign/switch, or use -Unassign to remove the workspace from its capacity."
 }
 
+# One token for the whole run. Headers used to shell out to `az` on every request,
+# including every 5-second poll, which made a simple assign take minutes.
+$script:Token = $null
 function Get-Token {
-    $t = az account get-access-token --resource "https://api.fabric.microsoft.com" --query accessToken -o tsv
-    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($t)) { throw "Could not get a Fabric token. Run 'az login' first." }
-    return $t
+    if (-not $script:Token) {
+        $t = az account get-access-token --resource "https://api.fabric.microsoft.com" --query accessToken -o tsv
+        if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($t)) { throw "Could not get a Fabric token. Run 'az login' first." }
+        $script:Token = $t
+    }
+    return $script:Token
 }
 function Headers { @{ Authorization = "Bearer $(Get-Token)"; "Content-Type" = "application/json" } }
 function Is-Guid([string]$s) { [guid]::TryParse($s, [ref]([guid]::Empty)) }
+
+function Get-AllPages([string]$Uri) {
+    # List endpoints are paginated. Reading only the first page meant a workspace that
+    # was not on it was reported as "not found" in any tenant with many workspaces.
+    $items = @()
+    $next = $Uri
+    while ($next) {
+        $page = Invoke-RestMethod -Uri $next -Headers (Headers)
+        $items += @($page.value)
+        if ($page.continuationUri) { $next = $page.continuationUri }
+        elseif ($page.continuationToken) { $next = "$($Uri)?continuationToken=$([uri]::EscapeDataString($page.continuationToken))" }
+        else { $next = $null }
+    }
+    return $items
+}
 
 function Wait-Operation($response) {
     if ([int]$response.StatusCode -ne 202) { return }
     $op = @($response.Headers["Operation-Location"])[0]; if (-not $op) { $op = @($response.Headers["Location"])[0] }
     if (-not $op) { return }
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     do {
+        if ((Get-Date) -gt $deadline) { throw "Operation did not finish within $TimeoutSeconds seconds. Check the workspace settings in the portal: $op" }
         Start-Sleep -Seconds 5
         $status = (Invoke-RestMethod -Uri $op -Headers (Headers)).status
         Write-Host "  operation: $status"
-    } while ($status -notin @("Succeeded", "Completed", "Failed"))
+    } while ($status -notin @("Succeeded", "Completed", "Failed", "Cancelled"))
     if ($status -eq "Failed") { throw "Operation failed. Check that you are a capacity admin and have workspace admin rights." }
+    if ($status -eq "Cancelled") { throw "Operation was cancelled." }
+}
+
+function Same-Guid([string]$a, [string]$b) {
+    if ([string]::IsNullOrWhiteSpace($a) -or [string]::IsNullOrWhiteSpace($b)) { return $false }
+    return ([guid]$a) -eq ([guid]$b)
 }
 
 # --- Resolve the workspace ---
@@ -75,7 +108,7 @@ if (Is-Guid $Workspace) {
     $wsId = $Workspace
 }
 else {
-    $all = (Invoke-RestMethod -Uri "$api/workspaces" -Headers (Headers)).value
+    $all = Get-AllPages "$api/workspaces"
     $match = @($all | Where-Object { $_.displayName -eq $Workspace })
     if ($match.Count -eq 0) { throw "Workspace '$Workspace' not found (or you lack access)." }
     if ($match.Count -gt 1) { throw "Multiple workspaces named '$Workspace' -- pass the GUID instead." }
@@ -100,9 +133,9 @@ if ($Unassign) {
 }
 
 # --- Resolve the capacity (assign / switch) ---
-$caps = (Invoke-RestMethod -Uri "$api/capacities" -Headers (Headers)).value
+$caps = Get-AllPages "$api/capacities"
 if (Is-Guid $Capacity) {
-    $cap = $caps | Where-Object { $_.id -eq $Capacity } | Select-Object -First 1
+    $cap = $caps | Where-Object { Same-Guid $_.id $Capacity } | Select-Object -First 1
     if (-not $cap) { throw "Capacity GUID '$Capacity' is not visible to you. Are you a capacity admin and is it Active?" }
 }
 else {
@@ -112,7 +145,9 @@ else {
     $cap = $m[0]
 }
 Write-Host "Capacity:  $($cap.displayName) -> $($cap.id) (sku $($cap.sku), state $($cap.state))" -ForegroundColor Cyan
-if ($cap.state -ne "Active") { Write-Host "WARNING: capacity state is '$($cap.state)', not 'Active'. Resume it first." -ForegroundColor Yellow }
+# Assigning to a paused capacity fails after the wait with a generic error, so stop
+# here with the actual reason instead.
+if ($cap.state -ne "Active") { throw "Capacity '$($cap.displayName)' is '$($cap.state)', not 'Active'. Resume it first, then re-run." }
 
 Write-Host "Assigning capacity to workspace..."
 $resp = Invoke-WebRequest -Method POST -Uri "$api/workspaces/$wsId/assignToCapacity" `
@@ -121,7 +156,7 @@ Wait-Operation $resp
 
 Start-Sleep -Seconds 3
 $ws = Invoke-RestMethod -Uri "$api/workspaces/$wsId" -Headers (Headers)
-if ($ws.capacityId -eq $cap.id) {
+if (Same-Guid $ws.capacityId $cap.id) {
     Write-Host "SUCCESS: '$($ws.displayName)' is now on capacity '$($cap.displayName)' ($($cap.id))." -ForegroundColor Green
 }
 else {
