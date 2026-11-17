@@ -225,10 +225,14 @@ az rest --method post \
   --resource "https://api.fabric.microsoft.com" \
   --headers "Content-Type=application/json" \
   --body '{"executionData":{"parameters":{
-            "SiteUrl":{"value":"https://<tenant>.sharepoint.com/sites/<site>","type":"string"},
-            "LibraryName":{"value":"Documents","type":"string"},
-            "Mode":{"value":"full","type":"string"}}}}'
+            "SiteUrl":"https://<tenant>.sharepoint.com/sites/<site>",
+            "LibraryName":"Documents",
+            "Mode":"full"}}}'
 ```
+
+Pipeline parameters are plain values. (Notebook jobs, Option A, take `{"value", "type"}`
+objects; a pipeline wraps those in a second object and the notebook rejects the run with
+HTTP 400.)
 
 | Parameter | Example | Meaning |
 |-----------|---------|---------|
@@ -297,6 +301,8 @@ WHERE status LIKE 'error:%' ORDER BY ts_utc DESC;
 | Notebook job fails immediately | Missing Graph permission or secret. | Confirm `Sites.Read.All`/`Files.Read.All` + admin consent, and that the Key Vault secret exists and the run identity has **Secrets User**. |
 | `migration_audit` rows show `error: 403` | App lacks access to that site/library. | Grant the app access to the site collection (or use sites-selected consent). |
 | Want to re-copy everything | Watermark already advanced. | Run with `Mode = full` (ignores the watermark). |
+| `Start-FabricMigration.ps1` stops with *HTTP 401 TokenExpired*, often after about 2 hours | Fixed in the current script (it now renews the token from its expiry time and retries a 401). The run itself kept going in Fabric. | Update the script. Check the run in the Monitor hub before starting it again. |
+| Pipeline run fails at once: *Notebook service rejected the request ... BadRequest* | Run parameters were sent as `{"value", "type"}` objects. | Send pipeline parameters as plain values (see Option B), or use `Start-FabricMigration.ps1`. |
 | Pipeline succeeds but nothing is migrated | `SiteUrl` was blank, so the notebook ran its smoke test. | Use `Start-FabricMigration.ps1` (Option C), or pass `SiteUrl`, `LibraryName` and `Mode`. |
 | A file deleted in SharePoint is still in OneLake | Deliberate: a deletion removes the inventory row but keeps the migrated copy. | Delete it from the Lakehouse by hand if it should go. |
 | `migration_audit` is clean but `errors` > 0 in the run output | A renamed or moved item could not be relocated in OneLake. The notebook prints `could not relocate ...`. | Nothing is lost; the watermark is held and the next run retries the move. |
